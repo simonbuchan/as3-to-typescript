@@ -32,9 +32,8 @@
 
 
 import Token = require('./token');
+import Keywords = require('../syntax/keywords');
 var sax: any = require('sax');
-
-var END: string = '__END__';
 
 
 function isDecimalChar(currentCharacter: string): boolean {
@@ -43,9 +42,7 @@ function isDecimalChar(currentCharacter: string): boolean {
 
 function endsWith(string: string, suffix: string) {
     return string.indexOf(suffix, string.length - suffix.length) !== -1;
-};
-
-
+}
 
 function verifyXML(string: string) {
     var parser = sax.parser(true);
@@ -100,7 +97,7 @@ class AS3Scanner {
         if (this.content != null && this.index < this.content.length) {
             currentCharacter = this.nextNonWhitespaceCharacter();
         }  else {
-            return new Token(END, this.index);
+            return new Token(Keywords.EOF, this.index);
         }
 
         if (currentCharacter === '\n') {
