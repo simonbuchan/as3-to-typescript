@@ -1,10 +1,10 @@
 /*jshint node:true*/
 
-var Parser = require('./lib/parser'),
-    Scanner = require('./lib/scanner'),
-    Emitter = require('./lib/emitter'),
-    KeyWords = require('./lib/keywords'),
-    Operators = require('./lib/operators');
+var Parser = require('./lib/parse/parser'),
+    Scanner = require('./lib/parse/scanner'),
+    Emitter = require('./lib/emit/emitter'),
+    KeyWords = require('./lib/syntax/keywords'),
+    Operators = require('./lib/syntax/operators');
 
 module.exports = {
     Parser: Parser,

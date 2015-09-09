@@ -1,9 +1,7 @@
 
-import Token = require('./token');
-import NodeKind = require('./nodeKind');
-import Operators = require('./operators');
-import KeyWords = require('./keywords');
-import Node = require('./node');
+import NodeKind = require('./../syntax/nodeKind');
+import Keywords = require('./../syntax/keywords');
+import Node = require('./../syntax/node');
 
 //Utils
 function assign(target: any, ...items: any[]): any {
@@ -14,23 +12,6 @@ function assign(target: any, ...items: any[]): any {
         }, target);
     }, target);
 }
-
-
-var keywordsCheck: { [index: string]: boolean } 
-    = Object.keys(KeyWords).reduce(
-        (result: { [index: string]: boolean}, key: string) => {
-            var keyword: string = (<any>KeyWords)[key];
-            result[keyword] = true;
-            return result;
-        }, <{ [index: string]: boolean}>{}
-    );
-
-function isKeyWord(text: string): boolean {
-    return !!keywordsCheck[text];
-}
-
-
-
 
 
 function transformAST(node:Node, parentNode: Node): Node {
@@ -513,7 +494,7 @@ function emitIdent(node: Node) {
         }
     }
     
-    if (isKeyWord(node.text)) {
+    if (Keywords.isKeyWord(node.text)) {
         return;
     }
     

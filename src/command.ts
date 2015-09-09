@@ -1,7 +1,7 @@
 /*jshint node:true*/
 
-import AS3Parser = require('./parser');
-import emitter = require('./emitter');
+import AS3Parser = require('./parse/parser');
+import emitter = require('./emit/emitter');
 import fs = require('fs-extra');
 import path = require('path');
 

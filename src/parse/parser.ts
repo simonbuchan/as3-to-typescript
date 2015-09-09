@@ -31,10 +31,10 @@
 
 import AS3Scanner = require('./scanner');
 import Token = require('./token');
-import NodeKind = require('./nodeKind');
-import Operators = require('./operators');
-import KeyWords = require('./keywords');
-import Node = require('./node');
+import NodeKind = require('./../syntax/nodeKind');
+import Operators = require('./../syntax/operators');
+import KeyWords = require('./../syntax/keywords');
+import Node = require('./../syntax/node');
 
 
 var ASDOC_COMMENT: string = "/**";

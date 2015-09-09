@@ -1,7 +1,7 @@
 /*jshint node:true*/
 
-var AS3Parser = require('../lib/parser'),
-    emitter = require('../lib/emitter'),
+var AS3Parser = require('../lib/parse/parser'),
+    emitter = require('../lib/emit/emitter'),
     fs = require('fs'),
     path = require('path');
 

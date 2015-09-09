@@ -2,8 +2,8 @@
 
 var fs = require('fs'),
     path = require('path'),
-    AS3Parser = require('../lib/parser'),
-    emitter = require('../lib/emitter');
+    AS3Parser = require('../lib/parse/parser'),
+    emitter = require('../lib/emit/emitter');
 
 
 var FIXTURES_DIR = path.join(__dirname,  'fixtures'),
