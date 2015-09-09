@@ -1495,7 +1495,7 @@ module com.deCampredon.spark.components
 		/**
 		 * @private
 		 */
-		/*override*/ /*protected*/ commitProperties():void {
+		/*override*/ protected commitProperties():void {
 			super.commitProperties();
 			var i:number,weekObject:Object;
 
@@ -1556,7 +1556,7 @@ module com.deCampredon.spark.components
 		/**
 		 * @private
 		 */
-		/*override*/ /*protected*/ resourcesChanged():void
+		/*override*/ protected resourcesChanged():void
 		{
 			super.resourcesChanged();
 
@@ -1571,7 +1571,7 @@ module com.deCampredon.spark.components
 		/**
 		 * @private
 		 */
-		/*override*/ /*protected*/ getCurrentSkinState():string {
+		/*override*/ protected getCurrentSkinState():string {
 			if(this.yearNavigationEnabled) {
 				return this.enabled?"normalWithYearNavigation":"disabledWithYearNavigation";
 			}
@@ -1581,7 +1581,7 @@ module com.deCampredon.spark.components
 		/**
 		 * @private
 		 */
-		/*override*/ /*protected*/ partAdded(partName:string, instance:Object):void {
+		/*override*/ protected partAdded(partName:string, instance:Object):void {
 			super.partAdded(partName,instance);
 			if(instance == this.bodyGrid) {
 				this.bodyGrid.dateChooser = this;
@@ -1616,7 +1616,7 @@ module com.deCampredon.spark.components
 		/**
 		 * @private
 		 */
-		/*override*/ /*protected*/ partRemoved(partName:string, instance:Object):void {
+		/*override*/ protected partRemoved(partName:string, instance:Object):void {
 			super.partRemoved(partName,instance);
 			if(instance == this.bodyGrid) {
 				this.bodyGrid.removeEventListener(GridSelectionEvent.SELECTION_CHANGING,this.bodyGrid_selectionChangingHandler);
@@ -1648,7 +1648,7 @@ module com.deCampredon.spark.components
 		 * handle selectionChanging events displayed by the grid, prevent the selection 
 		 * if the cell corresponding date should not be selected.
 		 */
-		/*protected*/ bodyGrid_selectionChangingHandler(event:GridSelectionEvent):void
+		protected bodyGrid_selectionChangingHandler(event:GridSelectionEvent):void
 		{
 			if(!this.isEnabledCell(event.selectionChange.rowIndex,event.selectionChange.columnIndex)){
 				event.preventDefault();
@@ -1659,7 +1659,7 @@ module com.deCampredon.spark.components
 		 * @private
 		 * handle selectionChange events dispatched by the grid, and commit the selection
 		 */
-		/*protected*/ bodyGrid_selectionChangeHandler(event:GridSelectionEvent):void
+		protected bodyGrid_selectionChangeHandler(event:GridSelectionEvent):void
 		{
 			var date:Date = this.getDateForCell(event.selectionChange.rowIndex,event.selectionChange.columnIndex);
 			date = new Date(date.time);
@@ -1673,7 +1673,7 @@ module com.deCampredon.spark.components
 		 * handle rollOver events on grid cell, prevent the rollOverIndicator to be displayed
 		 * if the cell is not selectable.
 		 */
-		/*protected*/ bodyGrid_gridRollOverHandler(event:GridEvent):void
+		protected bodyGrid_gridRollOverHandler(event:GridEvent):void
 		{
 			if(!this.isEnabledCell(event.rowIndex,event.columnIndex) && this.bodyGrid && this.bodyGrid.grid) {
 				this.bodyGrid.grid.hoverRowIndex = -1;
@@ -1685,7 +1685,7 @@ module com.deCampredon.spark.components
 		 * @private
 		 * handle prevMonthButton click events
 		 */
-		/*protected*/ prevMonthButton_clickHandler(event:MouseEvent):void
+		protected prevMonthButton_clickHandler(event:MouseEvent):void
 		{
 			this.decreaseDisplayedMonth();
 		}
@@ -1695,7 +1695,7 @@ module com.deCampredon.spark.components
 		 * @private
 		 * handle nextMonthButton click events
 		 */
-		/*protected*/ nextMonthButton_clickHandler(event:MouseEvent):void
+		protected nextMonthButton_clickHandler(event:MouseEvent):void
 		{
 			this.increaseDisplayedMonth();
 		}		
@@ -1705,7 +1705,7 @@ module com.deCampredon.spark.components
 		 * @private
 		 * handle yearNavigation change events
 		 */
-		/*protected*/ yearNavigator_changeHandler(event:Event):void
+		protected yearNavigator_changeHandler(event:Event):void
 		{
 			var increased:boolean = this.displayedYear < this.yearNavigator.value;
 			this.displayedYear = this.yearNavigator.value;
