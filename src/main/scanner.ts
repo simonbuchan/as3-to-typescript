@@ -506,27 +506,28 @@ class AS3Scanner {
         if (typeof delimiter === 'undefined') {
             delimiter = start;
         }
-        var buffer = '';;
+        var buffer = '';
         var peekPos = 1;
-        var numberOfBackslashes = 0;
+        var inBackslash = false;
 
         buffer += start;
 
-        for (; ;) {
+        while (this.index + peekPos < this.content.length) {
             var currentCharacter: string = this.peekChar(peekPos++);
-            if (currentCharacter === '\n' || (this.index + peekPos >= this.content.length)) {
+            if (currentCharacter === '\n') {
                 return null;
             }
             buffer += currentCharacter;
-            if ((currentCharacter === delimiter  && numberOfBackslashes == 0) ) {
+            if ((currentCharacter === delimiter && !inBackslash) ) {
                 var result = new Token(buffer, this.index);
                 this.skipChars(buffer.toString().length - 1);
                 return result;
             }
-            numberOfBackslashes = currentCharacter === '\\' ? (numberOfBackslashes + 1) % 2
-            : 0;
-            
+            if (currentCharacter === '\\') {
+                inBackslash = !inBackslash;
+            }
         }
+        return null;
     }
 
     private scanWord(startingCharacter: string): Token {
