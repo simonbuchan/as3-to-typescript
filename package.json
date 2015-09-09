@@ -7,7 +7,7 @@
     "as3-to-typescript": "./bin/as3-to-typescript"
   },
   "scripts": {
-    "test": "node test/runner generate && node test/runner compare",
+    "test": "node test/runner compare",
     "generate": "node test/runner generate",
     "accept": "node test/runner accept",
     "compile": "tsc --project src",
