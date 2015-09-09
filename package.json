@@ -29,8 +29,7 @@
   "author": "François de Campredon <francois.de.campredon@gmail.com>",
   "license": "Apache-2.0",
   "dependencies": {
-    "fs-extended": "^0.2.0",
-    "rimraf": "^2.2.8",
+    "fs-extra": "^0.24.0",
     "sax": "~0.6.0"
   },
   "devDependencies": {
