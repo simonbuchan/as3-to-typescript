@@ -3,6 +3,7 @@
     "outDir": "../lib",
     "target": "es5",
     "module": "commonjs",
-    "sourceMap": true
+    "sourceMap": true,
+    "noImplicitAny": true
   }
 }
