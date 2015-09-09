@@ -1,4 +1,11 @@
-node_modules
-test/fixtures/generated
-test/single
+# compile output, *not* ignored by .npmignore
+/lib
+
+# default .npmignore
+/node_modules
 npm-debug.log
+
+# I'm an IntelliJ duder
+/.idea
+/test/fixtures/generated
+/test/single

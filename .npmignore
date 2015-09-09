@@ -1,0 +1,4 @@
+# Copy of .gitignore, except for build output and default .npmignored
+/.idea
+/test/fixtures/generated
+/test/single
