@@ -1,7 +1,7 @@
 /*jshint node:true*/
 
-import AS3Parser = require('./parse/parser');
-import emitter = require('./emit/emitter');
+import parse = require('./parse');
+import emit = require('./emit');
 import fs = require('fs-extra');
 import path = require('path');
 
@@ -36,7 +36,6 @@ export function run() {
     }
     if (process.argv.length !== 4) {
         throw new Error('source dir and output dir are mandatory');
-        process.exit(1)
     }
     var sourceDir = path.resolve(process.cwd(), process.argv[2]);
     if (!fs.existsSync(sourceDir) || !fs.statSync(sourceDir).isDirectory()) {
@@ -47,7 +46,6 @@ export function run() {
     if (fs.existsSync(outputDir)) {
         if (!fs.statSync(outputDir).isDirectory()) {
             throw new Error('invalid ouput dir');
-            process.exit(1)
         }
         fs.removeSync(outputDir);
     }
@@ -57,13 +55,12 @@ export function run() {
     var number = 0;
     var length = files.length;
     files.forEach(function (file) {
-        var parser = new AS3Parser();
         console.log('compiling \'' + file + '\' ' + number + '/' + length);
         var content = fs.readFileSync(path.resolve(sourceDir, file), 'UTF-8');
         console.log('parsing');
-        var ast = parser.buildAst(path.basename(file), content);
+        var ast = parse(path.basename(file), content);
         console.log('emitting');
-        fs.outputFileSync(path.resolve(outputDir, file.replace(/.as$/, '.ts')), emitter.emit(ast, content));
+        fs.outputFileSync(path.resolve(outputDir, file.replace(/.as$/, '.ts')), emit(ast, content));
         number ++;
     });
 }

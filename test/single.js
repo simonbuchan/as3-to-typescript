@@ -1,16 +1,13 @@
 /*jshint node:true*/
 
-var AS3Parser = require('../lib/parse/parser'),
-    emitter = require('../lib/emit/emitter'),
+var parse = require('../lib/parse'),
+    emit = require('../lib/emit'),
     fs = require('fs'),
     path = require('path');
 
-var parser = new AS3Parser();
-
-
 var content = fs.readFileSync(path.join(__dirname ,'single', 'file.as'), 'UTF-8' );
-var ast = parser.buildAst('file.as', content);
+var ast = parse('file.as', content);
 
 fs.writeFileSync(path.join(__dirname ,'single', 'file.ast.json'), JSON.stringify(ast, null, 4));
-fs.writeFileSync(path.join(__dirname ,'single', 'file.ts'),  emitter.emit(ast, content));
+fs.writeFileSync(path.join(__dirname ,'single', 'file.ts'), emit(ast, content));
 

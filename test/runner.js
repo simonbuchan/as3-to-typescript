@@ -2,8 +2,8 @@
 
 var fs = require('fs'),
     path = require('path'),
-    AS3Parser = require('../lib/parse/parser'),
-    emitter = require('../lib/emit/emitter');
+    parse = require('../lib/parse'),
+    emit = require('../lib/emit');
 
 
 var FIXTURES_DIR = path.join(__dirname,  'fixtures'),
@@ -55,12 +55,11 @@ function compile(callback) {
     try {
         asFiles.forEach(function (file) {
             console.log('compiling : '+ file);
-            var parser = new AS3Parser();
             var content = fs.readFileSync(path.join(FIXTURES_DIR, file), 'UTF-8');
-            var ast = parser.buildAst(file, content);
+            var ast = parse(file, content);
             results.push({
                 file: path.basename(file, '.as'),
-                content: emitter.emit(ast, content)
+                content: emit(ast, content)
             });
         });
     } catch(e) {
