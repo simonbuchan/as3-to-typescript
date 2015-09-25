@@ -4,34 +4,6 @@ import Node = require('./../syntax/node');
 import assign = require('object-assign');
 
 
-function transformAST(node: Node, parentNode: Node): Node {
-    //we don't care about comment
-    let newNode = new Node(
-            node.kind,
-            node.start,
-            node.end,
-            node.text,
-            [],
-            parentNode
-    );
-
-    newNode.children = node.children.filter(
-            child => !!child &&
-            child.kind !== NodeKind.AS_DOC &&
-            child.kind !== NodeKind.MULTI_LINE_COMMENT
-    ).map(child => transformAST(child, newNode));
-
-    return newNode;
-}
-
-
-interface Scope {
-    parent: Scope;
-    declarations: Declaration[];
-    isTopLevel: boolean;
-}
-
-
 const GLOBAL_NAMES = [
     'undefined', 'NaN', 'Infinity',
     'Array', 'Boolean', 'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'escape',
@@ -42,9 +14,16 @@ const GLOBAL_NAMES = [
 ];
 
 
+interface Scope {
+    parent: Scope;
+    declarations: Declaration[];
+    className?: string;
+}
+
+
 interface Declaration {
-    bound?: string;
     name: string;
+    bound?: string;
 }
 
 
@@ -54,11 +33,11 @@ export interface EmitterOptions {
 
 
 interface NodeVisitor {
-    (emitter:Emitter, node: Node):void
+    (emitter: Emitter, node: Node):void
 }
 
 
-const VISITORS:{[kind: string]: NodeVisitor} = {
+const VISITORS: {[kind: string]: NodeVisitor} = {
     [NodeKind.PACKAGE]: emitPackage,
     [NodeKind.META]: emitMeta,
     [NodeKind.IMPORT]: emitImport,
@@ -81,137 +60,107 @@ const VISITORS:{[kind: string]: NodeVisitor} = {
 };
 
 
+function visitNodes(emitter: Emitter, nodes: Node[]) {
+    if (nodes) {
+        nodes.forEach(node => visitNode(emitter, node));
+    }
+}
+
+
+function visitNode(emitter: Emitter, node: Node) {
+    if (node) {
+        if (VISITORS.hasOwnProperty(node.kind)) {
+            VISITORS[node.kind](emitter, node);
+        } else {
+            emitter.catchup(node.start);
+            visitNodes(emitter, node.children);
+        }
+    }
+}
+
+
+function filterAST(node: Node): Node {
+    //we don't care about comment
+    function isInteresting(child: Node) {
+        return !!child &&
+                child.kind !== NodeKind.AS_DOC &&
+                child.kind !== NodeKind.MULTI_LINE_COMMENT;
+    }
+
+    let newNode = new Node(
+            node.kind,
+            node.start,
+            node.end,
+            node.text,
+            node.children
+                    .filter(isInteresting)
+                    .map(filterAST));
+
+    newNode.children.forEach(child => child.parent = newNode);
+
+    return newNode;
+}
+
+
 class Emitter {
-    source: string;
-    options: EmitterOptions;
+    private source: string;
+    private options: EmitterOptions;
 
-    output: string = '';
+    private output: string = '';
 
-    index: number = 0;
-    currentClassName: string = '';
-    scope: Scope = null;
-    isNew: boolean = false;
-    emitThisForNextIdent: boolean = true;
-    parentNode: Node = null;
+    private index: number = 0;
+    private scope: Scope = null;
+
+    public isNew: boolean = false;
+    public emitThisForNextIdent: boolean = true;
 
     constructor(source: string, options?: EmitterOptions) {
         this.source = source;
-        this.options = assign({ lineSeparator: '\n' }, options || {});
+        this.options = assign({lineSeparator: '\n'}, options || {});
     }
 
     emit(ast: Node) {
-        this.enterScope([]);
-        this.visitNode(transformAST(ast, null));
-        this.catchup(this.source.length - 1);
-        this.exitScope();
+        this.withScope([], () => {
+            visitNode(this, filterAST(ast));
+            this.catchup(this.source.length - 1);
+        });
         return this.output;
     }
 
-    visitNode(node: Node) {
-        if (!node) {
-            return;
+    enterScope(declarations: Declaration[]) {
+        return this.scope = {parent: this.scope, declarations};
+    }
+
+    exitScope(checkScope: Scope = null) {
+        if (checkScope && this.scope != checkScope) {
+            throw new Error("Mismatched enterScope() / exitScope().");
         }
-        if (VISITORS.hasOwnProperty(node.kind)) {
-            VISITORS[node.kind](this, node);
-        } else {
-            this.catchup(node.start);
-            this.visitNodes(node.children);
+        if (!this.scope) {
+            throw new Error("Unmatched exitScope().");
+        }
+        this.scope = this.scope.parent;
+    }
+
+    withScope(declarations: Declaration[], body: (scope: Scope) => void) {
+        let scope = this.enterScope(declarations);
+        try {
+            body(scope);
+        } finally {
+            this.exitScope(scope);
         }
     }
 
-    visitNodes(nodes: Node[]) {
-        if (!nodes) {
-            return;
+    get currentClassName(): string {
+        for (var scope = this.scope; scope; scope = scope.parent) {
+            if (scope.className) {
+                return scope.className;
+            }
         }
-        nodes.forEach(node => this.visitNode(node));
+        return null;
     }
 
-    enterClassScope(contentsNode: Node[]) {
-        var found: {[name: string]: boolean } = {};
-
-        var declarations = contentsNode.map(node => {
-            var nameNode: Node;
-            var isStatic: boolean;
-
-            switch (node.kind) {
-                case NodeKind.SET:
-                case NodeKind.GET:
-                case NodeKind.FUNCTION:
-                    nameNode = node.findChild(NodeKind.NAME);
-                    break;
-                case NodeKind.VAR_LIST:
-                case NodeKind.CONST_LIST:
-                    nameNode = node.findChild(NodeKind.NAME_TYPE_INIT).findChild(NodeKind.NAME);
-                    break;
-            }
-            if (!nameNode || found[nameNode.text]) {
-                return null;
-            }
-            found[nameNode.text] = true;
-            if (nameNode.text === this.currentClassName) {
-                return;
-            }
-            var modList = node.findChild(NodeKind.MOD_LIST);
-            var isStatic = modList &&
-                    modList.children.some(mod => mod.text === 'static');
-            return {
-                name: nameNode.text,
-                bound: isStatic ? this.currentClassName : 'this'
-            };
-        }).filter(el => !!el);
-
-        this.enterScope(declarations);
-    }
-
-    enterFunctionScope(node: Node) {
-        var decls: Declaration[] = [];
-        var params = node.findChild(NodeKind.PARAMETER_LIST);
-        if (params && params.children.length) {
-            decls = params.children.map(param => {
-                var nameTypeInit = param.findChild(NodeKind.NAME_TYPE_INIT);
-                if (nameTypeInit) {
-                    return {name: nameTypeInit.findChild(NodeKind.NAME).text}
-                }
-                var rest = param.findChild(NodeKind.REST)
-                return {name: rest.text};
-            });
-        }
-        var block = node.findChild(NodeKind.BLOCK);
-        if (block) {
-            function traverse(node: Node): Declaration[] {
-                var result = [] as Array<Declaration>;
-                if (node.kind === NodeKind.VAR_LIST || node.kind === NodeKind.CONST_LIST ||
-                        node.kind === NodeKind.VAR || node.kind === NodeKind.CONST) {
-                    result = result.concat(
-                            node
-                                    .findChildren(NodeKind.NAME_TYPE_INIT)
-                                    .map(node => ({name: node.findChild(NodeKind.NAME).text}))
-                    );
-                }
-                if (node.kind !== NodeKind.FUNCTION && node.children && node.children.length) {
-                    result = Array.prototype.concat.apply(result, node.children.map(traverse));
-                }
-                return result.filter(decl => !!decl);
-            }
-
-            decls = decls.concat(traverse(block));
-        }
-
-        this.enterScope(decls);
-    }
-
-    enterScope(decls: Declaration[]) {
-        this.scope = {
-            parent: this.scope,
-            declarations: decls,
-            get isTopLevel() {
-                return !this.scope;
-            }
-        };
-    }
-
-    exitScope() {
-        this.scope = this.scope && this.scope.parent;
+    declareInScope(declaration: Declaration) {
+        this.scope.declarations.push(declaration);
     }
 
     findDefInScope(text: string) {
@@ -285,7 +234,7 @@ function emitPackage(emitter: Emitter, node: Node) {
     emitter.catchup(node.start);
     emitter.skip(NodeKind.PACKAGE.length);
     emitter.insert('module');
-    emitter.visitNodes(node.children);
+    visitNodes(emitter, node.children);
 }
 
 
@@ -307,7 +256,8 @@ function emitImport(emitter: Emitter, node: Node) {
     var name = split[split.length - 1];
     emitter.insert(name + ' = ');
     emitter.catchup(node.end);
-    emitter.scope.declarations.push({name: name});
+
+    emitter.declareInScope({name});
 }
 
 
@@ -315,7 +265,7 @@ function emitInterface(emitter: Emitter, node: Node) {
     emitDeclaration(emitter, node);
 
     //we'll catchup the other part
-    emitter.scope.declarations.push({
+    emitter.declareInScope({
         name: node.findChild(NodeKind.NAME).text
     });
 
@@ -324,7 +274,7 @@ function emitInterface(emitter: Emitter, node: Node) {
     let foundVariables: { [name: string]: boolean } = {};
     if (contentsNode) {
         contentsNode.forEach(node => {
-            emitter.visitNode(node.findChild(NodeKind.META_LIST));
+            visitNode(emitter, node.findChild(NodeKind.META_LIST));
             emitter.catchup(node.start);
             if (node.kind === NodeKind.FUNCTION) {
                 emitter.skip(8);
@@ -362,26 +312,102 @@ function emitInterface(emitter: Emitter, node: Node) {
 }
 
 
+function getFunctionDeclarations(emitter: Emitter, node: Node) {
+    let decls: Declaration[] = [];
+    let params = node.findChild(NodeKind.PARAMETER_LIST);
+    if (params && params.children.length) {
+        decls = params.children.map(param => {
+            let nameTypeInit = param.findChild(NodeKind.NAME_TYPE_INIT);
+            if (nameTypeInit) {
+                return {name: nameTypeInit.findChild(NodeKind.NAME).text}
+            }
+            let rest = param.findChild(NodeKind.REST);
+            return {name: rest.text};
+        });
+    }
+    let block = node.findChild(NodeKind.BLOCK);
+    if (block) {
+        function traverse(node: Node): Declaration[] {
+            let result: Declaration[] = [];
+            if (node.kind === NodeKind.VAR_LIST || node.kind === NodeKind.CONST_LIST ||
+                    node.kind === NodeKind.VAR || node.kind === NodeKind.CONST) {
+                result = result.concat(
+                        node
+                                .findChildren(NodeKind.NAME_TYPE_INIT)
+                                .map(node => ({name: node.findChild(NodeKind.NAME).text}))
+                );
+            }
+            if (node.kind !== NodeKind.FUNCTION && node.children && node.children.length) {
+                result = Array.prototype.concat.apply(result, node.children.map(traverse));
+            }
+            return result.filter(decl => !!decl);
+        }
+
+        decls = decls.concat(traverse(block));
+    }
+    return decls;
+}
+
+
 function emitFunction(emitter: Emitter, node: Node) {
     emitDeclaration(emitter, node);
-    emitter.enterFunctionScope(node);
-    let rest = node.getChildFrom(NodeKind.MOD_LIST);
-    emitter.exitScope();
-    emitter.visitNodes(rest);
+    emitter.withScope(getFunctionDeclarations(emitter, node), () => {
+        let rest = node.getChildFrom(NodeKind.MOD_LIST);
+        visitNodes(emitter, rest);
+    });
+}
+
+
+function getClassDeclarations(className: string, contentsNode: Node[]) {
+    let found: { [name: string]: boolean } = {};
+
+    return contentsNode.map(node => {
+        let nameNode: Node;
+
+        switch (node.kind) {
+            case NodeKind.SET:
+            case NodeKind.GET:
+            case NodeKind.FUNCTION:
+                nameNode = node.findChild(NodeKind.NAME);
+                break;
+            case NodeKind.VAR_LIST:
+            case NodeKind.CONST_LIST:
+                nameNode = node.findChild(NodeKind.NAME_TYPE_INIT).findChild(NodeKind.NAME);
+                break;
+        }
+        if (!nameNode || found[nameNode.text]) {
+            return null;
+        }
+        found[nameNode.text] = true;
+        if (nameNode.text === className) {
+            return;
+        }
+        let modList = node.findChild(NodeKind.MOD_LIST);
+        let isStatic = modList && modList.children.some(mod => mod.text === 'static');
+        return {
+            name: nameNode.text,
+            bound: isStatic ? className : 'this'
+        };
+    }).filter(el => !!el);
 }
 
 
 function emitClass(emitter: Emitter, node: Node) {
     emitDeclaration(emitter, node);
+
     let name = node.findChild(NodeKind.NAME);
-    emitter.currentClassName = name.text;
-    let content = node.findChild(NodeKind.CONTENT)
+
+    let content = node.findChild(NodeKind.CONTENT);
     let contentsNode = content && content.children;
-    if (contentsNode) {
-        //collects declarations
-        emitter.enterClassScope(contentsNode);
+    if (!contentsNode) {
+        return;
+    }
+
+    emitter.withScope(getClassDeclarations(name.text, contentsNode), scope => {
+        scope.className = name.text;
+
         contentsNode.forEach(node => {
-            emitter.visitNode(node.findChild(NodeKind.META_LIST));
+            visitNode(emitter, node.findChild(NodeKind.META_LIST));
             emitter.catchup(node.start);
             switch (node.kind) {
                 case NodeKind.SET:
@@ -398,29 +424,31 @@ function emitClass(emitter: Emitter, node: Node) {
                     emitPropertyDecl(emitter, node, true);
                     break;
                 default:
-                    emitter.visitNode(node);
+                    visitNode(emitter, node);
             }
         });
-        emitter.exitScope();
-    }
-    emitter.currentClassName = null;
+    });
 }
 
 
 function emitSet(emitter: Emitter, node: Node) {
     emitClassField(emitter, node);
+
     let name = node.findChild(NodeKind.NAME);
     emitter.consume('function', name.start);
+
     let params = node.findChild(NodeKind.PARAMETER_LIST);
-    emitter.visitNode(params);
+    visitNode(emitter, params);
     emitter.catchup(params.end);
+
     let type = node.findChild(NodeKind.TYPE);
     if (type) {
         emitter.skipTo(type.end);
     }
-    emitter.enterFunctionScope(node);
-    emitter.visitNodes(node.getChildFrom(NodeKind.TYPE));
-    emitter.exitScope();
+
+    emitter.withScope(getFunctionDeclarations(emitter, node), () => {
+        visitNodes(emitter, node.getChildFrom(NodeKind.TYPE));
+    });
 }
 
 
@@ -429,7 +457,7 @@ function emitConstList(emitter: Emitter, node: Node) {
     let nameTypeInit = node.findChild(NodeKind.NAME_TYPE_INIT);
     emitter.skipTo(nameTypeInit.start);
     emitter.insert('var ');
-    emitter.visitNode(nameTypeInit);
+    visitNode(emitter, nameTypeInit);
 }
 
 
@@ -447,9 +475,9 @@ function emitMethod(emitter: Emitter, node: Node) {
         emitter.insert('constructor');
         emitter.skipTo(name.end);
     }
-    emitter.enterFunctionScope(node);
-    emitter.visitNodes(node.getChildFrom(NodeKind.NAME));
-    emitter.exitScope();
+    emitter.withScope(getFunctionDeclarations(emitter, node), () => {
+        visitNodes(emitter, node.getChildFrom(NodeKind.NAME));
+    })
 }
 
 
@@ -457,7 +485,7 @@ function emitPropertyDecl(emitter: Emitter, node: Node, isConst = false) {
     emitClassField(emitter, node);
     let name = node.findChild(NodeKind.NAME_TYPE_INIT);
     emitter.consume(isConst ? 'const' : 'var', name.start);
-    emitter.visitNode(name);
+    visitNode(emitter, name);
 }
 
 
@@ -478,7 +506,7 @@ function emitClassField(emitter: Emitter, node: Node) {
 
 function emitDeclaration(emitter: Emitter, node: Node) {
     emitter.catchup(node.start);
-    emitter.visitNode(node.findChild(NodeKind.META_LIST));
+    visitNode(emitter, node.findChild(NodeKind.META_LIST));
     let mods = node.findChild(NodeKind.MOD_LIST);
     if (mods && mods.children.length) {
         emitter.catchup(mods.start);
@@ -554,7 +582,7 @@ function emitShortVector(emitter: Emitter, node: Node) {
     let arrayLiteral = node.findChild(NodeKind.ARRAY);
     if (arrayLiteral.children && arrayLiteral.children.length) {
         emitter.skipTo(arrayLiteral.children[0].start);
-        emitter.visitNodes(arrayLiteral.children);
+        visitNodes(emitter, arrayLiteral.children);
         emitter.catchup(arrayLiteral.lastChild.end);
     }
     emitter.insert(')');
@@ -566,7 +594,7 @@ function emitNew(emitter: Emitter, node: Node) {
     emitter.catchup(node.start);
     emitter.isNew = true;
     emitter.emitThisForNextIdent = false;
-    emitter.visitNodes(node.children);
+    visitNodes(emitter, node.children);
     emitter.isNew = false;
 }
 
@@ -590,7 +618,7 @@ function emitCall(emitter: Emitter, node: Node) {
             }
             emitter.skipTo(vector.end);
             emitter.insert('>');
-            emitter.visitNodes(node.getChildFrom(NodeKind.VECTOR));
+            visitNodes(emitter, node.getChildFrom(NodeKind.VECTOR));
             return;
         }
 
@@ -601,12 +629,12 @@ function emitCall(emitter: Emitter, node: Node) {
             emitVector(emitter, node.children[0]);
             emitter.insert('>');
             emitter.skipTo(args.children[0].start);
-            emitter.visitNode(args.children[0]);
+            visitNode(emitter, args.children[0]);
             emitter.catchup(node.end);
             return;
         }
     }
-    emitter.visitNodes(node.children);
+    visitNodes(emitter, node.children);
 }
 
 
@@ -618,7 +646,7 @@ function emitRelation(emitter: Emitter, node: Node) {
             emitter.insert('<');
             emitter.insert(node.lastChild.text);
             emitter.insert('>');
-            emitter.visitNodes(node.getChildUntil(NodeKind.AS));
+            visitNodes(emitter, node.getChildUntil(NodeKind.AS));
             emitter.catchup(as.start);
             emitter.skipTo(node.end);
         } else {
@@ -626,9 +654,8 @@ function emitRelation(emitter: Emitter, node: Node) {
         }
         return;
     }
-    emitter.visitNodes(node.children)
+    visitNodes(emitter, node.children);
 }
-
 
 
 function emitOp(emitter: Emitter, node: Node) {
