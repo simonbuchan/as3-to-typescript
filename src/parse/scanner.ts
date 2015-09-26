@@ -34,6 +34,7 @@
 import Token = require('./token');
 import Keywords = require('../syntax/keywords');
 import sax = require('sax');
+import objectAssign = require('object-assign');
 
 
 function startsWith(string: string, prefix: string) {
@@ -43,6 +44,12 @@ function startsWith(string: string, prefix: string) {
 
 function endsWith(string: string, suffix: string) {
     return string.substr(-suffix.length) === suffix;
+}
+
+
+interface CheckPoint {
+    index: number
+    inVector: boolean
 }
 
 
@@ -70,13 +77,28 @@ class AS3Scanner {
         return scanRegExp(this);
     }
 
-    getCheckPoint() {
+    getCheckPoint(): CheckPoint {
         return { index: this.index, inVector: this.inVector };
     }
 
-    rewind(checkpoint: { index: number, inVector: boolean }): void {
+    rewind(checkpoint: CheckPoint): void {
         this.index = checkpoint.index;
         this.inVector = checkpoint.inVector;
+    }
+
+    createToken(
+            text: string,
+            options?: {
+                index?: number
+                isNumeric?: boolean
+                isXML?: boolean
+                skip?: boolean
+            }): Token {
+        options = objectAssign({index: this.index, isNumeric: false, isXML: false, skip: true}, options);
+        if (options.skip && text.length > 1) {
+            this.skipChars(text.length - 1);
+        }
+        return new Token(text, options.index, options.isNumeric, options.isXML);
     }
 
     getPreviousCharacter(): string {
@@ -129,13 +151,13 @@ class AS3Scanner {
 
 function nextToken(scanner: AS3Scanner): Token {
     if (scanner.index >= scanner.content.length) {
-        return new Token(Keywords.EOF, scanner.index);
+        return scanner.createToken(Keywords.EOF, { skip: false });
     }
 
     let currentCharacter = scanner.nextNonWhitespaceCharacter();
     switch (currentCharacter) {
         case '\n':
-            return new Token('\n', scanner.index);
+            return scanner.createToken(currentCharacter);
         case '/':
             return scanCommentRegExpOrOperator(scanner);
         case '"': case '\'':
@@ -148,13 +170,13 @@ function nextToken(scanner: AS3Scanner): Token {
             return scanNumberOrDots(scanner, currentCharacter);
         case '{': case '}': case '(': case ')': case '[': case ']':
         case ';': case ',': case '?': case '~':
-            return new Token(currentCharacter, scanner.index);
+            return scanner.createToken(currentCharacter);
         case ':':
             return scanCharacterSequence(scanner, currentCharacter, ['::']);
         case '*':
             //UGLY HACK but .... seems working
             if (scanner.getPreviousCharacter() === ':') {
-                return new Token('*', scanner.index);
+                return scanner.createToken(currentCharacter);
             }
             return scanCharacterSequence(scanner, currentCharacter, ['*=']);
         case '+':
@@ -188,18 +210,17 @@ function nextToken(scanner: AS3Scanner): Token {
 
 function scanCharacterSequence(scanner: AS3Scanner, currentCharacter: string, possibleMatches: string[]): Token {
     let buffer = currentCharacter;
-    let found = buffer;
+    let match = buffer;
 
     let maxLength = Math.max(...possibleMatches.map(m => m.length));
     for (let peekPos = 1; peekPos < maxLength; peekPos++) {
         buffer += scanner.peekChar(peekPos);
         if (possibleMatches.indexOf(buffer) !== -1) {
-            found = buffer;
+            match = buffer;
         }
     }
-    let result = new Token(found, scanner.index);
-    scanner.skipChars(found.length - 1);
-    return result;
+
+    return scanner.createToken(match);
 }
 
 
@@ -247,11 +268,9 @@ function scanCommentRegExpOrOperator(scanner: AS3Scanner): Token {
         return scanMultiLineComment(scanner);
     }
     if (firstCharacter != '=') {
-        return new Token('/', scanner.index);
+        return scanner.createToken('/');
     }
-    let result = new Token('/=', scanner.index);
-    scanner.skipChars(1);
-    return result;
+    return scanner.createToken('/=');
 }
 
 
@@ -287,9 +306,7 @@ function scanDecimal(scanner: AS3Scanner, currentCharacter: string): Token {
         }
     }
 
-    let result = new Token(buffer.toString(), scanner.index, true);
-    scanner.skipChars(result.text.length - 1);
-    return result;
+    return scanner.createToken(buffer, {isNumeric: true});
 }
 
 
@@ -302,16 +319,10 @@ function scanDots(scanner: AS3Scanner): Token {
     if (secondCharacter == '.') {
         let thirdCharacter = scanner.peekChar(2);
         let text = thirdCharacter != '.' ? '..' : '...';
-        let result = new Token(text, scanner.index);
-
-        scanner.skipChars(text.length - 1);
-
-        return result;
+        return scanner.createToken(text);
     } else if (secondCharacter == '<') {
-        let result = new Token('.<', scanner.index);
-        scanner.skipChars(1);
         scanner.inVector = true;
-        return result;
+        return scanner.createToken('.<');
     }
     return null;
 }
@@ -330,9 +341,7 @@ function scanHex(scanner: AS3Scanner): Token {
         }
         buffer += character;
     }
-    let result = new Token(buffer, scanner.index, true);
-    scanner.skipChars(result.text.length - 1);
-    return result;
+    return scanner.createToken(buffer, {isNumeric: true});
 }
 
 
@@ -340,20 +349,19 @@ function scanHex(scanner: AS3Scanner): Token {
  * the current string is the first slash plus we know, that a * is following
  */
 function scanMultiLineComment(scanner: AS3Scanner): Token {
-    let buffer = '';
+    let buffer = '/*';
     let currentCharacter = ' ';
     let previousCharacter = ' ';
 
-    buffer += '/*';
     scanner.nextChar();
     do {
         previousCharacter = currentCharacter;
         currentCharacter = scanner.nextChar();
         buffer += currentCharacter;
     }
-    while (currentCharacter && !(currentCharacter === '/' && previousCharacter == '*'));
+    while (currentCharacter && (previousCharacter !== '*' || currentCharacter !== '/'));
 
-    return new Token(buffer.toString(), scanner.index);
+    return scanner.createToken(buffer, {skip: false});
 }
 
 
@@ -367,17 +375,13 @@ function scanNumberOrDots(scanner: AS3Scanner, characterToBeScanned: string): To
             return result;
         }
 
-        let firstCharacter = scanner.peekChar(1);
-        if (!/\d/.test(firstCharacter)) {
-            return new Token('.', scanner.index);
+        if (!/\d/.test(scanner.peekChar(1))) {
+            return scanner.createToken('.');
         }
     }
 
-    if (characterToBeScanned == '0') {
-        let firstCharacter = scanner.peekChar(1);
-        if (firstCharacter == 'x') {
-            return scanHex(scanner);
-        }
+    if (characterToBeScanned == '0' && scanner.peekChar(1) == 'x') {
+        return scanHex(scanner);
     }
 
     return scanDecimal(scanner, characterToBeScanned);
@@ -397,7 +401,7 @@ function scanSingleLineComment(scanner: AS3Scanner): Token {
     }
     while (char !== '\n');
 
-    return new Token(buffer, scanner.index);
+    return scanner.createToken(buffer, {skip: false});
 }
 
 
@@ -416,9 +420,7 @@ function scanUntilDelimiter(scanner: AS3Scanner, start: string, delimiter: strin
         }
         buffer += currentCharacter;
         if (currentCharacter === delimiter && !inBackslash) {
-            let result = new Token(buffer, scanner.index);
-            scanner.skipChars(buffer.toString().length - 1);
-            return result;
+            return scanner.createToken(buffer);
         }
         if (currentCharacter === '\\') {
             inBackslash = !inBackslash;
@@ -440,9 +442,7 @@ function scanWord(scanner: AS3Scanner, startingCharacter: string): Token {
         buffer += currentChar;
     }
 
-    let result = new Token(buffer.toString(), scanner.index);
-    scanner.skipChars(buffer.toString().length - 1);
-    return result;
+    return scanner.createToken(buffer);
 }
 
 
@@ -450,7 +450,7 @@ function scanWord(scanner: AS3Scanner, startingCharacter: string): Token {
  * Try to parse a XML document
  */
 function scanXML(scanner: AS3Scanner): Token {
-    let currentIndex: number = scanner.index;
+    let currentIndex = scanner.index;
     let level = 0;
     let buffer = '';
     let currentCharacter = '<';
@@ -475,16 +475,15 @@ function scanXML(scanner: AS3Scanner): Token {
         }
         while (currentToken == null);
 
-        if (currentToken.text.indexOf('</') === 0) {
+        if (startsWith(currentToken.text, '</')) {
             level--;
-        } else if (!endsWith(currentToken.text, '/>')
-            && currentToken.text !== '<>') // NOT operator in AS2
-        {
+        } else if (!endsWith(currentToken.text, '/>') &&
+                currentToken.text !== '<>') { // NOT operator in AS2
             level++;
         }
 
         if (level <= 0) {
-            return new Token(buffer.toString(), currentIndex, false, true);
+            return scanner.createToken(buffer, {index: currentIndex, isXML: true, skip: false});
         }
 
         for (; ;) {
