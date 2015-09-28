@@ -1,4 +1,4 @@
-class Token {
+export default class Token {
     end: number;
 
     constructor(
@@ -10,5 +10,3 @@ class Token {
         this.end = index + text.length;
     }
 }
-
-export = Token;

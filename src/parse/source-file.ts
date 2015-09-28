@@ -45,35 +45,13 @@ function buildLineMap(text: string): number[] {
 }
 
 
-interface LineAndCharacter {
+export interface LineAndCharacter {
     line: number
     col: number
 }
 
 
-function getLineAndCharacterFromPosition(position: number, lineStarts: number[]): LineAndCharacter {
-    if (position < 0 || position > this.length) {
-        throw Error("invalid position" + position);
-    }
-
-    var line = -1;
-    if (position === this.length) {
-        line = lineStarts.length - 1;
-    } else {
-        for (var i = 0; i < lineStarts.length; i++) {
-            if (lineStarts[i] > position) {
-                break;
-            }
-            line = i;
-        }
-        line = line > 0 ? line : 0;
-    }
-    let col = position - lineStarts[line];
-    return { line, col };
-}
-
-
-class SourceFile {
+export default class SourceFile {
     private lineMap: number[];
 
     constructor(
@@ -82,10 +60,25 @@ class SourceFile {
         this.lineMap = buildLineMap(content);
     }
     
-    getLineAndCharacterFromPosition(position: number) {
-        return getLineAndCharacterFromPosition(position, this.lineMap);
+    getLineAndCharacterFromPosition(position: number): LineAndCharacter {
+        let lineStarts = this.lineMap;
+        if (position < 0 || position > this.content.length) {
+            throw Error(`invalid position ${position}`);
+        }
+
+        var line = -1;
+        if (position === this.content.length) {
+            line = lineStarts.length - 1;
+        } else {
+            for (var i = 0; i < lineStarts.length; i++) {
+                if (lineStarts[i] > position) {
+                    break;
+                }
+                line = i;
+            }
+            line = line > 0 ? line : 0;
+        }
+        let col = position - lineStarts[line];
+        return { line, col };
     }
 }
-
-export = SourceFile;
-

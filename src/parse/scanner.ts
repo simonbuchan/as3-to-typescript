@@ -31,9 +31,9 @@
 
 
 
-import Token = require('./token');
-import Keywords = require('../syntax/keywords');
-import sax = require('sax');
+import Token from './token';
+import * as Keywords from '../syntax/keywords';
+import sax  = require('sax');
 import objectAssign = require('object-assign');
 
 
@@ -47,7 +47,7 @@ function endsWith(string: string, suffix: string) {
 }
 
 
-interface CheckPoint {
+export interface CheckPoint {
     index: number
     inVector: boolean
 }
@@ -59,7 +59,7 @@ interface CheckPoint {
  * @author rbokel
  * @author xagnetti
  */
-class AS3Scanner {
+export default class AS3Scanner {
     inVector: boolean;
     index: number;
     content: string = '';
@@ -518,6 +518,3 @@ function scanXMLOrOperator(scanner: AS3Scanner, startingCharacterc: string): Tok
     }
     return scanCharacterSequence(scanner, startingCharacterc, ['<<<=', '<<<', '<<=', '<<', '<=']);
 }
-
-
-export = AS3Scanner;

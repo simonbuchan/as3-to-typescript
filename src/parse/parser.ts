@@ -29,13 +29,13 @@
  *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import SourceFile = require('./source-file');
-import AS3Scanner = require('./scanner');
-import Token = require('./token');
-import NodeKind = require('../syntax/nodeKind');
-import Operators = require('../syntax/operators');
-import KeyWords = require('../syntax/keywords');
-import Node = require('../syntax/node');
+import SourceFile from './source-file';
+import AS3Scanner from './scanner';
+import Token from './token';
+import * as NodeKind from '../syntax/nodeKind';
+import * as Operators from '../syntax/operators';
+import * as KeyWords from '../syntax/keywords';
+import Node from '../syntax/node';
 
 
 const ASDOC_COMMENT = "/**";
@@ -58,7 +58,7 @@ function endsWith(string: string, suffix: string) {
 /**
  * @author xagnetti
  */
-class AS3Parser {
+export default class AS3Parser {
     private sourceFile: SourceFile;
 
     private currentAsDoc: Node;
@@ -1922,4 +1922,7 @@ class AS3Parser {
     }
 }
 
-export = AS3Parser;
+export function parse(filePath: string, content: string): Node {
+    var parser = new AS3Parser();
+    return parser.buildAst(filePath, content);
+}

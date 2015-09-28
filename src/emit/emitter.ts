@@ -1,6 +1,6 @@
-import NodeKind = require('./../syntax/nodeKind');
-import Keywords = require('./../syntax/keywords');
-import Node = require('./../syntax/node');
+import * as NodeKind from '../syntax/nodeKind';
+import * as Keywords from '../syntax/keywords';
+import Node from '../syntax/node';
 import assign = require('object-assign');
 
 
@@ -102,7 +102,7 @@ function filterAST(node: Node): Node {
 }
 
 
-class Emitter {
+export default class Emitter {
     private source: string;
     private options: EmitterOptions;
 

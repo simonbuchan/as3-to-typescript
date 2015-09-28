@@ -1,7 +1,7 @@
 /*jshint node:true*/
 
-import parse = require('./parse');
-import emit = require('./emit');
+import {parse} from './parse/parser';
+import {emit} from './emit/emitter';
 import fs = require('fs-extra');
 import path = require('path');
 

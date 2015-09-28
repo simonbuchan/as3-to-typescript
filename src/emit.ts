@@ -1,2 +1,2 @@
-import emitter = require('./emit/emitter');
-export = emitter.emit;
+import {emit} from './emit/emitter';
+export = emit;

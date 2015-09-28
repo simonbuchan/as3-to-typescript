@@ -1,5 +1,4 @@
-
-class Node {
+export default class Node {
     constructor (
         public kind: string, 
         public start: number,
@@ -46,5 +45,3 @@ class Node {
         return this.children[this.children.length -1];
     }
 }
-
-export = Node;
