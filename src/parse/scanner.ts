@@ -33,18 +33,10 @@
 
 import Token from './token';
 import * as Keywords from '../syntax/keywords';
+import {startsWith, endsWith} from '../string';
+
 import sax  = require('sax');
 import objectAssign = require('object-assign');
-
-
-function startsWith(string: string, prefix: string) {
-    return string.substr(0, prefix.length) === prefix;
-}
-
-
-function endsWith(string: string, suffix: string) {
-    return string.substr(-suffix.length) === suffix;
-}
 
 
 export interface CheckPoint {

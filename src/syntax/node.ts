@@ -1,6 +1,8 @@
+import NodeKind from './nodeKind';
+
 export default class Node {
     constructor (
-        public kind: string, 
+        public kind: NodeKind,
         public start: number,
         public end: number,
         public text?: string,
@@ -8,21 +10,21 @@ export default class Node {
         public parent?: Node) {
     }
     
-    findChild(type: string): Node {
+    findChild(kind: NodeKind): Node {
         for (var i = 0; i< this.children.length;i++) {
-            if (this.children[i].kind === type) {
+            if (this.children[i].kind === kind) {
                 return this.children[i]
             }
         }
         return null;
     }
     
-    findChildren(type: string): Node[] {
-        return this.children.filter(child => child.kind === type);
+    findChildren(kind: NodeKind): Node[] {
+        return this.children.filter(child => child.kind === kind);
     }
     
-    getChildFrom(type: string) {
-        var child = this.findChild(type);
+    getChildFrom(kind: NodeKind) {
+        var child = this.findChild(kind);
         if (!child) {
             return this.children.slice(0)
         } else {
@@ -31,8 +33,8 @@ export default class Node {
         }
     }
     
-    getChildUntil(type: string) {
-        var child = this.findChild(type);
+    getChildUntil(kind: NodeKind) {
+        var child = this.findChild(kind);
         if (!child) {
             return this.children.splice(0)
         } else {

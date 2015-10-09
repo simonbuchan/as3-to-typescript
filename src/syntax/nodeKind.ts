@@ -1,102 +1,109 @@
-export let ADD = "add";
-export let AND = "and";
-export let ARGUMENTS = "arguments";
-export let ARRAY = "array";
-export let ARRAY_ACCESSOR = "arr-acc";
-export let AS = "as";
-export let AS_DOC = "as-doc";
-export let ASSIGN = "assign";
-export let B_AND = "b-and";
-export let B_NOT = "b-not";
-export let B_OR = "b-or";
-export let B_XOR = "b-xor";
-export let BLOCK = "block";
-export let BREAK = "break";
-export let CALL = "call";
-export let CASE = "case";
-export let CASES = "cases";
-export let CATCH = "catch";
-export let CLASS = "class";
-export let COMPILATION_UNIT = "compilation-unit";
-export let COND = "cond";
-export let CONDITION = "condition";
-export let CONDITIONAL = "conditional";
-export let CONST = "const";
-export let CONST_LIST = "const-list";
-export let CONTENT = "content";
-export let CONTINUE = "continue";
-export let DEFAULT = "default";
-export let DELETE = "delete";
-export let DO = "do";
-export let DOT = "dot";
-export let E4X_ATTR = "e4x-attr";
-export let E4X_FILTER = "e4x-filter";
-export let E4X_STAR = "e4x-star";
-export let ENCAPSULATED = "encapsulated";
-export let EQUALITY = "equality";
-export let EXPR_LIST = "expr-list";
-export let EXTENDS = "extends";
-export let FINALLY = "finally";
-export let FOR = "for";
-export let FOREACH = "foreach";
-export let FORIN = "forin";
-export let FUNCTION = "function";
-export let GET = "get";
-export let IF = "if";
-export let IMPLEMENTS = "implements";
-export let IMPLEMENTS_LIST = "implements-list";
-export let IMPORT = "import";
-export let IN = "in";
-export let INCLUDE = "include";
-export let INIT = "init";
-export let INTERFACE = "interface";
-export let ITER = "iter";
-export let LAMBDA = "lambda";
-export let LEFT_CURLY_BRACKET = "{";
-export let META = "meta";
-export let META_LIST = "meta-list";
-export let MINUS = "minus";
-export let MOD_LIST = "mod-list";
-export let MODIFIER = "mod";
-export let MULTI_LINE_COMMENT = "multi-line-comment";
-export let MULTIPLICATION = "mul";
-export let NAME = "name";
-export let NAME_TYPE_INIT = "name-type-init";
-export let NEW = "new";
-export let NOT = "not";
-export let OBJECT = "object";
-export let OP = "op";
-export let OR = "or";
-export let PACKAGE = "package";
-export let PARAMETER = "parameter";
-export let PARAMETER_LIST = "parameter-list";
-export let PLUS = "plus";
-export let POST_DEC = "post-dec";
-export let POST_INC = "post-inc";
-export let PRE_DEC = "pre-dec";
-export let PRE_INC = "pre-inc";
-export let PROP = "prop";
-export let RELATION = "relation";
-export let REST = "rest";
-export let RETURN = "return";
-export let SET = "set";
-export let SHIFT = "shift";
-export let STAR = "star";
-export let STMT_EMPTY = "stmt-empty";
-export let SWITCH = "switch";
-export let SWITCH_BLOCK = "switch-block";
-export let TRY = "try";
-export let TYPE = "type";
-export let TYPEOF = "typeof";
-export let USE = "use";
-export let VALUE = "value";
-export let VAR = "var";
-export let VAR_LIST = "var-list";
-export let VECTOR = "vector";
-export let SHORT_VECTOR = "short_vector";
-export let VOID = "void";
-export let WHILE = "while";
+enum NodeKind
+{
+    ADD,
+    AND,
+    ARGUMENTS,
+    ARRAY,
+    ARRAY_ACCESSOR,
+    AS,
+    AS_DOC,
+    ASSIGN,
+    B_AND,
+    B_NOT,
+    B_OR,
+    B_XOR,
+    BLOCK,
+    BREAK,
+    CALL,
+    CASE,
+    CASES,
+    CATCH,
+    CLASS,
+    COMPILATION_UNIT,
+    COND,
+    CONDITION,
+    CONDITIONAL,
+    CONST,
+    CONST_LIST,
+    CONTENT,
+    CONTINUE,
+    DEFAULT,
+    DELETE,
+    DO,
+    DOT,
+    E4X_ATTR,
+    E4X_FILTER,
+    E4X_STAR,
+    ENCAPSULATED,
+    EQUALITY,
+    EXPR_LIST,
+    EXTENDS,
+    FINALLY,
+    FOR,
+    FOREACH,
+    FORIN,
+    FUNCTION,
+    GET,
+    IF,
+    IMPLEMENTS,
+    IMPLEMENTS_LIST,
+    IMPORT,
+    IN,
+    INCLUDE,
+    INIT,
+    INTERFACE,
+    ITER,
+    LAMBDA,
+    LEFT_CURLY_BRACKET,
+    META,
+    META_LIST,
+    MINUS,
+    MOD_LIST,
+    MODIFIER,
+    MULTI_LINE_COMMENT,
+    MULTIPLICATION,
+    NAME,
+    NAME_TYPE_INIT,
+    NEW,
+    NOT,
+    OBJECT,
+    OP,
+    OR,
+    PACKAGE,
+    PARAMETER,
+    PARAMETER_LIST,
+    PLUS,
+    POST_DEC,
+    POST_INC,
+    PRE_DEC,
+    PRE_INC,
+    PROP,
+    RELATION,
+    REST,
+    RETURN,
+    SET,
+    SHIFT,
+    STAR,
+    STMT_EMPTY,
+    SWITCH,
+    SWITCH_BLOCK,
+    TRY,
+    TYPE,
+    TYPEOF,
+    USE,
+    VALUE,
+    VAR,
+    VAR_LIST,
+    VECTOR,
+    SHORT_VECTOR,
+    VOID,
+    WHILE,
 
-export let XML_LITERAL = "xml_literal";
-export let LITERAL = "literal";
-export let IDENTIFIER = "identifier";
+    XML_LITERAL,
+    LITERAL,
+    IDENTIFIER,
+}
+
+// Can't do 'export default enum Foo {...}' for some reason?
+export default NodeKind;
+

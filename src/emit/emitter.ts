@@ -1,4 +1,4 @@
-import * as NodeKind from '../syntax/nodeKind';
+import NodeKind from '../syntax/nodeKind';
 import * as Keywords from '../syntax/keywords';
 import Node from '../syntax/node';
 import assign = require('object-assign');
@@ -37,7 +37,7 @@ interface NodeVisitor {
 }
 
 
-const VISITORS: {[kind: string]: NodeVisitor} = {
+const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.PACKAGE]: emitPackage,
     [NodeKind.META]: emitMeta,
     [NodeKind.IMPORT]: emitImport,
@@ -68,14 +68,12 @@ function visitNodes(emitter: Emitter, nodes: Node[]) {
 
 
 function visitNode(emitter: Emitter, node: Node) {
-    if (node) {
-        if (VISITORS.hasOwnProperty(node.kind)) {
-            VISITORS[node.kind](emitter, node);
-        } else {
-            emitter.catchup(node.start);
-            visitNodes(emitter, node.children);
-        }
-    }
+    if (!node) return;
+    let visitor = VISITORS[node.kind] || function (emitter: Emitter, node: Node) {
+        emitter.catchup(node.start);
+        visitNodes(emitter, node.children);
+    };
+    visitor(emitter, node);
 }
 
 
@@ -232,7 +230,7 @@ export default class Emitter {
 
 function emitPackage(emitter: Emitter, node: Node) {
     emitter.catchup(node.start);
-    emitter.skip(NodeKind.PACKAGE.length);
+    emitter.skip(Keywords.PACKAGE.length);
     emitter.insert('module');
     visitNodes(emitter, node.children);
 }
@@ -251,7 +249,7 @@ function emitInclude(emitter: Emitter, node: Node) {
 
 
 function emitImport(emitter: Emitter, node: Node) {
-    emitter.catchup(node.start + NodeKind.IMPORT.length + 1);
+    emitter.catchup(node.start + Keywords.IMPORT.length + 1);
     var split = node.text.split('.');
     var name = split[split.length - 1];
     emitter.insert(name + ' = ');
@@ -312,7 +310,7 @@ function emitInterface(emitter: Emitter, node: Node) {
 }
 
 
-function getFunctionDeclarations(emitter: Emitter, node: Node) {
+function getFunctionDeclarations(node: Node) {
     let decls: Declaration[] = [];
     let params = node.findChild(NodeKind.PARAMETER_LIST);
     if (params && params.children.length) {
@@ -351,7 +349,7 @@ function getFunctionDeclarations(emitter: Emitter, node: Node) {
 
 function emitFunction(emitter: Emitter, node: Node) {
     emitDeclaration(emitter, node);
-    emitter.withScope(getFunctionDeclarations(emitter, node), () => {
+    emitter.withScope(getFunctionDeclarations(node), () => {
         let rest = node.getChildFrom(NodeKind.MOD_LIST);
         visitNodes(emitter, rest);
     });
@@ -446,7 +444,7 @@ function emitSet(emitter: Emitter, node: Node) {
         emitter.skipTo(type.end);
     }
 
-    emitter.withScope(getFunctionDeclarations(emitter, node), () => {
+    emitter.withScope(getFunctionDeclarations(node), () => {
         visitNodes(emitter, node.getChildFrom(NodeKind.TYPE));
     });
 }
@@ -475,7 +473,7 @@ function emitMethod(emitter: Emitter, node: Node) {
         emitter.insert('constructor');
         emitter.skipTo(name.end);
     }
-    emitter.withScope(getFunctionDeclarations(emitter, node), () => {
+    emitter.withScope(getFunctionDeclarations(node), () => {
         visitNodes(emitter, node.getChildFrom(NodeKind.NAME));
     })
 }

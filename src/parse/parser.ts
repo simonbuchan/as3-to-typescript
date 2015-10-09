@@ -32,10 +32,11 @@
 import SourceFile from './source-file';
 import AS3Scanner from './scanner';
 import Token from './token';
-import * as NodeKind from '../syntax/nodeKind';
+import NodeKind from '../syntax/nodeKind';
 import * as Operators from '../syntax/operators';
 import * as KeyWords from '../syntax/keywords';
 import Node from '../syntax/node';
+import {startsWith} from '../string';
 
 
 const ASDOC_COMMENT = "/**";
@@ -43,16 +44,6 @@ const MULTIPLE_LINES_COMMENT = "/*";
 const NEW_LINE = "\n";
 const SINGLE_LINE_COMMENT = "//";
 const VECTOR = "Vector";
-
-
-function startsWith(string: string, prefix: string) {
-    return string.substring(0, prefix.length) === prefix;
-}
-
-
-function endsWith(string: string, suffix: string) {
-    return string.substr(-suffix.length) === suffix;
-}
 
 
 /**
@@ -474,7 +465,7 @@ export default class AS3Parser {
         return [type, name, params, returnType];
     }
 
-    private findFunctionTypeFromSignature(signature: Node[]): string {
+    private findFunctionTypeFromSignature(signature: Node[]): NodeKind {
         for (var i = 0; i < signature.length; i++) {
             var node = signature[i];
             if (node.kind === NodeKind.TYPE) {
@@ -1548,7 +1539,7 @@ export default class AS3Parser {
     
     private parseBreakOrContinueStatement(): Node {
         var tok: Token = this.tok;
-        var kind: string;
+        var kind: NodeKind;
         if (this.tokIs(KeyWords.BREAK) || this.tokIs(KeyWords.CONTINUE)) {
             kind = this.tokIs(KeyWords.BREAK)? NodeKind.BREAK : NodeKind.CONTINUE;
             this.nextToken();
@@ -1695,7 +1686,7 @@ export default class AS3Parser {
                 result.children.push(new Node(NodeKind.INIT, expr.start, expr.end, null, [expr]));
                 this.isInFor = false;
             }
-            if (this.tokIs(NodeKind.IN)) {
+            if (this.tokIs(KeyWords.IN)) {
                 return this.parseForIn(result);
             }
         }
