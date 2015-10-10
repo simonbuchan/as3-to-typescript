@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "source-map-support": "^0.3.2",
+    "tslint": "^2.5.1",
     "typescript": "^1.5.3"
   }
 }

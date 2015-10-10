@@ -1,5 +1,4 @@
-enum NodeKind
-{
+enum NodeKind {
     ADD,
     AND,
     ARGUMENTS,

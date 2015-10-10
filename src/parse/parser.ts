@@ -39,11 +39,11 @@ import Node from '../syntax/node';
 import {startsWith} from '../string';
 
 
-const ASDOC_COMMENT = "/**";
-const MULTIPLE_LINES_COMMENT = "/*";
-const NEW_LINE = "\n";
-const SINGLE_LINE_COMMENT = "//";
-const VECTOR = "Vector";
+const ASDOC_COMMENT = '/**';
+const MULTIPLE_LINES_COMMENT = '/*';
+const NEW_LINE = '\n';
+const SINGLE_LINE_COMMENT = '//';
+const VECTOR = 'Vector';
 
 
 /**
@@ -71,23 +71,22 @@ export default class AS3Parser {
     }
 
 
-    private nextToken(ignoreDocumentation: boolean= false): void {
+    private nextToken(ignoreDocumentation: boolean = false): void {
         do {
             if (ignoreDocumentation) {
                 this.nextTokenIgnoringDocumentation();
-            }
-            else {
+            } else {
                 this.nextTokenAllowNewLine();
             }
         }
         while (this.tok.text === NEW_LINE);
     }
-    
+
     private tryParse<T>(func: () => T): T {
         let checkPoint = this.scn.getCheckPoint();
         try {
             return func();
-        } catch(e) {
+        } catch (e) {
             this.scn.rewind(checkPoint);
             return null;
         }
@@ -110,27 +109,23 @@ export default class AS3Parser {
             }
             if (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
                 meta.push(this.parseMetaData());
-            }
-            else if (this.tokIs(Keywords.VAR)) {
+            } else if (this.tokIs(Keywords.VAR)) {
                 this.parseClassField(result, modifiers, meta);
-            }
-            else if (this.tokIs(Keywords.CONST)) {
+            } else if (this.tokIs(Keywords.CONST)) {
                 this.parseClassConstant(result, modifiers, meta);
-            }
-            else if (this.tokIs(Keywords.IMPORT)) {
+            } else if (this.tokIs(Keywords.IMPORT)) {
                 result.children.push(this.parseImport());
-            }
-            else if (this.tokIs(Keywords.INCLUDE) || this.tokIs(Keywords.INCLUDE_AS2)) {
+            } else if (this.tokIs(Keywords.INCLUDE) || this.tokIs(Keywords.INCLUDE_AS2)) {
                 result.children.push(this.parseIncludeExpression());
-            }
-            else if (this.tokIs(Keywords.FUNCTION)) {
+            } else if (this.tokIs(Keywords.FUNCTION)) {
                 this.parseClassFunctions(result, modifiers, meta);
-            }
-            else {
+            } else {
                 this.tryToParseCommentNode(result, modifiers);
             }
         }
-        if (result.lastChild) { result.end = result.lastChild.end }
+        if (result.lastChild) {
+            result.end = result.lastChild.end;
+        }
         return result;
     }
 
@@ -169,24 +164,22 @@ export default class AS3Parser {
         while (!this.tokIs(Operators.RIGHT_CURLY_BRACKET)) {
             if (this.tokIs(Keywords.IMPORT)) {
                 result.children.push(this.parseImport());
-            }
-            else if (this.tokIs(Keywords.FUNCTION)) {
+            } else if (this.tokIs(Keywords.FUNCTION)) {
                 result.children.push(this.parseFunctionSignature());
-            }
-            else if (this.tokIs(Keywords.INCLUDE) || this.tokIs(Keywords.INCLUDE_AS2)) {
+            } else if (this.tokIs(Keywords.INCLUDE) || this.tokIs(Keywords.INCLUDE_AS2)) {
                 result.children.push(this.parseIncludeExpression());
-            }
-            else if (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
+            } else if (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
                 while (!this.tokIs(Operators.RIGHT_SQUARE_BRACKET)) {
                     this.nextToken();
                 }
                 this.nextToken();
-            }
-            else {
+            } else {
                 this.tryToParseCommentNode(result, null);
             }
         }
-        if (result.lastChild) { result.end = result.lastChild.end }
+        if (result.lastChild) {
+            result.end = result.lastChild.end;
+        }
         return result;
     }
 
@@ -203,45 +196,38 @@ export default class AS3Parser {
         while (!this.tokIs(Operators.RIGHT_CURLY_BRACKET) && !this.tokIs(Keywords.EOF)) {
             if (this.tokIs(Keywords.IMPORT)) {
                 result.children.push(this.parseImport());
-            }
-            else if (this.tokIs(Keywords.USE)) {
+            } else if (this.tokIs(Keywords.USE)) {
                 result.children.push(this.parseUse());
-            }
-            else if (this.tokIs(Keywords.INCLUDE) || this.tokIs(Keywords.INCLUDE_AS2)) {
+            } else if (this.tokIs(Keywords.INCLUDE) || this.tokIs(Keywords.INCLUDE_AS2)) {
                 result.children.push(this.parseIncludeExpression());
-            }
-            else if (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
+            } else if (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
                 meta.push(this.parseMetaData());
-            }
-            else if (this.tokIs(Keywords.CLASS)) {
+            } else if (this.tokIs(Keywords.CLASS)) {
                 result.children.push(this.parseClass(meta, modifiers));
                 modifiers.length = 0;
                 meta.length = 0;
-            }
-            else if (this.tokIs(Keywords.INTERFACE)) {
+            } else if (this.tokIs(Keywords.INTERFACE)) {
                 result.children.push(this.parseInterface(meta, modifiers));
                 modifiers.length = 0;
                 meta.length = 0;
-            }
-            else if (this.tokIs(Keywords.FUNCTION)) {
+            } else if (this.tokIs(Keywords.FUNCTION)) {
                 this.parseClassFunctions(result, modifiers, meta);
-            }
-            else if (startsWith(this.tok.text, ASDOC_COMMENT)) {
+            } else if (startsWith(this.tok.text, ASDOC_COMMENT)) {
                 this.currentAsDoc = new Node(NodeKind.AS_DOC, this.tok.index,
                     this.tok.index + this.tok.index - 1, this.tok.text);
                 this.nextToken();
-            }
-            else if (startsWith(this.tok.text, MULTIPLE_LINES_COMMENT)) {
+            } else if (startsWith(this.tok.text, MULTIPLE_LINES_COMMENT)) {
                 this.currentMultiLineComment = new Node(NodeKind.MULTI_LINE_COMMENT, this.tok.index,
                     this.tok.index + this.tok.index - 1, this.tok.text);
                 this.nextToken();
-            }
-            else {
+            } else {
                 modifiers.push(this.tok);
                 this.nextTokenIgnoringDocumentation();
             }
         }
-        if (result.lastChild) { result.end = result.lastChild.end }
+        if (result.lastChild) {
+            result.end = result.lastChild.end;
+        }
         return result;
     }
 
@@ -250,8 +236,8 @@ export default class AS3Parser {
      * @throws TokenException
      */
     private parsePrimaryExpression(): Node {
-        let result:Node;
-        
+        let result: Node;
+
         if (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
             return this.parseArrayLiteral();
         } else if (this.tokIs(Operators.LEFT_CURLY_BRACKET)) {
@@ -262,7 +248,7 @@ export default class AS3Parser {
             return this.parseNewExpression();
         } else if (this.tokIs(Operators.LEFT_PARENTHESIS)) {
             return this.parseEncapsulatedExpression();
-        } else if (this.tok.text === 'Vector') {
+        } else if (this.tok.text === VECTOR) {
             return this.parseVector();
         } else if (this.tokIs(Operators.INFERIOR)) {
             let res = this.tryParse(() => this.parseShortVector());
@@ -270,19 +256,18 @@ export default class AS3Parser {
                 return res;
             }
         }
-        
+
         if (this.tok.text === '/' || this.tok.text === '/=') {
             let tok = this.scn.scanRegExp();
             if (tok) {
                 this.nextToken(true);
-                return new Node(NodeKind.LITERAL, tok.index, tok.end, tok.text)
+                return new Node(NodeKind.LITERAL, tok.index, tok.end, tok.text);
             }
         }
 
         if (this.tok.isXML) {
             result = new Node(NodeKind.XML_LITERAL, this.tok.index, this.tok.end, this.tok.text);
-        }
-        else if (this.tok.isNumeric || /('|")/.test(this.tok.text[0])) {
+        } else if (this.tok.isNumeric || /('|")/.test(this.tok.text[0])) {
             result = new Node(NodeKind.LITERAL, this.tok.index, this.tok.end, this.tok.text);
         } else {
             result = new Node(NodeKind.IDENTIFIER,  this.tok.index, this.tok.end, this.tok.text);
@@ -301,50 +286,35 @@ export default class AS3Parser {
 
         if (this.tokIs(Keywords.FOR)) {
             result = this.parseFor();
-        }
-        else if (this.tokIs(Keywords.IF)) {
+        } else if (this.tokIs(Keywords.IF)) {
             result = this.parseIf();
-        }
-        else if (this.tokIs(Keywords.SWITCH)) {
+        } else if (this.tokIs(Keywords.SWITCH)) {
             result = this.parseSwitch();
-        }
-        else if (this.tokIs(Keywords.DO)) {
+        } else if (this.tokIs(Keywords.DO)) {
             result = this.parseDo();
-        }
-        else if (this.tokIs(Keywords.WHILE)) {
+        } else if (this.tokIs(Keywords.WHILE)) {
             result = this.parseWhile();
-        }
-        else if (this.tokIs(Keywords.TRY)) {
+        } else if (this.tokIs(Keywords.TRY)) {
             result = this.parseTry();
-        }
-        else if (this.tokIs(Keywords.CATCH)) {
+        } else if (this.tokIs(Keywords.CATCH)) {
             result = this.parseCatch();
-        }
-        else if (this.tokIs(Keywords.FINALLY)) {
+        } else if (this.tokIs(Keywords.FINALLY)) {
             result = this.parseFinally();
-        }
-        else if (this.tokIs(Operators.LEFT_CURLY_BRACKET)) {
+        } else if (this.tokIs(Operators.LEFT_CURLY_BRACKET)) {
             result = this.parseBlock();
-        }
-        else if (this.tokIs(Keywords.VAR)) {
+        } else if (this.tokIs(Keywords.VAR)) {
             result = this.parseVar();
-        }
-        else if (this.tokIs(Keywords.CONST)) {
+        } else if (this.tokIs(Keywords.CONST)) {
             result = this.parseConst();
-        }
-        else if (this.tokIs(Keywords.RETURN)) {
+        } else if (this.tokIs(Keywords.RETURN)) {
             result = this.parseReturnStatement();
-        }
-        else if (this.tokIs(Keywords.THROW)) {
+        } else if (this.tokIs(Keywords.THROW)) {
             result = this.parseThrowStatement();
-        }
-        else if (this.tokIs(Keywords.BREAK) || this.tokIs(Keywords.CONTINUE)) {
+        } else if (this.tokIs(Keywords.BREAK) || this.tokIs(Keywords.CONTINUE)) {
             result = this.parseBreakOrContinueStatement();
-        }
-        else if (this.tokIs(Operators.SEMI_COLUMN)) {
+        } else if (this.tokIs(Operators.SEMI_COLUMN)) {
             result = this.parseEmptyStatement();
-        }
-        else {
+        } else {
             result = this.parseExpressionList();
             this.skip(Operators.SEMI_COLUMN);
         }
@@ -361,20 +331,16 @@ export default class AS3Parser {
         if (this.tokIs(Operators.INCREMENT)) {
             this.nextToken();
             result = new Node(NodeKind.PRE_INC, this.tok.index, index, null, [this.parseUnaryExpression()]);
-        }
-        else if (this.tokIs(Operators.DECREMENT)) {
+        } else if (this.tokIs(Operators.DECREMENT)) {
             this.nextToken();
             result = new Node(NodeKind.PRE_DEC, this.tok.index, index, null, [this.parseUnaryExpression()]);
-        }
-        else if (this.tokIs(Operators.MINUS)) {
+        } else if (this.tokIs(Operators.MINUS)) {
             this.nextToken();
             result = new Node(NodeKind.MINUS, this.tok.index, index, null, [this.parseUnaryExpression()]);
-        }
-        else if (this.tokIs(Operators.PLUS) || this.tokIs(Operators.PLUS_AS2)) {
+        } else if (this.tokIs(Operators.PLUS) || this.tokIs(Operators.PLUS_AS2)) {
             this.nextToken();
             result = new Node(NodeKind.PLUS, this.tok.index, index, null, [this.parseUnaryExpression()]);
-        }
-        else {
+        } else {
             return this.parseUnaryExpressionNotPlusMinus();
         }
         return result;
@@ -397,8 +363,8 @@ export default class AS3Parser {
      * @param text
      * @throws UnExpectedTokenException
      */
-    consume(text: string): Token {
-        while (startsWith(this.tok.text, "//")) {
+    private consume(text: string): Token {
+        while (startsWith(this.tok.text, '//')) {
             this.nextToken();
         }
 
@@ -407,9 +373,11 @@ export default class AS3Parser {
                 new Position(this.tok.index, this.tok.getColumn()),
                 fileName,
                 text);*/
-            
+
             let pos = this.sourceFile.getLineAndCharacterFromPosition(this.tok.index);
-            let msg = `unexpected token : ${this.tok.text}(${pos.line},${pos.col}) in file ${this.sourceFile.path} expected: ${text}`;
+            let msg =
+                `unexpected token : ${this.tok.text}(${pos.line},${pos.col}) ` +
+                `in file ${this.sourceFile.path} expected: ${text}`;
             throw new Error(msg);
         }
         let result = this.tok;
@@ -418,13 +386,15 @@ export default class AS3Parser {
     }
 
     private convertMeta(metadataList: Node[]): Node {
-        if (metadataList == null || metadataList.length === 0) {
+        if (!metadataList || metadataList.length === 0) {
             return null;
         }
 
         let result: Node = new Node(NodeKind.META_LIST, this.tok.index, -1);
         result.children = metadataList ? metadataList.slice(0) : [];
-        if (result.lastChild) { result.end = result.lastChild.end }
+        if (result.lastChild) {
+            result.end = result.lastChild.end;
+        }
         result.start = result.children.reduce((index: number, child: Node) => {
             return Math.min(index, child ? child.start : Infinity);
         }, result.start);
@@ -432,7 +402,7 @@ export default class AS3Parser {
     }
 
     private convertModifiers(modifierList: Token[]): Node {
-        if (modifierList == null) {
+        if (!modifierList) {
             return null;
         }
 
@@ -441,7 +411,7 @@ export default class AS3Parser {
         let end = this.tok.index;
         result.children = modifierList.map(tok => {
             end = tok.index + tok.text.length;
-            return new Node(NodeKind.MODIFIER, tok.index, end, tok.text)
+            return new Node(NodeKind.MODIFIER, tok.index, end, tok.text);
         });
         result.end = end;
         result.start = result.children.reduce((index: number, child: Node) => {
@@ -468,10 +438,10 @@ export default class AS3Parser {
         for (let i = 0; i < signature.length; i++) {
             let node = signature[i];
             if (node.kind === NodeKind.TYPE) {
-                if (node.text === "set") {
+                if (node.text === Keywords.SET) {
                     return NodeKind.SET;
                 }
-                if (node.text === "get") {
+                if (node.text === Keywords.GET) {
                     return NodeKind.GET;
                 }
                 return NodeKind.FUNCTION;
@@ -488,13 +458,15 @@ export default class AS3Parser {
      */
     private nextTokenAllowNewLine(): void {
         do {
+            let lastTok = this.tok;
             this.tok = this.scn.nextToken();
 
-            if (this.tok == null) {
-                throw new Error(this.sourceFile.path); //TODO NullTokenException(fileName);
+            if (!this.tok) {
+                let {line, col} = this.sourceFile.getLineAndCharacterFromPosition(lastTok.index);
+                throw new Error(`failed to parse token after ${this.sourceFile.path}:(${line},${col})`);
 
             }
-            if (this.tok.text == null) {
+            if (this.tok.text === null) {
                  throw new Error(this.sourceFile.path); //TODO throw new NullTokenException(fileName);
             }
         }
@@ -509,13 +481,15 @@ export default class AS3Parser {
     }
 
     private parseAdditiveExpression(): Node {
-        let result: Node = new Node(NodeKind.ADD, this.tok.index, this.tok.end, null, [this.parseMultiplicativeExpression()]);
+        let result = new Node(NodeKind.ADD, this.tok.index, this.tok.end, null, [this.parseMultiplicativeExpression()]);
         while (this.tokIs(Operators.PLUS) || this.tokIs(Operators.PLUS_AS2) || this.tokIs(Operators.MINUS)) {
             result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
             this.nextToken(true);
             result.children.push(this.parseMultiplicativeExpression());
         }
-        if (result.lastChild) { result.end = result.lastChild.end }
+        if (result.lastChild) {
+            result.end = result.lastChild.end;
+        }
         return result.children.length > 1 ? result : result.lastChild;
     }
 
@@ -524,13 +498,15 @@ export default class AS3Parser {
     // ------------------------------------------------------------------------
 
     private parseAndExpression(): Node {
-        let result: Node = new Node(NodeKind.AND, this.tok.index, this.tok.end, null, [this.parseBitwiseOrExpression()]);
+        let result = new Node(NodeKind.AND, this.tok.index, this.tok.end, null, [this.parseBitwiseOrExpression()]);
         while (this.tokIs(Operators.AND) || this.tokIs(Operators.AND_AS2)) {
             result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
             this.nextToken(true);
             result.children.push(this.parseBitwiseOrExpression());
         }
-        if (result.lastChild) { result.end = result.lastChild.end }
+        if (result.lastChild) {
+            result.end = result.lastChild.end;
+        }
         return result.children.length > 1 ? result : result.lastChild;
     }
 
@@ -575,7 +551,7 @@ export default class AS3Parser {
     }
 
     private parseAssignmentExpression(): Node {
-        let result: Node = new Node(NodeKind.ASSIGN, this.tok.index, this.tok.end, null, [this.parseConditionalExpression()]);
+        let result = new Node(NodeKind.ASSIGN, this.tok.index, this.tok.end, null, [this.parseConditionalExpression()]);
         while (this.tokIs(Operators.EQUAL)
             || this.tokIs(Operators.PLUS_EQUAL) || this.tokIs(Operators.MINUS_EQUAL)
             || this.tokIs(Operators.TIMES_EQUAL) || this.tokIs(Operators.DIVIDED_EQUAL)
@@ -585,51 +561,59 @@ export default class AS3Parser {
             this.nextToken(true);
             result.children.push(this.parseExpression());
         }
-        if (result.lastChild) { 
+        if (result.lastChild) {
             result.end = result.lastChild.end;
         }
         return result.children.length > 1 ? result : result.lastChild;
     }
 
     private parseBitwiseAndExpression(): Node {
-        let result: Node = new Node(NodeKind.B_AND, this.tok.index, this.tok.end, this.tok.text, [this.parseEqualityExpression()]);
+        let children = [this.parseEqualityExpression()];
+        let result = new Node(NodeKind.B_AND, this.tok.index, this.tok.end, this.tok.text, children);
         while (this.tokIs(Operators.B_AND)) {
             result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
             this.nextToken(true);
             result.children.push(this.parseEqualityExpression());
         }
-        if (result.lastChild) { result.end = result.lastChild.end }
+        if (result.lastChild) {
+            result.end = result.lastChild.end;
+        }
         return result.children.length > 1 ? result : result.lastChild;
     }
 
     private parseBitwiseOrExpression(): Node {
-        let result: Node = new Node(NodeKind.B_OR, this.tok.index, this.tok.end, this.tok.text, [this.parseBitwiseXorExpression()]);
+        let children = [this.parseBitwiseXorExpression()];
+        let result = new Node(NodeKind.B_OR, this.tok.index, this.tok.end, this.tok.text, children);
         while (this.tokIs(Operators.B_OR)) {
             result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
             this.nextToken(true);
             result.children.push(this.parseBitwiseXorExpression());
         }
-        if (result.lastChild) { result.end = result.lastChild.end }
+        if (result.lastChild) {
+            result.end = result.lastChild.end;
+        }
         return result.children.length > 1 ? result : result.lastChild;
     }
 
     private parseBitwiseXorExpression(): Node {
-        let result: Node = new Node(NodeKind.B_XOR, this.tok.index, this.tok.end, this.tok.text, [this.parseBitwiseAndExpression()]);
+        let children = [this.parseBitwiseAndExpression()];
+        let result = new Node(NodeKind.B_XOR, this.tok.index, this.tok.end, this.tok.text, children);
         while (this.tokIs(Operators.B_XOR)) {
             result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
             this.nextToken(true);
             result.children.push(this.parseBitwiseAndExpression());
         }
-        if (result.lastChild) { result.end = result.lastChild.end }
+        if (result.lastChild) {
+            result.end = result.lastChild.end;
+        }
         return result.children.length > 1 ? result : result.lastChild;
     }
 
 
     private parseBlock(result?: Node): Node {
-
         let tok = this.consume(Operators.LEFT_CURLY_BRACKET);
         if (!result) {
-            result = new Node(NodeKind.BLOCK, tok.index, this.tok.end)
+            result = new Node(NodeKind.BLOCK, tok.index, this.tok.end);
         } else {
             result.start = tok.index;
         }
@@ -639,8 +623,7 @@ export default class AS3Parser {
                     new Node(NodeKind.MULTI_LINE_COMMENT, this.tok.index, this.tok.end, this.tok.text)
                     );
                 this.nextToken();
-            }
-            else {
+            } else {
                 result.children.push(this.parseStatement());
             }
         }
@@ -683,11 +666,11 @@ export default class AS3Parser {
         let tok = this.consume(Keywords.CLASS);
         let result: Node = new Node(NodeKind.CLASS, tok.index, tok.end);
 
-        if (this.currentAsDoc != null) {
+        if (this.currentAsDoc) {
             result.children.push(this.currentAsDoc);
             this.currentAsDoc = null;
         }
-        if (this.currentMultiLineComment != null) {
+        if (this.currentMultiLineComment) {
             result.children.push(this.currentMultiLineComment);
             this.currentMultiLineComment = null;
         }
@@ -707,8 +690,7 @@ export default class AS3Parser {
                 index = this.tok.index;
                 name = this.parseQualifiedName(false);
                 result.children.push(new Node(NodeKind.EXTENDS, index, index + name.length, name));
-            }
-            else if (this.tokIs(Keywords.IMPLEMENTS)) {
+            } else if (this.tokIs(Keywords.IMPLEMENTS)) {
                 result.children.push(this.parseImplementsList());
             }
         }
@@ -737,11 +719,11 @@ export default class AS3Parser {
     private parseClassField(result: Node, modifiers: Token[], meta: Node[]): void {
         let varList: Node = this.parseVarList(meta, modifiers);
         result.children.push(varList);
-        if (this.currentAsDoc != null) {
+        if (this.currentAsDoc) {
             varList.children.push(this.currentAsDoc);
             this.currentAsDoc = null;
         }
-        if (this.currentMultiLineComment != null) {
+        if (this.currentMultiLineComment) {
             result.children.push(this.currentMultiLineComment);
             this.currentMultiLineComment = null;
         }
@@ -756,7 +738,6 @@ export default class AS3Parser {
         result.children.push(this.parseFunction(meta, modifiers));
         meta.length = 0;
         modifiers.length = 0;
-        
     }
 
     /**
@@ -851,8 +832,7 @@ export default class AS3Parser {
             result.children.push(this.parseExpression());
             result.end = this.consume(Operators.RIGHT_PARENTHESIS).end;
             return result;
-        }
-        else if (this.tokIs(Operators.TIMES)) {
+        } else if (this.tokIs(Operators.TIMES)) {
             let result: Node = new Node(NodeKind.E4X_STAR, this.tok.index, -1);
             result.children.push(node);
             result.end = node.end;
@@ -934,8 +914,7 @@ export default class AS3Parser {
         if (this.tokIs(Keywords.EACH)) {
             this.nextToken();
             return this.parseForEach(tok.index);
-        }
-        else {
+        } else {
             return this.parseTraditionalFor(tok.index);
         }
     }
@@ -956,8 +935,7 @@ export default class AS3Parser {
             node.children.push(child);
             node.end = child.end;
             result.children.push(node);
-        }
-        else {
+        } else {
             result.children.push(new Node(NodeKind.NAME, this.tok.index, this.tok.end, this.tok.text));
             // names allowed?
             this.nextToken();
@@ -997,11 +975,11 @@ export default class AS3Parser {
             -1, signature[0].text
         );
 
-        if (this.currentAsDoc != null) {
+        if (this.currentAsDoc) {
             result.children.push(this.currentAsDoc);
             this.currentAsDoc = null;
         }
-        if (this.currentMultiLineComment != null) {
+        if (this.currentMultiLineComment) {
             result.children.push(this.currentMultiLineComment);
             this.currentMultiLineComment = null;
         }
@@ -1012,8 +990,7 @@ export default class AS3Parser {
         result.children.push(signature[3]);
         if (this.tokIs(Operators.SEMI_COLUMN)) {
             this.consume(Operators.SEMI_COLUMN);
-        }
-        else {
+        } else {
             result.children.push(this.parseFunctionBlock());
         }
         this.currentFunctionNode = null;
@@ -1157,8 +1134,7 @@ export default class AS3Parser {
         let tok: Token;
         if (this.tokIs(Keywords.INCLUDE)) {
             tok = this.consume(Keywords.INCLUDE);
-        }
-        else if (this.tokIs(Keywords.INCLUDE_AS2)) {
+        } else if (this.tokIs(Keywords.INCLUDE_AS2)) {
             tok = this.consume(Keywords.INCLUDE_AS2);
         }
         if (tok) {
@@ -1189,11 +1165,11 @@ export default class AS3Parser {
         let tok = this.consume(Keywords.INTERFACE);
         let result: Node = new Node(NodeKind.INTERFACE, tok.index, -1);
 
-        if (this.currentAsDoc != null) {
+        if (this.currentAsDoc) {
             result.children.push(this.currentAsDoc);
             this.currentAsDoc = null;
         }
-        if (this.currentMultiLineComment != null) {
+        if (this.currentMultiLineComment) {
             result.children.push(this.currentMultiLineComment);
             this.currentMultiLineComment = null;
         }
@@ -1232,11 +1208,9 @@ export default class AS3Parser {
         let tok = this.consume(Keywords.FUNCTION);
         let result: Node;
 
-        //if (this.tok.text.compareTo("(") == 0) {
-        if (this.tok.text === "(") {
+        if (this.tok.text === Operators.LEFT_PARENTHESIS) {
             result = new Node(NodeKind.LAMBDA, tok.index, this.tok.end);
-        }
-        else {
+        } else {
             result = new Node(NodeKind.FUNCTION, tok.index, this.tok.end, this.tok.text);
             this.nextToken(true);
         }
@@ -1372,7 +1346,7 @@ export default class AS3Parser {
      * @throws TokenException
      */
     private parseOptionalType(): Node {
-        let result: Node = new Node(NodeKind.TYPE, this.tok.index, this.tok.index, "");
+        let result: Node = new Node(NodeKind.TYPE, this.tok.index, this.tok.index, '');
         if (this.tokIs(Operators.COLUMN)) {
             this.nextToken(true);
             result = this.parseType();
@@ -1427,8 +1401,7 @@ export default class AS3Parser {
             let rest: Node = new Node(NodeKind.REST, index, this.tok.end, this.tok.text);
             this.nextToken(true); // rest
             result.children.push(rest);
-        }
-        else {
+        } else {
             result.children.push(this.parseNameTypeInit());
         }
         result.end = result.children.reduce((index: number, child: Node) => {
@@ -1450,8 +1423,7 @@ export default class AS3Parser {
             result.children.push(this.parseParameter());
             if (this.tokIs(Operators.COMMA)) {
                 this.nextToken(true);
-            }
-            else {
+            } else {
                 break;
             }
         }
@@ -1493,8 +1465,7 @@ export default class AS3Parser {
             && !this.isInFor || this.tokIs(Keywords.AS) || this.tokIs(Keywords.INSTANCE_OF)) {
             if (!this.tokIs(Keywords.AS)) {
                 result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            }
-            else {
+            } else {
                 result.children.push(new Node(NodeKind.AS, this.tok.index, this.tok.end, this.tok.text));
             }
             this.nextToken(true);
@@ -1514,28 +1485,27 @@ export default class AS3Parser {
         this.nextTokenAllowNewLine();
         if (this.tokIs(NEW_LINE) || this.tokIs(Operators.SEMI_COLUMN)) {
             this.nextToken(true);
-            result = new Node(NodeKind.RETURN, index, end, "");
-        }
-        else {
+            result = new Node(NodeKind.RETURN, index, end, '');
+        } else {
             let expr = this.parseExpression();
             result = new Node(NodeKind.RETURN, index, expr.end, null, [expr]);
             this.skip(Operators.SEMI_COLUMN);
         }
         return result;
     }
-    
+
     private parseThrowStatement(): Node {
         let tok = this.consume(Keywords.THROW);
         let expr = this.parseExpression();
-        
-        return  new Node(NodeKind.RETURN, tok.index, expr.end, null, [expr]);
+
+        return new Node(NodeKind.RETURN, tok.index, expr.end, null, [expr]);
     }
-    
+
     private parseBreakOrContinueStatement(): Node {
         let tok: Token = this.tok;
         let kind: NodeKind;
         if (this.tokIs(Keywords.BREAK) || this.tokIs(Keywords.CONTINUE)) {
-            kind = this.tokIs(Keywords.BREAK)? NodeKind.BREAK : NodeKind.CONTINUE;
+            kind = this.tokIs(Keywords.BREAK) ? NodeKind.BREAK : NodeKind.CONTINUE;
             this.nextToken();
         } else {
             let pos = this.sourceFile.getLineAndCharacterFromPosition(this.tok.index);
@@ -1548,7 +1518,7 @@ export default class AS3Parser {
         let result: Node;
         if (this.tokIs(NEW_LINE) || this.tokIs(Operators.SEMI_COLUMN)) {
             this.nextToken(true);
-            result = new Node(kind, tok.index, tok.end, "");
+            result = new Node(kind, tok.index, tok.end, '');
         } else {
             let ident = this.tryParse(() => {
                 let expr = this.parsePrimaryExpression();
@@ -1560,10 +1530,9 @@ export default class AS3Parser {
             });
             if (!ident) {
                 let pos = this.sourceFile.getLineAndCharacterFromPosition(this.tok.index);
-                throw new Error('unexpected token : ' +
-                    this.tok.text + '(' + pos.line + ',' + pos.col + ')' +
-                    ' in file ' + this.sourceFile.path +
-                    'expected: ident'
+                throw new Error(
+                    `unexpected token : ${this.tok.text}(${pos.line},${pos.col})` +
+                    ` in file ${ this.sourceFile.path } expected: ident`
                 );
             }
             result = new Node(kind, tok.index, ident.end, null, [ident]);
@@ -1610,7 +1579,9 @@ export default class AS3Parser {
      */
     private parseSwitchBlock(): Node {
         let result: Node = new Node(NodeKind.SWITCH_BLOCK, this.tok.index, this.tok.end);
-        while (!this.tokIs(Keywords.CASE) && !this.tokIs(Keywords.DEFAULT) && !this.tokIs(Operators.RIGHT_CURLY_BRACKET)) {
+        while (!this.tokIs(Keywords.CASE) &&
+                !this.tokIs(Keywords.DEFAULT) &&
+                !this.tokIs(Operators.RIGHT_CURLY_BRACKET)) {
             result.children.push(this.parseStatement());
         }
         result.end = result.children.reduce((index: number, child: Node) => {
@@ -1626,11 +1597,10 @@ export default class AS3Parser {
      */
     private parseSwitchCases(): Node {
         let result: Node = new Node(NodeKind.CASES, this.tok.index, this.tok.end);
-        for (; ;) {
+        while (true) {
             if (this.tokIs(Operators.RIGHT_CURLY_BRACKET)) {
                 break;
-            }
-            else if (this.tokIs(Keywords.CASE)) {
+            } else if (this.tokIs(Keywords.CASE)) {
                 let index = this.tok.index;
                 this.nextToken(true); // case
                 let expr = this.parseExpression();
@@ -1640,8 +1610,7 @@ export default class AS3Parser {
                 caseNode.children.push(block);
                 caseNode.end = block.end;
                 result.children.push(caseNode);
-            }
-            else if (this.tokIs(Keywords.DEFAULT)) {
+            } else if (this.tokIs(Keywords.DEFAULT)) {
                 let index = this.tok.index;
                 this.nextToken(true); // default
                 this.consume(Operators.COLUMN);
@@ -1673,8 +1642,7 @@ export default class AS3Parser {
             if (this.tokIs(Keywords.VAR)) {
                 let varList = this.parseVarList(null, null);
                 result.children.push(new Node(NodeKind.INIT, varList.start, varList.end, null, [varList]));
-            }
-            else {
+            } else {
                 this.isInFor = true;
                 let expr = this.parseExpression();
                 result.children.push(new Node(NodeKind.INIT, expr.start, expr.end, null, [expr]));
@@ -1712,8 +1680,7 @@ export default class AS3Parser {
         let result: Node;
         if (this.tok.text === VECTOR) {
             result = this.parseVector();
-        }
-        else {
+        } else {
             let index = this.tok.index,
                 name = this.parseQualifiedName(true);
             result = new Node(NodeKind.TYPE, index, index + name.length, name);
@@ -1729,28 +1696,23 @@ export default class AS3Parser {
             this.nextToken(true);
             let expr = this.parseExpression();
             result = new Node(NodeKind.DELETE, index, expr.end, null, [expr]);
-        }
-        else if (this.tokIs(Keywords.VOID)) {
+        } else if (this.tokIs(Keywords.VOID)) {
             this.nextToken(true);
             let expr = this.parseExpression();
             result = new Node(NodeKind.VOID, index, expr.end, null, [expr]);
-        }
-        else if (this.tokIs(Keywords.TYPEOF)) {
+        } else if (this.tokIs(Keywords.TYPEOF)) {
             this.nextToken(true);
             let expr = this.parseExpression();
             result = new Node(NodeKind.TYPEOF, index, expr.end, null, [expr]);
-        }
-        else if (this.tokIs("!") || this.tokIs("not")) {
+        } else if (this.tokIs('!') || this.tokIs('not')) {
             this.nextToken(true);
             let expr = this.parseExpression();
             result = new Node(NodeKind.NOT, index, expr.end, null, [expr]);
-        }
-        else if (this.tokIs("~")) {
+        } else if (this.tokIs('~')) {
             this.nextToken(true);
             let expr = this.parseExpression();
             result = new Node(NodeKind.B_NOT, index, expr.end, null, [expr]);
-        }
-        else {
+        } else {
             result = this.parseUnaryPostfixExpression();
         }
         return result;
@@ -1761,13 +1723,12 @@ export default class AS3Parser {
 
         if (this.tokIs(Operators.INCREMENT)) {
             node = this.parseIncrement(node);
-        }
-        else if (this.tokIs(Operators.DECREMENT)) {
+        } else if (this.tokIs(Operators.DECREMENT)) {
             node = this.parseDecrement(node);
         }
         return node;
     }
-    
+
     private parseAccessExpresion(): Node {
         let node: Node = this.parsePrimaryExpression();
 
@@ -1826,8 +1787,8 @@ export default class AS3Parser {
     }
 
     private parseVector(): Node {
-        let result: Node = new Node(NodeKind.VECTOR, this.tok.index, -1, "");
-        if (this.tok.text === "Vector") {
+        let result: Node = new Node(NodeKind.VECTOR, this.tok.index, -1, '');
+        if (this.tok.text === VECTOR) {
             this.nextToken();
         }
         this.consume(Operators.VECTOR_START);
@@ -1838,15 +1799,15 @@ export default class AS3Parser {
 
         return result;
     }
-    
+
     private parseShortVector(): Node {
-        let vector: Node = new Node(NodeKind.VECTOR, this.tok.index, -1, "");
+        let vector: Node = new Node(NodeKind.VECTOR, this.tok.index, -1, '');
         this.consume(Operators.INFERIOR);
         vector.children.push(this.parseType());
         vector.end = this.consume(Operators.SUPERIOR).end;
-        
+
         let arrayLiteral = this.parseArrayLiteral();
-        
+
         return new Node(NodeKind.SHORT_VECTOR, vector.start, arrayLiteral.end, null, [vector, arrayLiteral]);
     }
 
@@ -1893,13 +1854,11 @@ export default class AS3Parser {
         if (startsWith(this.tok.text, ASDOC_COMMENT)) {
             this.currentAsDoc = new Node(NodeKind.AS_DOC, this.tok.index, -1, this.tok.text);
             this.nextToken();
-        }
-        else if (startsWith(this.tok.text, MULTIPLE_LINES_COMMENT)) {
+        } else if (startsWith(this.tok.text, MULTIPLE_LINES_COMMENT)) {
             result.children.push(new Node(NodeKind.MULTI_LINE_COMMENT, this.tok.index, -1, this.tok.text));
             this.nextToken();
-        }
-        else {
-            if (modifiers != null) {
+        } else {
+            if (modifiers) {
                 modifiers.push(this.tok);
             }
             this.nextTokenIgnoringDocumentation();

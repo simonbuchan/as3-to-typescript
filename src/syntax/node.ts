@@ -9,41 +9,41 @@ export default class Node {
         public children: Node[] = [],
         public parent?: Node) {
     }
-    
+
     findChild(kind: NodeKind): Node {
-        for (var i = 0; i< this.children.length;i++) {
+        for (var i = 0; i < this.children.length; i++) {
             if (this.children[i].kind === kind) {
-                return this.children[i]
+                return this.children[i];
             }
         }
         return null;
     }
-    
+
     findChildren(kind: NodeKind): Node[] {
         return this.children.filter(child => child.kind === kind);
     }
-    
-    getChildFrom(kind: NodeKind) {
-        var child = this.findChild(kind);
+
+    getChildFrom(kind: NodeKind): Node[] {
+        let child = this.findChild(kind);
         if (!child) {
-            return this.children.slice(0)
+            return this.children.slice(0);
         } else {
-            var index = this.children.indexOf(child);
+            let index = this.children.indexOf(child);
             return this.children.slice(index + 1);
         }
     }
-    
-    getChildUntil(kind: NodeKind) {
-        var child = this.findChild(kind);
+
+    getChildUntil(kind: NodeKind): Node[] {
+        let child = this.findChild(kind);
         if (!child) {
-            return this.children.splice(0)
+            return this.children.splice(0);
         } else {
-            var index = this.children.indexOf(child);
+            let index = this.children.indexOf(child);
             return this.children.slice(0, index);
         }
     }
-    
+
     get lastChild(): Node {
-        return this.children[this.children.length -1];
+        return this.children[this.children.length - 1];
     }
 }

@@ -9,8 +9,9 @@ const GLOBAL_NAMES = [
     'Array', 'Boolean', 'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'escape',
     'int', 'isFinite', 'isNaN', 'isXMLName', 'Number', 'Object',
     'parseFloat', 'parseInt', 'String', 'trace', 'uint', 'unescape', 'Vector', 'XML', 'XMLList',
-    'ArgumentError', 'arguments', 'Class', 'Date', 'DefinitionError', 'Error', 'EvalError', 'Function', 'Math', 'Namespace',
-    'QName', 'RangeError', 'ReferenceError', 'RegExp', 'SecurityError', 'SyntaxError', 'TypeError', 'URIError', 'VerifyError'
+    'ArgumentError', 'arguments', 'Class', 'Date', 'DefinitionError', 'Error', 'EvalError', 'Function', 'Math',
+    'Namespace', 'QName', 'RangeError', 'ReferenceError', 'RegExp', 'SecurityError', 'SyntaxError', 'TypeError',
+    'URIError', 'VerifyError'
 ];
 
 
@@ -33,7 +34,7 @@ export interface EmitterOptions {
 
 
 interface NodeVisitor {
-    (emitter: Emitter, node: Node):void
+    (emitter: Emitter, node: Node): void;
 }
 
 
@@ -60,16 +61,18 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
 };
 
 
-function visitNodes(emitter: Emitter, nodes: Node[]) {
+function visitNodes(emitter: Emitter, nodes: Node[]): void {
     if (nodes) {
         nodes.forEach(node => visitNode(emitter, node));
     }
 }
 
 
-function visitNode(emitter: Emitter, node: Node) {
-    if (!node) return;
-    let visitor = VISITORS[node.kind] || function (emitter: Emitter, node: Node) {
+function visitNode(emitter: Emitter, node: Node): void {
+    if (!node) {
+        return;
+    }
+    let visitor = VISITORS[node.kind] || function (emitter: Emitter, node: Node): void {
         emitter.catchup(node.start);
         visitNodes(emitter, node.children);
     };
@@ -79,7 +82,7 @@ function visitNode(emitter: Emitter, node: Node) {
 
 function filterAST(node: Node): Node {
     //we don't care about comment
-    function isInteresting(child: Node) {
+    function isInteresting(child: Node): boolean {
         return !!child &&
                 child.kind !== NodeKind.AS_DOC &&
                 child.kind !== NodeKind.MULTI_LINE_COMMENT;
@@ -101,6 +104,9 @@ function filterAST(node: Node): Node {
 
 
 export default class Emitter {
+    public isNew: boolean = false;
+    public emitThisForNextIdent: boolean = true;
+
     private source: string;
     private options: EmitterOptions;
 
@@ -109,15 +115,12 @@ export default class Emitter {
     private index: number = 0;
     private scope: Scope = null;
 
-    public isNew: boolean = false;
-    public emitThisForNextIdent: boolean = true;
-
     constructor(source: string, options?: EmitterOptions) {
         this.source = source;
         this.options = assign({lineSeparator: '\n'}, options || {});
     }
 
-    emit(ast: Node) {
+    emit(ast: Node): string {
         this.withScope([], () => {
             visitNode(this, filterAST(ast));
             this.catchup(this.source.length - 1);
@@ -125,21 +128,21 @@ export default class Emitter {
         return this.output;
     }
 
-    enterScope(declarations: Declaration[]) {
+    enterScope(declarations: Declaration[]): Scope {
         return this.scope = {parent: this.scope, declarations};
     }
 
-    exitScope(checkScope: Scope = null) {
-        if (checkScope && this.scope != checkScope) {
-            throw new Error("Mismatched enterScope() / exitScope().");
+    exitScope(checkScope: Scope = null): void {
+        if (checkScope && this.scope !== checkScope) {
+            throw new Error('Mismatched enterScope() / exitScope().');
         }
         if (!this.scope) {
-            throw new Error("Unmatched exitScope().");
+            throw new Error('Unmatched exitScope().');
         }
         this.scope = this.scope.parent;
     }
 
-    withScope(declarations: Declaration[], body: (scope: Scope) => void) {
+    withScope(declarations: Declaration[], body: (scope: Scope) => void): void {
         let scope = this.enterScope(declarations);
         try {
             body(scope);
@@ -157,14 +160,14 @@ export default class Emitter {
         return null;
     }
 
-    declareInScope(declaration: Declaration) {
+    declareInScope(declaration: Declaration): void {
         this.scope.declarations.push(declaration);
     }
 
-    findDefInScope(text: string) {
-        var scope = this.scope;
+    findDefInScope(text: string): Declaration {
+        let scope = this.scope;
         while (scope) {
-            for (var i = 0; i < scope.declarations.length; i++) {
+            for (let i = 0; i < scope.declarations.length; i++) {
                 if (scope.declarations[i].name === text) {
                     return scope.declarations[i];
                 }
@@ -174,10 +177,10 @@ export default class Emitter {
         return null;
     }
 
-    commentNode(node: Node, catchSemi: boolean) {
+    commentNode(node: Node, catchSemi: boolean): void {
         this.insert('/*');
         this.catchup(node.end);
-        var index = this.index;
+        let index = this.index;
         if (catchSemi) {
             while (true) {
                 if (index >= this.source.length) {
@@ -197,29 +200,29 @@ export default class Emitter {
         this.insert('*/');
     }
 
-    catchup(index: number) {
+    catchup(index: number): void {
         if (this.index >= index) {
             return;
         }
-        var text = this.source.substring(this.index, index);
+        let text = this.source.substring(this.index, index);
         this.index = index;
         this.insert(text);
     }
 
-    skipTo(index: number) {
+    skipTo(index: number): void {
         this.index = index;
     }
 
-    skip(number: number) {
+    skip(number: number): void {
         this.index += number;
     }
 
-    insert(string: string) {
+    insert(string: string): void {
         this.output += string;
     }
 
-    consume(string: string, limit: number) {
-        var index = this.source.indexOf(string, this.index) + string.length;
+    consume(string: string, limit: number): void {
+        let index = this.source.indexOf(string, this.index) + string.length;
         if (index > limit || index < this.index) {
             throw new Error('invalid consume');
         }
@@ -228,7 +231,7 @@ export default class Emitter {
 }
 
 
-function emitPackage(emitter: Emitter, node: Node) {
+function emitPackage(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     emitter.skip(Keywords.PACKAGE.length);
     emitter.insert('module');
@@ -236,22 +239,22 @@ function emitPackage(emitter: Emitter, node: Node) {
 }
 
 
-function emitMeta(emitter: Emitter, node: Node) {
+function emitMeta(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     emitter.commentNode(node, false);
 }
 
 
-function emitInclude(emitter: Emitter, node: Node) {
+function emitInclude(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     emitter.commentNode(node, true);
 }
 
 
-function emitImport(emitter: Emitter, node: Node) {
+function emitImport(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start + Keywords.IMPORT.length + 1);
-    var split = node.text.split('.');
-    var name = split[split.length - 1];
+    let split = node.text.split('.');
+    let name = split[split.length - 1];
     emitter.insert(name + ' = ');
     emitter.catchup(node.end);
 
@@ -259,7 +262,7 @@ function emitImport(emitter: Emitter, node: Node) {
 }
 
 
-function emitInterface(emitter: Emitter, node: Node) {
+function emitInterface(emitter: Emitter, node: Node): void {
     emitDeclaration(emitter, node);
 
     //we'll catchup the other part
@@ -305,19 +308,19 @@ function emitInterface(emitter: Emitter, node: Node) {
                 //include or import in interface content not supported
                 emitter.commentNode(node, true);
             }
-        })
+        });
     }
 }
 
 
-function getFunctionDeclarations(node: Node) {
+function getFunctionDeclarations(node: Node): Declaration[] {
     let decls: Declaration[] = [];
     let params = node.findChild(NodeKind.PARAMETER_LIST);
     if (params && params.children.length) {
         decls = params.children.map(param => {
             let nameTypeInit = param.findChild(NodeKind.NAME_TYPE_INIT);
             if (nameTypeInit) {
-                return {name: nameTypeInit.findChild(NodeKind.NAME).text}
+                return {name: nameTypeInit.findChild(NodeKind.NAME).text};
             }
             let rest = param.findChild(NodeKind.REST);
             return {name: rest.text};
@@ -347,7 +350,7 @@ function getFunctionDeclarations(node: Node) {
 }
 
 
-function emitFunction(emitter: Emitter, node: Node) {
+function emitFunction(emitter: Emitter, node: Node): void {
     emitDeclaration(emitter, node);
     emitter.withScope(getFunctionDeclarations(node), () => {
         let rest = node.getChildFrom(NodeKind.MOD_LIST);
@@ -356,7 +359,7 @@ function emitFunction(emitter: Emitter, node: Node) {
 }
 
 
-function getClassDeclarations(className: string, contentsNode: Node[]) {
+function getClassDeclarations(className: string, contentsNode: Node[]): Declaration[] {
     let found: { [name: string]: boolean } = {};
 
     return contentsNode.map(node => {
@@ -371,6 +374,8 @@ function getClassDeclarations(className: string, contentsNode: Node[]) {
             case NodeKind.VAR_LIST:
             case NodeKind.CONST_LIST:
                 nameNode = node.findChild(NodeKind.NAME_TYPE_INIT).findChild(NodeKind.NAME);
+                break;
+            default:
                 break;
         }
         if (!nameNode || found[nameNode.text]) {
@@ -390,7 +395,7 @@ function getClassDeclarations(className: string, contentsNode: Node[]) {
 }
 
 
-function emitClass(emitter: Emitter, node: Node) {
+function emitClass(emitter: Emitter, node: Node): void {
     emitDeclaration(emitter, node);
 
     let name = node.findChild(NodeKind.NAME);
@@ -429,7 +434,7 @@ function emitClass(emitter: Emitter, node: Node) {
 }
 
 
-function emitSet(emitter: Emitter, node: Node) {
+function emitSet(emitter: Emitter, node: Node): void {
     emitClassField(emitter, node);
 
     let name = node.findChild(NodeKind.NAME);
@@ -450,7 +455,7 @@ function emitSet(emitter: Emitter, node: Node) {
 }
 
 
-function emitConstList(emitter: Emitter, node: Node) {
+function emitConstList(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     let nameTypeInit = node.findChild(NodeKind.NAME_TYPE_INIT);
     emitter.skipTo(nameTypeInit.start);
@@ -459,12 +464,12 @@ function emitConstList(emitter: Emitter, node: Node) {
 }
 
 
-function emitMethod(emitter: Emitter, node: Node) {
+function emitMethod(emitter: Emitter, node: Node): void {
     let name = node.findChild(NodeKind.NAME);
     if (node.kind !== NodeKind.FUNCTION || name.text !== emitter.currentClassName) {
         emitClassField(emitter, node);
         emitter.consume('function', name.start);
-        emitter.catchup(name.end)
+        emitter.catchup(name.end);
     } else {
         let mods = node.findChild(NodeKind.MOD_LIST);
         if (mods) {
@@ -475,25 +480,28 @@ function emitMethod(emitter: Emitter, node: Node) {
     }
     emitter.withScope(getFunctionDeclarations(node), () => {
         visitNodes(emitter, node.getChildFrom(NodeKind.NAME));
-    })
+    });
 }
 
 
-function emitPropertyDecl(emitter: Emitter, node: Node, isConst = false) {
+function emitPropertyDecl(emitter: Emitter, node: Node, isConst = false): void {
     emitClassField(emitter, node);
     let name = node.findChild(NodeKind.NAME_TYPE_INIT);
-    emitter.consume(isConst ? 'const' : 'var', name.start);
+    emitter.consume(isConst ? Keywords.CONST : Keywords.VAR, name.start);
     visitNode(emitter, name);
 }
 
 
-function emitClassField(emitter: Emitter, node: Node) {
+function emitClassField(emitter: Emitter, node: Node): void {
     let mods = node.findChild(NodeKind.MOD_LIST);
     if (mods) {
         emitter.catchup(mods.start);
         mods.children.forEach(node => {
             emitter.catchup(node.start);
-            if (node.text !== 'private' && node.text !== 'public' && node.text !== 'protected' && node.text !== 'static') {
+            if (node.text !== Keywords.PRIVATE &&
+                    node.text !== Keywords.PUBLIC &&
+                    node.text !== Keywords.PROTECTED &&
+                    node.text !== Keywords.STATIC) {
                 emitter.commentNode(node, false);
             }
             emitter.catchup(node.end);
@@ -502,7 +510,7 @@ function emitClassField(emitter: Emitter, node: Node) {
 }
 
 
-function emitDeclaration(emitter: Emitter, node: Node) {
+function emitDeclaration(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     visitNode(emitter, node.findChild(NodeKind.META_LIST));
     let mods = node.findChild(NodeKind.MOD_LIST);
@@ -522,7 +530,7 @@ function emitDeclaration(emitter: Emitter, node: Node) {
 }
 
 
-function emitType(emitter: Emitter, node: Node) {
+function emitType(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     emitter.skip(node.text.length);
     let type: string;
@@ -551,7 +559,7 @@ function emitType(emitter: Emitter, node: Node) {
 }
 
 
-function emitVector(emitter: Emitter, node: Node) {
+function emitVector(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     let type = node.findChild(NodeKind.TYPE);
     if (type) {
@@ -565,7 +573,7 @@ function emitVector(emitter: Emitter, node: Node) {
 }
 
 
-function emitShortVector(emitter: Emitter, node: Node) {
+function emitShortVector(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     let vector = node.findChild(NodeKind.VECTOR);
     emitter.insert('Array');
@@ -588,7 +596,7 @@ function emitShortVector(emitter: Emitter, node: Node) {
 }
 
 
-function emitNew(emitter: Emitter, node: Node) {
+function emitNew(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     emitter.isNew = true;
     emitter.emitThisForNextIdent = false;
@@ -597,7 +605,7 @@ function emitNew(emitter: Emitter, node: Node) {
 }
 
 
-function emitCall(emitter: Emitter, node: Node) {
+function emitCall(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     let isNew = emitter.isNew;
     emitter.isNew = false;
@@ -636,7 +644,7 @@ function emitCall(emitter: Emitter, node: Node) {
 }
 
 
-function emitRelation(emitter: Emitter, node: Node) {
+function emitRelation(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     let as = node.findChild(NodeKind.AS);
     if (as) {
@@ -656,10 +664,10 @@ function emitRelation(emitter: Emitter, node: Node) {
 }
 
 
-function emitOp(emitter: Emitter, node: Node) {
+function emitOp(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
-    if (node.text === "is") {
-        emitter.insert('instanceof');
+    if (node.text === Keywords.IS) {
+        emitter.insert(Keywords.INSTANCE_OF);
         emitter.skipTo(node.end);
         return;
     }
@@ -667,7 +675,7 @@ function emitOp(emitter: Emitter, node: Node) {
 }
 
 
-function emitIdent(emitter: Emitter, node: Node) {
+function emitIdent(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     if (node.parent && node.parent.kind === NodeKind.DOT) {
         //in case of dot just check the first
@@ -695,14 +703,14 @@ function emitIdent(emitter: Emitter, node: Node) {
 }
 
 
-function emitXMLLiteral(emitter: Emitter, node: Node) {
+function emitXMLLiteral(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     emitter.insert(JSON.stringify(node.text));
     emitter.skipTo(node.end);
 }
 
 
-export function emit(ast: Node, source: string, options?: EmitterOptions) {
+export function emit(ast: Node, source: string, options?: EmitterOptions): string {
     let emitter = new Emitter(source, options);
     return emitter.emit(ast);
 }
