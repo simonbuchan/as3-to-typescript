@@ -8,9 +8,9 @@
   },
   "scripts": {
     "pretest": "npm run -s compile",
-    "test": "node test/runner compare",
-    "generate": "node test/runner generate",
-    "accept": "node test/runner accept",
+    "test": "node -r source-map-support/register test/runner compare",
+    "generate": "node -r source-map-support/register test/runner generate",
+    "accept": "node -r source-map-support/register test/runner accept",
     "compile": "tsc --project src",
     "watch": "tsc --project src --watch"
   },
@@ -35,6 +35,7 @@
     "sax": "~0.6.0"
   },
   "devDependencies": {
+    "source-map-support": "^0.3.2",
     "typescript": "^1.5.3"
   }
 }
