@@ -1,117 +1,88 @@
 /*jshint node: true */
 
-var fs = require('fs'),
-    path = require('path'),
-    parse = require('../lib/parse'),
-    emit = require('../lib/emit');
+var fs = require('fs-extra');
+var path = require('path');
+var diff = require('diff');
+var parse = require('../lib/parse');
+var emit = require('../lib/emit');
 
 
-var FIXTURES_DIR = path.join(__dirname,  'fixtures'),
-    EXPECTED_DIR = path.join(FIXTURES_DIR, 'expected'),
-    GENERATED_DIR = path.join(FIXTURES_DIR, 'generated');
+var FIXTURES_DIR = path.join(__dirname, 'fixtures');
+var EXPECTED_DIR = path.join(FIXTURES_DIR, 'expected');
+var GENERATED_DIR = path.join(FIXTURES_DIR, 'generated');
 
-function clear(dir) {
-    var files = [];
-    if(fs.existsSync(dir)) {
-        files = fs.readdirSync(dir);
-        files.forEach(function(file,index){
-            var filePath = path.join(dir, file);
-            if(fs.lstatSync(filePath).isDirectory()) { 
-                clear(filePath);
-            } else {
-                fs.unlinkSync(filePath);
-            }
-        });
-        fs.rmdirSync(dir);
-    }
-}
 
-function recursiveCopy(dir, target) {
-    var files = [];
-    if(fs.existsSync(dir)) {
-        if (!fs.existsSync(target)) {
-            fs.mkdirSync(target);
-        }
-        files = fs.readdirSync(dir);
-        files.forEach(function(file,index){
-            var filePath = path.join(dir, file),
-                targetPath = path.join(target, file);
-            
-            if(fs.lstatSync(filePath).isDirectory()) { 
-                recursiveCopy(filePath, targetPath);
-            } else {
-                fs.linkSync(filePath, targetPath);
-            }
-        });
-    }
-}
-
-function compile(callback) {
-    var asFiles = fs.readdirSync(FIXTURES_DIR).filter(function (file) {
-        return path.extname(file) === '.as';
+function fixturePaths() {
+  return fs.readdirSync(FIXTURES_DIR)
+    .filter(function (name) {
+      return path.extname(name) === '.as';
+    }).map(function (name) {
+      var basename = path.basename(name, '.as');
+      return {
+        name: name,
+        source: path.join(FIXTURES_DIR, name),
+        expectedTs: path.join(EXPECTED_DIR, basename + '.ts'),
+        expectedAst: path.join(EXPECTED_DIR, basename + '.ast.json'),
+        generatedTs: path.join(GENERATED_DIR, basename + '.ts'),
+        generatedAst: path.join(GENERATED_DIR, basename + '.ast.json')
+      };
     });
-
-    var results = [];
-    try {
-        asFiles.forEach(function (file) {
-            console.log('compiling : '+ file);
-            var content = fs.readFileSync(path.join(FIXTURES_DIR, file), 'UTF-8');
-            var ast = parse(file, content);
-            results.push({
-                file: path.basename(file, '.as'),
-                content: emit(ast, content)
-            });
-        });
-    } catch(e) {
-        callback(e);
-    }
-    callback(null, results);
 }
 
 function generate() {
-    clear(GENERATED_DIR);
-    fs.mkdirSync(GENERATED_DIR);
-    compile(function (err, results) {
-        if (err) {
-            throw err;
-        }
-        results.forEach(function (fileResult){
-            fs.writeFileSync(path.join(GENERATED_DIR, fileResult.file + '.ts'), fileResult.content); 
-        });
-    });
+  fs.emptyDirSync(GENERATED_DIR);
+  fixturePaths().forEach(function (fixture) {
+    console.log('compiling : ' + fixture.name);
+    var source = fs.readFileSync(fixture.source, 'UTF-8');
+    var ast = parse(fixture.source, source);
+    fs.outputFileSync(fixture.generatedAst, JSON.stringify(ast, null, 2));
+    var output = emit(ast, source);
+    fs.outputFileSync(fixture.generatedTs, output);
+  });
 }
 
 function acceptGenerated() {
-    clear(EXPECTED_DIR);
-    recursiveCopy(GENERATED_DIR, EXPECTED_DIR);
+  fs.removeSync(EXPECTED_DIR);
+  fs.copySync(GENERATED_DIR, EXPECTED_DIR);
+}
+
+function printDiff(expectedPath, generatedPath) {
+  var expected = fs.readFileSync(expectedPath, 'UTF-8');
+  var generated = fs.readFileSync(generatedPath, 'UTF-8');
+  if (expected === generated) {
+    return false;
+  }
+  var patch = diff.createTwoFilesPatch(
+    expectedPath,
+    generatedPath,
+    expected,
+    generated);
+  console.log(patch);
+  return true;
 }
 
 function compare() {
-    var files = [];
-    compile(function (err, results) {
-        if (err) {
-            throw err;
-        }
-        results.forEach(function (fileResult) {
-            if (fileResult.content !== fs.readFileSync(path.join(EXPECTED_DIR, fileResult.file + '.ts'), 'UTF-8')) {
-                throw new Error('compilation for file ' + fileResult.file + 
-                                    '.as does not produce the expected result');
-            }
-        });
-    });
+  var exitCode = 0;
+  fixturePaths().forEach(function (fixture) {
+    if (printDiff(fixture.expectedAst, fixture.generatedAst) ||
+        printDiff(fixture.expectedTs, fixture.generatedTs)) {
+      exitCode = 1;
+    }
+  });
+  process.exit(exitCode);
 }
 
 var command = process.argv[2];
-switch(command) {
-    case 'generate':
-        generate();
-        break;
-    case 'accept':
-        acceptGenerated();
-        break;
-    case 'compare':
-        compare();
-        break;
-    default:
-        throw new Error('unknow command :' + command);
+switch (command) {
+  case 'generate':
+    generate();
+    break;
+  case 'accept':
+    acceptGenerated();
+    break;
+  case 'compare':
+    compare();
+    break;
+  default:
+    throw new Error('unknown command :' + command);
 }

@@ -1,0 +1,344 @@
+{
+  "kind": 19,
+  "start": -1,
+  "end": -1,
+  "children": [
+    {
+      "kind": 69,
+      "start": 0,
+      "end": 298,
+      "children": [
+        {
+          "kind": 62,
+          "start": 8,
+          "end": 22,
+          "text": "myPackage.test",
+          "children": []
+        },
+        {
+          "kind": 25,
+          "start": 33,
+          "end": 295,
+          "children": [
+            {
+              "kind": 42,
+              "start": 33,
+              "end": 295,
+              "text": "function",
+              "children": [
+                {
+                  "kind": 6,
+                  "start": 83,
+                  "end": 165,
+                  "text": "/**\r\n     * hey\r\n     */",
+                  "children": []
+                },
+                {
+                  "kind": 56,
+                  "start": 33,
+                  "end": 54,
+                  "children": [
+                    {
+                      "kind": 55,
+                      "start": 33,
+                      "end": 54,
+                      "text": "[Meta('dosomething')]",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "kind": 58,
+                  "start": 90,
+                  "end": 96,
+                  "children": [
+                    {
+                      "kind": 59,
+                      "start": 90,
+                      "end": 96,
+                      "text": "public",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "kind": 62,
+                  "start": 106,
+                  "end": 111,
+                  "text": "hello",
+                  "children": []
+                },
+                {
+                  "kind": 71,
+                  "start": 111,
+                  "end": 123,
+                  "children": [
+                    {
+                      "kind": 70,
+                      "start": 112,
+                      "end": 122,
+                      "children": [
+                        {
+                          "kind": 63,
+                          "start": 112,
+                          "end": 122,
+                          "children": [
+                            {
+                              "kind": 62,
+                              "start": 112,
+                              "end": 117,
+                              "text": "param",
+                              "children": []
+                            },
+                            {
+                              "kind": 88,
+                              "start": 119,
+                              "end": 122,
+                              "text": "int",
+                              "children": []
+                            },
+                            null
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "kind": 94,
+                  "start": 125,
+                  "end": 137,
+                  "text": "",
+                  "children": [
+                    {
+                      "kind": 88,
+                      "start": 133,
+                      "end": 136,
+                      "text": "int",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "kind": 12,
+                  "start": 138,
+                  "end": 295,
+                  "children": [
+                    {
+                      "kind": 93,
+                      "start": 149,
+                      "end": 211,
+                      "children": [
+                        null,
+                        null,
+                        {
+                          "kind": 63,
+                          "start": 153,
+                          "end": 174,
+                          "children": [
+                            {
+                              "kind": 62,
+                              "start": 153,
+                              "end": 156,
+                              "text": "hey",
+                              "children": []
+                            },
+                            {
+                              "kind": 88,
+                              "start": 158,
+                              "end": 164,
+                              "text": "String",
+                              "children": []
+                            },
+                            {
+                              "kind": 50,
+                              "start": 167,
+                              "end": 174,
+                              "text": null,
+                              "children": [
+                                {
+                                  "kind": 99,
+                                  "start": 167,
+                                  "end": 174,
+                                  "text": "\"hello\"",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "kind": 63,
+                          "start": 189,
+                          "end": 211,
+                          "children": [
+                            {
+                              "kind": 62,
+                              "start": 189,
+                              "end": 192,
+                              "text": "arr",
+                              "children": []
+                            },
+                            {
+                              "kind": 88,
+                              "start": 194,
+                              "end": 199,
+                              "text": "Array",
+                              "children": []
+                            },
+                            {
+                              "kind": 50,
+                              "start": 202,
+                              "end": 211,
+                              "text": null,
+                              "children": [
+                                {
+                                  "kind": 3,
+                                  "start": 202,
+                                  "end": 211,
+                                  "children": [
+                                    {
+                                      "kind": 99,
+                                      "start": 203,
+                                      "end": 204,
+                                      "text": "1",
+                                      "children": []
+                                    },
+                                    {
+                                      "kind": 99,
+                                      "start": 206,
+                                      "end": 207,
+                                      "text": "2",
+                                      "children": []
+                                    },
+                                    {
+                                      "kind": 99,
+                                      "start": 209,
+                                      "end": 210,
+                                      "text": "3",
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "kind": 14,
+                      "start": 232,
+                      "end": 252,
+                      "children": [
+                        {
+                          "kind": 30,
+                          "start": 232,
+                          "end": 240,
+                          "children": [
+                            {
+                              "kind": 100,
+                              "start": 232,
+                              "end": 235,
+                              "text": "arr",
+                              "children": []
+                            },
+                            {
+                              "kind": 99,
+                              "start": 236,
+                              "end": 240,
+                              "text": "push",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "kind": 2,
+                          "start": 240,
+                          "end": 252,
+                          "children": [
+                            {
+                              "kind": 30,
+                              "start": 241,
+                              "end": 251,
+                              "children": [
+                                {
+                                  "kind": 100,
+                                  "start": 241,
+                                  "end": 244,
+                                  "text": "hey",
+                                  "children": []
+                                },
+                                {
+                                  "kind": 99,
+                                  "start": 245,
+                                  "end": 251,
+                                  "text": "length",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "kind": 80,
+                      "start": 263,
+                      "end": 287,
+                      "text": null,
+                      "children": [
+                        {
+                          "kind": 14,
+                          "start": 270,
+                          "end": 287,
+                          "children": [
+                            {
+                              "kind": 94,
+                              "start": 270,
+                              "end": 282,
+                              "text": "",
+                              "children": [
+                                {
+                                  "kind": 88,
+                                  "start": 278,
+                                  "end": 281,
+                                  "text": "int",
+                                  "children": []
+                                }
+                              ]
+                            },
+                            {
+                              "kind": 2,
+                              "start": 282,
+                              "end": 287,
+                              "children": [
+                                {
+                                  "kind": 100,
+                                  "start": 283,
+                                  "end": 286,
+                                  "text": "arr",
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": 25,
+      "start": 298,
+      "end": -1,
+      "children": []
+    }
+  ]
+}

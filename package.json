@@ -8,9 +8,10 @@
   },
   "scripts": {
     "pretest": "npm run -s compile",
-    "test": "node -r source-map-support/register test/runner compare",
+    "test": "npm run -s generate && npm run -s compare",
     "generate": "node -r source-map-support/register test/runner generate",
     "accept": "node -r source-map-support/register test/runner accept",
+    "compare": "node -r source-map-support/register test/runner compare || echo Comparison failed",
     "compile": "tsc --project src",
     "watch": "tsc --project src --watch"
   },
@@ -35,6 +36,7 @@
     "sax": "~0.6.0"
   },
   "devDependencies": {
+    "diff": "^2.2.1",
     "source-map-support": "^0.3.2",
     "tslint": "^2.5.1",
     "typescript": "^1.5.3"
