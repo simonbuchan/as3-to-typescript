@@ -50,1823 +50,1817 @@ const VECTOR = 'Vector';
  * @author xagnetti
  */
 export default class AS3Parser {
-    private sourceFile: SourceFile;
+    sourceFile:SourceFile;
 
-    private currentAsDoc: Node;
-    private currentFunctionNode: Node;
-    private currentMultiLineComment: Node;
-    private isInFor: boolean;
-    private scn: AS3Scanner;
-    private tok: Token;
+    currentAsDoc:Node;
+    currentFunctionNode:Node;
+    currentMultiLineComment:Node;
+    isInFor:boolean = false;
+    scn:AS3Scanner;
+    tok:Token;
 
-    constructor() {
-        this.isInFor = false;
-    }
-
-    public buildAst(filePath: string, content: string): Node {
+    buildAst(filePath:string, content:string):Node {
         this.sourceFile = new SourceFile(content, filePath);
         this.scn = new AS3Scanner();
         this.scn.setContent(content);
-        return this.parseCompilationUnit();
+        return parseCompilationUnit(this);
     }
+}
 
 
-    private nextToken(ignoreDocumentation: boolean = false): void {
-        do {
-            if (ignoreDocumentation) {
-                this.nextTokenIgnoringDocumentation();
-            } else {
-                this.nextTokenAllowNewLine();
-            }
-        }
-        while (this.tok.text === NEW_LINE);
-    }
-
-    private tryParse<T>(func: () => T): T {
-        let checkPoint = this.scn.getCheckPoint();
-        try {
-            return func();
-        } catch (e) {
-            this.scn.rewind(checkPoint);
-            return null;
-        }
-    }
-
-
-    /**
-     * tok is first content token
-     * 
-     * @throws TokenException
-     */
-    private parseClassContent(): Node {
-        let result: Node = new Node(NodeKind.CONTENT, this.tok.index, -1);
-        let modifiers: Token[] = [];
-        let meta: Node[] = [];
-
-        while (!this.tokIs(Operators.RIGHT_CURLY_BRACKET)) {
-            if (this.tokIs(Operators.LEFT_CURLY_BRACKET)) {
-                result.children.push(this.parseBlock());
-            }
-            if (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
-                meta.push(this.parseMetaData());
-            } else if (this.tokIs(Keywords.VAR)) {
-                this.parseClassField(result, modifiers, meta);
-            } else if (this.tokIs(Keywords.CONST)) {
-                this.parseClassConstant(result, modifiers, meta);
-            } else if (this.tokIs(Keywords.IMPORT)) {
-                result.children.push(this.parseImport());
-            } else if (this.tokIs(Keywords.INCLUDE) || this.tokIs(Keywords.INCLUDE_AS2)) {
-                result.children.push(this.parseIncludeExpression());
-            } else if (this.tokIs(Keywords.FUNCTION)) {
-                this.parseClassFunctions(result, modifiers, meta);
-            } else {
-                this.tryToParseCommentNode(result, modifiers);
-            }
-        }
-        if (result.lastChild) {
-            result.end = result.lastChild.end;
-        }
-        return result;
-    }
-
-    /**
-     * tok is empty, since nextToken has not been called before
-     * 
-     * @throws UnExpectedTokenException
-     */
-    private parseCompilationUnit(): Node {
-        let result: Node = new Node(NodeKind.COMPILATION_UNIT, -1, -1);
-
-        this.nextTokenIgnoringDocumentation();
-        if (this.tokIs(Keywords.PACKAGE)) {
-            result.children.push(this.parsePackage());
-        }
-        result.children.push(this.parsePackageContent());
-        return result;
-    }
-
-    /**
-     * @return
-     * @throws TokenException
-     */
-    private parseExpression(): Node {
-        return this.parseAssignmentExpression();
-    }
-
-    /**
-     * tok is first content token
-     * 
-     * @throws TokenException
-     */
-    private parseInterfaceContent(): Node {
-        let result: Node = new Node(NodeKind.CONTENT, this.tok.index, -1);
-
-        while (!this.tokIs(Operators.RIGHT_CURLY_BRACKET)) {
-            if (this.tokIs(Keywords.IMPORT)) {
-                result.children.push(this.parseImport());
-            } else if (this.tokIs(Keywords.FUNCTION)) {
-                result.children.push(this.parseFunctionSignature());
-            } else if (this.tokIs(Keywords.INCLUDE) || this.tokIs(Keywords.INCLUDE_AS2)) {
-                result.children.push(this.parseIncludeExpression());
-            } else if (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
-                while (!this.tokIs(Operators.RIGHT_SQUARE_BRACKET)) {
-                    this.nextToken();
-                }
-                this.nextToken();
-            } else {
-                this.tryToParseCommentNode(result, null);
-            }
-        }
-        if (result.lastChild) {
-            result.end = result.lastChild.end;
-        }
-        return result;
-    }
-
-    /**
-     * tok is first token of content
-     * 
-     * @throws UnExpectedTokenException
-     */
-    private parsePackageContent(): Node {
-        let result: Node = new Node(NodeKind.CONTENT, this.tok.index, -1);
-        let modifiers: Token[] = [];
-        let meta: Node[] = [];
-
-        while (!this.tokIs(Operators.RIGHT_CURLY_BRACKET) && !this.tokIs(Keywords.EOF)) {
-            if (this.tokIs(Keywords.IMPORT)) {
-                result.children.push(this.parseImport());
-            } else if (this.tokIs(Keywords.USE)) {
-                result.children.push(this.parseUse());
-            } else if (this.tokIs(Keywords.INCLUDE) || this.tokIs(Keywords.INCLUDE_AS2)) {
-                result.children.push(this.parseIncludeExpression());
-            } else if (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
-                meta.push(this.parseMetaData());
-            } else if (this.tokIs(Keywords.CLASS)) {
-                result.children.push(this.parseClass(meta, modifiers));
-                modifiers.length = 0;
-                meta.length = 0;
-            } else if (this.tokIs(Keywords.INTERFACE)) {
-                result.children.push(this.parseInterface(meta, modifiers));
-                modifiers.length = 0;
-                meta.length = 0;
-            } else if (this.tokIs(Keywords.FUNCTION)) {
-                this.parseClassFunctions(result, modifiers, meta);
-            } else if (startsWith(this.tok.text, ASDOC_COMMENT)) {
-                this.currentAsDoc = new Node(NodeKind.AS_DOC, this.tok.index,
-                    this.tok.index + this.tok.index - 1, this.tok.text);
-                this.nextToken();
-            } else if (startsWith(this.tok.text, MULTIPLE_LINES_COMMENT)) {
-                this.currentMultiLineComment = new Node(NodeKind.MULTI_LINE_COMMENT, this.tok.index,
-                    this.tok.index + this.tok.index - 1, this.tok.text);
-                this.nextToken();
-            } else {
-                modifiers.push(this.tok);
-                this.nextTokenIgnoringDocumentation();
-            }
-        }
-        if (result.lastChild) {
-            result.end = result.lastChild.end;
-        }
-        return result;
-    }
-
-    /**
-     * @return
-     * @throws TokenException
-     */
-    private parsePrimaryExpression(): Node {
-        let result: Node;
-
-        if (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
-            return this.parseArrayLiteral();
-        } else if (this.tokIs(Operators.LEFT_CURLY_BRACKET)) {
-            return this.parseObjectLiteral();
-        } else if (this.tokIs(Keywords.FUNCTION)) {
-            return this.parseLambdaExpression();
-        } else if (this.tokIs(Keywords.NEW)) {
-            return this.parseNewExpression();
-        } else if (this.tokIs(Operators.LEFT_PARENTHESIS)) {
-            return this.parseEncapsulatedExpression();
-        } else if (this.tok.text === VECTOR) {
-            return this.parseVector();
-        } else if (this.tokIs(Operators.INFERIOR)) {
-            let res = this.tryParse(() => this.parseShortVector());
-            if (res) {
-                return res;
-            }
-        }
-
-        if (this.tok.text === '/' || this.tok.text === '/=') {
-            let tok = this.scn.scanRegExp();
-            if (tok) {
-                this.nextToken(true);
-                return new Node(NodeKind.LITERAL, tok.index, tok.end, tok.text);
-            }
-        }
-
-        if (this.tok.isXML) {
-            result = new Node(NodeKind.XML_LITERAL, this.tok.index, this.tok.end, this.tok.text);
-        } else if (this.tok.isNumeric || /('|")/.test(this.tok.text[0])) {
-            result = new Node(NodeKind.LITERAL, this.tok.index, this.tok.end, this.tok.text);
+function nextToken(parser:AS3Parser, ignoreDocumentation:boolean = false):void {
+    do {
+        if (ignoreDocumentation) {
+            nextTokenIgnoringDocumentation(parser);
         } else {
-            result = new Node(NodeKind.IDENTIFIER,  this.tok.index, this.tok.end, this.tok.text);
+            nextTokenAllowNewLine(parser);
         }
-        this.nextToken(true);
-        return result;
     }
+    while (parser.tok.text === NEW_LINE);
+}
 
-    /**
-     * tok is the first token of a statement
-     * 
-     * @throws TokenException
-     */
-    private parseStatement(): Node {
-        let result: Node;
+function tryParse<T>(parser:AS3Parser, func:() => T):T {
+    let checkPoint = parser.scn.getCheckPoint();
+    try {
+        return func();
+    } catch (e) {
+        parser.scn.rewind(checkPoint);
+        return null;
+    }
+}
 
-        if (this.tokIs(Keywords.FOR)) {
-            result = this.parseFor();
-        } else if (this.tokIs(Keywords.IF)) {
-            result = this.parseIf();
-        } else if (this.tokIs(Keywords.SWITCH)) {
-            result = this.parseSwitch();
-        } else if (this.tokIs(Keywords.DO)) {
-            result = this.parseDo();
-        } else if (this.tokIs(Keywords.WHILE)) {
-            result = this.parseWhile();
-        } else if (this.tokIs(Keywords.TRY)) {
-            result = this.parseTry();
-        } else if (this.tokIs(Keywords.CATCH)) {
-            result = this.parseCatch();
-        } else if (this.tokIs(Keywords.FINALLY)) {
-            result = this.parseFinally();
-        } else if (this.tokIs(Operators.LEFT_CURLY_BRACKET)) {
-            result = this.parseBlock();
-        } else if (this.tokIs(Keywords.VAR)) {
-            result = this.parseVar();
-        } else if (this.tokIs(Keywords.CONST)) {
-            result = this.parseConst();
-        } else if (this.tokIs(Keywords.RETURN)) {
-            result = this.parseReturnStatement();
-        } else if (this.tokIs(Keywords.THROW)) {
-            result = this.parseThrowStatement();
-        } else if (this.tokIs(Keywords.BREAK) || this.tokIs(Keywords.CONTINUE)) {
-            result = this.parseBreakOrContinueStatement();
-        } else if (this.tokIs(Operators.SEMI_COLUMN)) {
-            result = this.parseEmptyStatement();
+
+/**
+ * tok is first content token
+ *
+ * @throws TokenException
+ */
+function parseClassContent(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.CONTENT, parser.tok.index, -1);
+    let modifiers:Token[] = [];
+    let meta:Node[] = [];
+
+    while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
+        if (tokIs(parser, Operators.LEFT_CURLY_BRACKET)) {
+            result.children.push(parseBlock(parser));
+        }
+        if (tokIs(parser, Operators.LEFT_SQUARE_BRACKET)) {
+            meta.push(parseMetaData(parser));
+        } else if (tokIs(parser, Keywords.VAR)) {
+            parseClassField(parser, result, modifiers, meta);
+        } else if (tokIs(parser, Keywords.CONST)) {
+            parseClassConstant(parser, result, modifiers, meta);
+        } else if (tokIs(parser, Keywords.IMPORT)) {
+            result.children.push(parseImport(parser));
+        } else if (tokIs(parser, Keywords.INCLUDE) || tokIs(parser, Keywords.INCLUDE_AS2)) {
+            result.children.push(parseIncludeExpression(parser));
+        } else if (tokIs(parser, Keywords.FUNCTION)) {
+            parseClassFunctions(parser, result, modifiers, meta);
         } else {
-            result = this.parseExpressionList();
-            this.skip(Operators.SEMI_COLUMN);
+            tryToParseCommentNode(parser, result, modifiers);
         }
-        return result;
     }
+    if (result.lastChild) {
+        result.end = result.lastChild.end;
+    }
+    return result;
+}
 
-    /**
-     * @return
-     * @throws TokenException
-     */
-    private parseUnaryExpression(): Node {
-        let result: Node,
-            index = this.tok.index;
-        if (this.tokIs(Operators.INCREMENT)) {
-            this.nextToken();
-            result = new Node(NodeKind.PRE_INC, this.tok.index, index, null, [this.parseUnaryExpression()]);
-        } else if (this.tokIs(Operators.DECREMENT)) {
-            this.nextToken();
-            result = new Node(NodeKind.PRE_DEC, this.tok.index, index, null, [this.parseUnaryExpression()]);
-        } else if (this.tokIs(Operators.MINUS)) {
-            this.nextToken();
-            result = new Node(NodeKind.MINUS, this.tok.index, index, null, [this.parseUnaryExpression()]);
-        } else if (this.tokIs(Operators.PLUS) || this.tokIs(Operators.PLUS_AS2)) {
-            this.nextToken();
-            result = new Node(NodeKind.PLUS, this.tok.index, index, null, [this.parseUnaryExpression()]);
+/**
+ * tok is empty, since nextToken has not been called before
+ *
+ * @throws UnExpectedTokenException
+ */
+function parseCompilationUnit(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.COMPILATION_UNIT, -1, -1);
+
+    nextTokenIgnoringDocumentation(parser);
+    if (tokIs(parser, Keywords.PACKAGE)) {
+        result.children.push(parsePackage(parser));
+    }
+    result.children.push(parsePackageContent(parser));
+    return result;
+}
+
+/**
+ * @return
+ * @throws TokenException
+ */
+function parseExpression(parser:AS3Parser):Node {
+    return parseAssignmentExpression(parser);
+}
+
+/**
+ * tok is first content token
+ *
+ * @throws TokenException
+ */
+function parseInterfaceContent(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.CONTENT, parser.tok.index, -1);
+
+    while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
+        if (tokIs(parser, Keywords.IMPORT)) {
+            result.children.push(parseImport(parser));
+        } else if (tokIs(parser, Keywords.FUNCTION)) {
+            result.children.push(parseFunctionSignature(parser));
+        } else if (tokIs(parser, Keywords.INCLUDE) || tokIs(parser, Keywords.INCLUDE_AS2)) {
+            result.children.push(parseIncludeExpression(parser));
+        } else if (tokIs(parser, Operators.LEFT_SQUARE_BRACKET)) {
+            while (!tokIs(parser, Operators.RIGHT_SQUARE_BRACKET)) {
+                nextToken(parser);
+            }
+            nextToken(parser);
         } else {
-            return this.parseUnaryExpressionNotPlusMinus();
+            tryToParseCommentNode(parser, result, null);
         }
-        return result;
+    }
+    if (result.lastChild) {
+        result.end = result.lastChild.end;
+    }
+    return result;
+}
+
+/**
+ * tok is first token of content
+ *
+ * @throws UnExpectedTokenException
+ */
+function parsePackageContent(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.CONTENT, parser.tok.index, -1);
+    let modifiers:Token[] = [];
+    let meta:Node[] = [];
+
+    while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET) && !tokIs(parser, Keywords.EOF)) {
+        if (tokIs(parser, Keywords.IMPORT)) {
+            result.children.push(parseImport(parser));
+        } else if (tokIs(parser, Keywords.USE)) {
+            result.children.push(parseUse(parser));
+        } else if (tokIs(parser, Keywords.INCLUDE) || tokIs(parser, Keywords.INCLUDE_AS2)) {
+            result.children.push(parseIncludeExpression(parser));
+        } else if (tokIs(parser, Operators.LEFT_SQUARE_BRACKET)) {
+            meta.push(parseMetaData(parser));
+        } else if (tokIs(parser, Keywords.CLASS)) {
+            result.children.push(parseClass(parser, meta, modifiers));
+            modifiers.length = 0;
+            meta.length = 0;
+        } else if (tokIs(parser, Keywords.INTERFACE)) {
+            result.children.push(parseInterface(parser, meta, modifiers));
+            modifiers.length = 0;
+            meta.length = 0;
+        } else if (tokIs(parser, Keywords.FUNCTION)) {
+            parseClassFunctions(parser, result, modifiers, meta);
+        } else if (startsWith(parser.tok.text, ASDOC_COMMENT)) {
+            parser.currentAsDoc = new Node(NodeKind.AS_DOC, parser.tok.index,
+                parser.tok.index + parser.tok.index - 1, parser.tok.text);
+            nextToken(parser);
+        } else if (startsWith(parser.tok.text, MULTIPLE_LINES_COMMENT)) {
+            parser.currentMultiLineComment = new Node(NodeKind.MULTI_LINE_COMMENT, parser.tok.index,
+                parser.tok.index + parser.tok.index - 1, parser.tok.text);
+            nextToken(parser);
+        } else {
+            modifiers.push(parser.tok);
+            nextTokenIgnoringDocumentation(parser);
+        }
+    }
+    if (result.lastChild) {
+        result.end = result.lastChild.end;
+    }
+    return result;
+}
+
+/**
+ * @return
+ * @throws TokenException
+ */
+function parsePrimaryExpression(parser:AS3Parser):Node {
+    let result:Node;
+
+    if (tokIs(parser, Operators.LEFT_SQUARE_BRACKET)) {
+        return parseArrayLiteral(parser);
+    } else if (tokIs(parser, Operators.LEFT_CURLY_BRACKET)) {
+        return parseObjectLiteral(parser);
+    } else if (tokIs(parser, Keywords.FUNCTION)) {
+        return parseLambdaExpression(parser);
+    } else if (tokIs(parser, Keywords.NEW)) {
+        return parseNewExpression(parser);
+    } else if (tokIs(parser, Operators.LEFT_PARENTHESIS)) {
+        return parseEncapsulatedExpression(parser);
+    } else if (parser.tok.text === VECTOR) {
+        return parseVector(parser);
+    } else if (tokIs(parser, Operators.INFERIOR)) {
+        let res = tryParse(parser, () => parseShortVector(parser));
+        if (res) {
+            return res;
+        }
     }
 
-    private collectVarListContent(result: Node): Node {
-        result.children.push(this.parseNameTypeInit());
-        while (this.tokIs(Operators.COMMA)) {
-            this.nextToken(true);
-            result.children.push(this.parseNameTypeInit());
+    if (parser.tok.text === '/' || parser.tok.text === '/=') {
+        let tok = parser.scn.scanRegExp();
+        if (tok) {
+            nextToken(parser, true);
+            return new Node(NodeKind.LITERAL, tok.index, tok.end, tok.text);
         }
-        return result;
     }
 
+    if (parser.tok.isXML) {
+        result = new Node(NodeKind.XML_LITERAL, parser.tok.index, parser.tok.end, parser.tok.text);
+    } else if (parser.tok.isNumeric || /('|")/.test(parser.tok.text[0])) {
+        result = new Node(NodeKind.LITERAL, parser.tok.index, parser.tok.end, parser.tok.text);
+    } else {
+        result = new Node(NodeKind.IDENTIFIER, parser.tok.index, parser.tok.end, parser.tok.text);
+    }
+    nextToken(parser, true);
+    return result;
+}
 
-    /**
-     * Compare the current token to the parameter. If it equals, get the next
-     * token. If not, throw a runtime exception.
-     * 
-     * @param text
-     * @throws UnExpectedTokenException
-     */
-    private consume(text: string): Token {
-        while (startsWith(this.tok.text, '//')) {
-            this.nextToken();
-        }
+/**
+ * tok is the first token of a statement
+ *
+ * @throws TokenException
+ */
+function parseStatement(parser:AS3Parser):Node {
+    let result:Node;
 
-        if (!this.tokIs(text)) {
-            /*throw new UnExpectedTokenException(this.tok.text,
-                new Position(this.tok.index, this.tok.getColumn()),
-                fileName,
-                text);*/
+    if (tokIs(parser, Keywords.FOR)) {
+        result = parseFor(parser);
+    } else if (tokIs(parser, Keywords.IF)) {
+        result = parseIf(parser);
+    } else if (tokIs(parser, Keywords.SWITCH)) {
+        result = parseSwitch(parser);
+    } else if (tokIs(parser, Keywords.DO)) {
+        result = parseDo(parser);
+    } else if (tokIs(parser, Keywords.WHILE)) {
+        result = parseWhile(parser);
+    } else if (tokIs(parser, Keywords.TRY)) {
+        result = parseTry(parser);
+    } else if (tokIs(parser, Keywords.CATCH)) {
+        result = parseCatch(parser);
+    } else if (tokIs(parser, Keywords.FINALLY)) {
+        result = parseFinally(parser);
+    } else if (tokIs(parser, Operators.LEFT_CURLY_BRACKET)) {
+        result = parseBlock(parser);
+    } else if (tokIs(parser, Keywords.VAR)) {
+        result = parseVar(parser);
+    } else if (tokIs(parser, Keywords.CONST)) {
+        result = parseConst(parser);
+    } else if (tokIs(parser, Keywords.RETURN)) {
+        result = parseReturnStatement(parser);
+    } else if (tokIs(parser, Keywords.THROW)) {
+        result = parseThrowStatement(parser);
+    } else if (tokIs(parser, Keywords.BREAK) || tokIs(parser, Keywords.CONTINUE)) {
+        result = parseBreakOrContinueStatement(parser);
+    } else if (tokIs(parser, Operators.SEMI_COLUMN)) {
+        result = parseEmptyStatement(parser);
+    } else {
+        result = parseExpressionList(parser);
+        skip(parser, Operators.SEMI_COLUMN);
+    }
+    return result;
+}
 
-            let pos = this.sourceFile.getLineAndCharacterFromPosition(this.tok.index);
-            let msg =
-                `unexpected token : ${this.tok.text}(${pos.line},${pos.col}) ` +
-                `in file ${this.sourceFile.path} expected: ${text}`;
-            throw new Error(msg);
-        }
-        let result = this.tok;
-        this.nextToken();
-        return result;
+/**
+ * @return
+ * @throws TokenException
+ */
+function parseUnaryExpression(parser:AS3Parser):Node {
+    let result:Node,
+        index = parser.tok.index;
+    if (tokIs(parser, Operators.INCREMENT)) {
+        nextToken(parser);
+        result = new Node(NodeKind.PRE_INC, parser.tok.index, index, null, [parseUnaryExpression(parser)]);
+    } else if (tokIs(parser, Operators.DECREMENT)) {
+        nextToken(parser);
+        result = new Node(NodeKind.PRE_DEC, parser.tok.index, index, null, [parseUnaryExpression(parser)]);
+    } else if (tokIs(parser, Operators.MINUS)) {
+        nextToken(parser);
+        result = new Node(NodeKind.MINUS, parser.tok.index, index, null, [parseUnaryExpression(parser)]);
+    } else if (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2)) {
+        nextToken(parser);
+        result = new Node(NodeKind.PLUS, parser.tok.index, index, null, [parseUnaryExpression(parser)]);
+    } else {
+        return parseUnaryExpressionNotPlusMinus(parser);
+    }
+    return result;
+}
+
+function collectVarListContent(parser:AS3Parser, result:Node):Node {
+    result.children.push(parseNameTypeInit(parser));
+    while (tokIs(parser, Operators.COMMA)) {
+        nextToken(parser, true);
+        result.children.push(parseNameTypeInit(parser));
+    }
+    return result;
+}
+
+
+/**
+ * Compare the current token to the parameter. If it equals, get the next
+ * token. If not, throw a runtime exception.
+ *
+ * @param text
+ * @throws UnExpectedTokenException
+ */
+function consume(parser:AS3Parser, text:string):Token {
+    while (startsWith(parser.tok.text, '//')) {
+        nextToken(parser);
     }
 
-    private convertMeta(metadataList: Node[]): Node {
-        if (!metadataList || metadataList.length === 0) {
-            return null;
-        }
+    if (!tokIs(parser, text)) {
+        /*throw new UnExpectedTokenException(parser.tok.text,
+         new Position(parser.tok.index, parser.tok.getColumn()),
+         fileName,
+         text);*/
 
-        let result: Node = new Node(NodeKind.META_LIST, this.tok.index, -1);
-        result.children = metadataList ? metadataList.slice(0) : [];
-        if (result.lastChild) {
-            result.end = result.lastChild.end;
-        }
-        result.start = result.children.reduce((index: number, child: Node) => {
-            return Math.min(index, child ? child.start : Infinity);
-        }, result.start);
-        return result;
+        let pos = parser.sourceFile.getLineAndCharacterFromPosition(parser.tok.index);
+        let msg =
+            `unexpected token : ${parser.tok.text}(${pos.line},${pos.col}) ` +
+            `in file ${parser.sourceFile.path} expected: ${text}`;
+        throw new Error(msg);
+    }
+    let result = parser.tok;
+    nextToken(parser);
+    return result;
+}
+
+function convertMeta(parser:AS3Parser, metadataList:Node[]):Node {
+    if (!metadataList || metadataList.length === 0) {
+        return null;
     }
 
-    private convertModifiers(modifierList: Token[]): Node {
-        if (!modifierList) {
-            return null;
-        }
+    let result:Node = new Node(NodeKind.META_LIST, parser.tok.index, -1);
+    result.children = metadataList ? metadataList.slice(0) : [];
+    if (result.lastChild) {
+        result.end = result.lastChild.end;
+    }
+    result.start = result.children.reduce((index:number, child:Node) => {
+        return Math.min(index, child ? child.start : Infinity);
+    }, result.start);
+    return result;
+}
 
-        let result: Node = new Node(NodeKind.MOD_LIST, this.tok.index, -1);
-
-        let end = this.tok.index;
-        result.children = modifierList.map(tok => {
-            end = tok.index + tok.text.length;
-            return new Node(NodeKind.MODIFIER, tok.index, end, tok.text);
-        });
-        result.end = end;
-        result.start = result.children.reduce((index: number, child: Node) => {
-            return Math.min(index, child ? child.start : Infinity);
-        }, result.start);
-        return result;
+function convertModifiers(parser:AS3Parser, modifierList:Token[]):Node {
+    if (!modifierList) {
+        return null;
     }
 
-    private doParseSignature(): Node[] {
-        let tok = this.consume(Keywords.FUNCTION);
-        let type: Node = new Node(NodeKind.TYPE, tok.index, tok.end, Keywords.FUNCTION);
-        if (this.tokIs(Keywords.SET) || this.tokIs(Keywords.GET)) {
-            type = new Node(NodeKind.TYPE, tok.index, this.tok.end, this.tok.text);
-            this.nextToken(); // set or get
-        }
-        let name: Node = new Node(NodeKind.NAME, this.tok.index, this.tok.end, this.tok.text);
-        this.nextToken(); // name
-        let params: Node = this.parseParameterList();
-        let returnType: Node = this.parseOptionalType();
-        return [type, name, params, returnType];
-    }
+    let result:Node = new Node(NodeKind.MOD_LIST, parser.tok.index, -1);
 
-    private findFunctionTypeFromSignature(signature: Node[]): NodeKind {
-        for (let i = 0; i < signature.length; i++) {
-            let node = signature[i];
-            if (node.kind === NodeKind.TYPE) {
-                if (node.text === Keywords.SET) {
-                    return NodeKind.SET;
-                }
-                if (node.text === Keywords.GET) {
-                    return NodeKind.GET;
-                }
-                return NodeKind.FUNCTION;
+    let end = parser.tok.index;
+    result.children = modifierList.map(tok => {
+        end = tok.index + tok.text.length;
+        return new Node(NodeKind.MODIFIER, tok.index, end, tok.text);
+    });
+    result.end = end;
+    result.start = result.children.reduce((index:number, child:Node) => {
+        return Math.min(index, child ? child.start : Infinity);
+    }, result.start);
+    return result;
+}
+
+function doParseSignature(parser:AS3Parser):Node[] {
+    let tok = consume(parser, Keywords.FUNCTION);
+    let type:Node = new Node(NodeKind.TYPE, tok.index, tok.end, Keywords.FUNCTION);
+    if (tokIs(parser, Keywords.SET) || tokIs(parser, Keywords.GET)) {
+        type = new Node(NodeKind.TYPE, tok.index, parser.tok.end, parser.tok.text);
+        nextToken(parser); // set or get
+    }
+    let name:Node = new Node(NodeKind.NAME, parser.tok.index, parser.tok.end, parser.tok.text);
+    nextToken(parser); // name
+    let params:Node = parseParameterList(parser);
+    let returnType:Node = parseOptionalType(parser);
+    return [type, name, params, returnType];
+}
+
+function findFunctionTypeFromSignature(parser:AS3Parser, signature:Node[]):NodeKind {
+    for (let i = 0; i < signature.length; i++) {
+        let node = signature[i];
+        if (node.kind === NodeKind.TYPE) {
+            if (node.text === Keywords.SET) {
+                return NodeKind.SET;
             }
-        }
-        return NodeKind.FUNCTION;
-    }
-
-    /**
-     * Get the next token Skip comments but keep newlines We need this method for
-     * beeing able to decide if a returnStatement has an expression
-     * 
-     * @throws UnExpectedTokenException
-     */
-    private nextTokenAllowNewLine(): void {
-        do {
-            let lastTok = this.tok;
-            this.tok = this.scn.nextToken();
-
-            if (!this.tok) {
-                let {line, col} = this.sourceFile.getLineAndCharacterFromPosition(lastTok.index);
-                throw new Error(`failed to parse token after ${this.sourceFile.path}:(${line},${col})`);
-
+            if (node.text === Keywords.GET) {
+                return NodeKind.GET;
             }
-            if (this.tok.text === null) {
-                 throw new Error(this.sourceFile.path); //TODO throw new NullTokenException(fileName);
-            }
+            return NodeKind.FUNCTION;
         }
-        while (startsWith(this.tok.text, SINGLE_LINE_COMMENT));
+    }
+    return NodeKind.FUNCTION;
+}
+
+/**
+ * Get the next token Skip comments but keep newlines We need parser method for
+ * beeing able to decide if a returnStatement has an expression
+ *
+ * @throws UnExpectedTokenException
+ */
+function nextTokenAllowNewLine(parser:AS3Parser):void {
+    do {
+        let lastTok = parser.tok;
+        parser.tok = parser.scn.nextToken();
+
+        if (!parser.tok) {
+            let {line, col} = parser.sourceFile.getLineAndCharacterFromPosition(lastTok.index);
+            throw new Error(`failed to parse token after ${parser.sourceFile.path}:(${line},${col})`);
+
+        }
+        if (parser.tok.text === null) {
+            throw new Error(parser.sourceFile.path); //TODO throw new NullTokenException(fileName);
+        }
+    }
+    while (startsWith(parser.tok.text, SINGLE_LINE_COMMENT));
+}
+
+function nextTokenIgnoringDocumentation(parser:AS3Parser):void {
+    do {
+        nextToken(parser);
+    }
+    while (startsWith(parser.tok.text, MULTIPLE_LINES_COMMENT));
+}
+
+function parseAdditiveExpression(parser:AS3Parser):Node {
+    let result = new Node(NodeKind.ADD, parser.tok.index, parser.tok.end, null, [parseMultiplicativeExpression(parser)]);
+    while (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2) || tokIs(parser, Operators.MINUS)) {
+        result.children.push(new Node(NodeKind.OP, parser.tok.index, parser.tok.end, parser.tok.text));
+        nextToken(parser, true);
+        result.children.push(parseMultiplicativeExpression(parser));
+    }
+    if (result.lastChild) {
+        result.end = result.lastChild.end;
+    }
+    return result.children.length > 1 ? result : result.lastChild;
+}
+
+// ------------------------------------------------------------------------
+// language specific recursive descent parsing
+// ------------------------------------------------------------------------
+
+function parseAndExpression(parser:AS3Parser):Node {
+    let result = new Node(NodeKind.AND, parser.tok.index, parser.tok.end, null, [parseBitwiseOrExpression(parser)]);
+    while (tokIs(parser, Operators.AND) || tokIs(parser, Operators.AND_AS2)) {
+        result.children.push(new Node(NodeKind.OP, parser.tok.index, parser.tok.end, parser.tok.text));
+        nextToken(parser, true);
+        result.children.push(parseBitwiseOrExpression(parser));
+    }
+    if (result.lastChild) {
+        result.end = result.lastChild.end;
+    }
+    return result.children.length > 1 ? result : result.lastChild;
+}
+
+/**
+ * tok is ( exit tok is first token after )
+ */
+function parseArgumentList(parser:AS3Parser):Node {
+    let tok = consume(parser, Operators.LEFT_PARENTHESIS);
+    let result:Node = new Node(NodeKind.ARGUMENTS, tok.index, -1);
+    while (!tokIs(parser, Operators.RIGHT_PARENTHESIS)) {
+        result.children.push(parseExpression(parser));
+        skip(parser, Operators.COMMA);
+    }
+    tok = consume(parser, Operators.RIGHT_PARENTHESIS);
+    result.end = tok.end;
+    return result;
+}
+
+function parseArrayAccessor(parser:AS3Parser, node:Node):Node {
+    let result:Node = new Node(NodeKind.ARRAY_ACCESSOR, node.start, -1);
+    result.children.push(node);
+    while (tokIs(parser, Operators.LEFT_SQUARE_BRACKET)) {
+        nextToken(parser, true);
+        result.children.push(parseExpression(parser));
+        result.end = consume(parser, Operators.RIGHT_SQUARE_BRACKET).end;
+    }
+    return result;
+}
+
+/**
+ * tok is [
+ */
+function parseArrayLiteral(parser:AS3Parser):Node {
+    let tok = consume(parser, Operators.LEFT_SQUARE_BRACKET);
+    let result:Node = new Node(NodeKind.ARRAY, tok.index, -1);
+    while (!tokIs(parser, Operators.RIGHT_SQUARE_BRACKET)) {
+        result.children.push(parseExpression(parser));
+        skip(parser, Operators.COMMA);
+    }
+    result.end = consume(parser, Operators.RIGHT_SQUARE_BRACKET).end;
+    return result;
+}
+
+function parseAssignmentExpression(parser:AS3Parser):Node {
+    let result = new Node(NodeKind.ASSIGN, parser.tok.index, parser.tok.end, null, [parseConditionalExpression(parser)]);
+    while (tokIs(parser, Operators.EQUAL)
+    || tokIs(parser, Operators.PLUS_EQUAL) || tokIs(parser, Operators.MINUS_EQUAL)
+    || tokIs(parser, Operators.TIMES_EQUAL) || tokIs(parser, Operators.DIVIDED_EQUAL)
+    || tokIs(parser, Operators.MODULO_EQUAL) || tokIs(parser, Operators.AND_EQUAL) || tokIs(parser, Operators.OR_EQUAL)
+    || tokIs(parser, Operators.XOR_EQUAL)) {
+        result.children.push(new Node(NodeKind.OP, parser.tok.index, parser.tok.end, parser.tok.text));
+        nextToken(parser, true);
+        result.children.push(parseExpression(parser));
+    }
+    if (result.lastChild) {
+        result.end = result.lastChild.end;
+    }
+    return result.children.length > 1 ? result : result.lastChild;
+}
+
+function parseBitwiseAndExpression(parser:AS3Parser):Node {
+    let children = [parseEqualityExpression(parser)];
+    let result = new Node(NodeKind.B_AND, parser.tok.index, parser.tok.end, parser.tok.text, children);
+    while (tokIs(parser, Operators.B_AND)) {
+        result.children.push(new Node(NodeKind.OP, parser.tok.index, parser.tok.end, parser.tok.text));
+        nextToken(parser, true);
+        result.children.push(parseEqualityExpression(parser));
+    }
+    if (result.lastChild) {
+        result.end = result.lastChild.end;
+    }
+    return result.children.length > 1 ? result : result.lastChild;
+}
+
+function parseBitwiseOrExpression(parser:AS3Parser):Node {
+    let children = [parseBitwiseXorExpression(parser)];
+    let result = new Node(NodeKind.B_OR, parser.tok.index, parser.tok.end, parser.tok.text, children);
+    while (tokIs(parser, Operators.B_OR)) {
+        result.children.push(new Node(NodeKind.OP, parser.tok.index, parser.tok.end, parser.tok.text));
+        nextToken(parser, true);
+        result.children.push(parseBitwiseXorExpression(parser));
+    }
+    if (result.lastChild) {
+        result.end = result.lastChild.end;
+    }
+    return result.children.length > 1 ? result : result.lastChild;
+}
+
+function parseBitwiseXorExpression(parser:AS3Parser):Node {
+    let children = [parseBitwiseAndExpression(parser)];
+    let result = new Node(NodeKind.B_XOR, parser.tok.index, parser.tok.end, parser.tok.text, children);
+    while (tokIs(parser, Operators.B_XOR)) {
+        result.children.push(new Node(NodeKind.OP, parser.tok.index, parser.tok.end, parser.tok.text));
+        nextToken(parser, true);
+        result.children.push(parseBitwiseAndExpression(parser));
+    }
+    if (result.lastChild) {
+        result.end = result.lastChild.end;
+    }
+    return result.children.length > 1 ? result : result.lastChild;
+}
+
+
+function parseBlock(parser:AS3Parser, result?:Node):Node {
+    let tok = consume(parser, Operators.LEFT_CURLY_BRACKET);
+    if (!result) {
+        result = new Node(NodeKind.BLOCK, tok.index, parser.tok.end);
+    } else {
+        result.start = tok.index;
+    }
+    while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
+        if (startsWith(parser.tok.text, MULTIPLE_LINES_COMMENT)) {
+            parser.currentFunctionNode.children.push(
+                new Node(NodeKind.MULTI_LINE_COMMENT, parser.tok.index, parser.tok.end, parser.tok.text)
+            );
+            nextToken(parser);
+        } else {
+            result.children.push(parseStatement(parser));
+        }
+    }
+    result.end = consume(parser, Operators.RIGHT_CURLY_BRACKET).end;
+    return result;
+}
+
+/**
+ * tok is catch
+ *
+ * @throws TokenException
+ */
+function parseCatch(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.CATCH);
+    consume(parser, Operators.LEFT_PARENTHESIS);
+    let result:Node = new Node(NodeKind.CATCH, tok.index, tok.end, null, [
+        new Node(NodeKind.NAME, parser.tok.index, parser.tok.end, parser.tok.text)
+    ]);
+    nextToken(parser, true); // name
+    if (tokIs(parser, Operators.COLUMN)) {
+        nextToken(parser, true); // :
+        result.children.push(new Node(NodeKind.TYPE, parser.tok.index, parser.tok.end, parser.tok.text));
+        nextToken(parser, true); // type
+    }
+    consume(parser, Operators.RIGHT_PARENTHESIS);
+    let block = parseBlock(parser);
+    result.children.push(block);
+    result.end = block.end;
+    return result;
+}
+
+/**
+ * tok is class
+ *
+ * @param meta
+ * @param modifier
+ * @throws TokenException
+ */
+function parseClass(parser:AS3Parser, meta:Node[], modifier:Token[]):Node {
+    let tok = consume(parser, Keywords.CLASS);
+    let result:Node = new Node(NodeKind.CLASS, tok.index, tok.end);
+
+    if (parser.currentAsDoc) {
+        result.children.push(parser.currentAsDoc);
+        parser.currentAsDoc = null;
+    }
+    if (parser.currentMultiLineComment) {
+        result.children.push(parser.currentMultiLineComment);
+        parser.currentMultiLineComment = null;
     }
 
-    private nextTokenIgnoringDocumentation(): void {
-        do {
-            this.nextToken();
+    let index = parser.tok.index,
+        name = parseQualifiedName(parser, true);
+    result.children.push(new Node(NodeKind.NAME, index, index + name.length, name));
+
+    result.children.push(convertMeta(parser, meta));
+    result.children.push(convertModifiers(parser, modifier));
+
+    // nextToken(parser,  true ); // name
+
+    do {
+        if (tokIs(parser, Keywords.EXTENDS)) {
+            nextToken(parser, true); // extends
+            index = parser.tok.index;
+            name = parseQualifiedName(parser, false);
+            result.children.push(new Node(NodeKind.EXTENDS, index, index + name.length, name));
+        } else if (tokIs(parser, Keywords.IMPLEMENTS)) {
+            result.children.push(parseImplementsList(parser));
         }
-        while (startsWith(this.tok.text, MULTIPLE_LINES_COMMENT));
     }
+    while (!tokIs(parser, Operators.LEFT_CURLY_BRACKET));
+    consume(parser, Operators.LEFT_CURLY_BRACKET);
+    result.children.push(parseClassContent(parser));
+    tok = consume(parser, Operators.RIGHT_CURLY_BRACKET);
 
-    private parseAdditiveExpression(): Node {
-        let result = new Node(NodeKind.ADD, this.tok.index, this.tok.end, null, [this.parseMultiplicativeExpression()]);
-        while (this.tokIs(Operators.PLUS) || this.tokIs(Operators.PLUS_AS2) || this.tokIs(Operators.MINUS)) {
-            result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            this.nextToken(true);
-            result.children.push(this.parseMultiplicativeExpression());
-        }
-        if (result.lastChild) {
-            result.end = result.lastChild.end;
-        }
-        return result.children.length > 1 ? result : result.lastChild;
+    result.end = tok.end;
+    result.start = result.children.reduce((index:number, child:Node) => {
+        return Math.min(index, child ? child.start : Infinity);
+    }, index);
+
+    return result;
+}
+
+function parseClassConstant(parser:AS3Parser, result:Node, modifiers:Token[], meta:Node[]):void {
+    result.children.push(parseConstList(parser, meta, modifiers));
+    if (tokIs(parser, Operators.SEMI_COLUMN)) {
+        nextToken(parser);
     }
+    meta.length = 0;
+    modifiers.length = 0;
+}
 
-    // ------------------------------------------------------------------------
-    // language specific recursive descent parsing
-    // ------------------------------------------------------------------------
-
-    private parseAndExpression(): Node {
-        let result = new Node(NodeKind.AND, this.tok.index, this.tok.end, null, [this.parseBitwiseOrExpression()]);
-        while (this.tokIs(Operators.AND) || this.tokIs(Operators.AND_AS2)) {
-            result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            this.nextToken(true);
-            result.children.push(this.parseBitwiseOrExpression());
-        }
-        if (result.lastChild) {
-            result.end = result.lastChild.end;
-        }
-        return result.children.length > 1 ? result : result.lastChild;
+function parseClassField(parser:AS3Parser, result:Node, modifiers:Token[], meta:Node[]):void {
+    let varList:Node = parseVarList(parser, meta, modifiers);
+    result.children.push(varList);
+    if (parser.currentAsDoc) {
+        varList.children.push(parser.currentAsDoc);
+        parser.currentAsDoc = null;
     }
-
-    /**
-     * tok is ( exit tok is first token after )
-     */
-    private parseArgumentList(): Node {
-        let tok = this.consume(Operators.LEFT_PARENTHESIS);
-        let result: Node = new Node(NodeKind.ARGUMENTS, tok.index, -1);
-        while (!this.tokIs(Operators.RIGHT_PARENTHESIS)) {
-            result.children.push(this.parseExpression());
-            this.skip(Operators.COMMA);
-        }
-        tok = this.consume(Operators.RIGHT_PARENTHESIS);
-        result.end = tok.end;
-        return result;
+    if (parser.currentMultiLineComment) {
+        result.children.push(parser.currentMultiLineComment);
+        parser.currentMultiLineComment = null;
     }
+    if (tokIs(parser, Operators.SEMI_COLUMN)) {
+        nextToken(parser);
+    }
+    meta.length = 0;
+    modifiers.length = 0;
+}
 
-    private parseArrayAccessor(node: Node): Node {
-        let result: Node = new Node(NodeKind.ARRAY_ACCESSOR, node.start, -1);
+function parseClassFunctions(parser:AS3Parser, result:Node, modifiers:Token[], meta:Node[]):void {
+    result.children.push(parseFunction(parser, meta, modifiers));
+    meta.length = 0;
+    modifiers.length = 0;
+}
+
+/**
+ * tok is (
+ *
+ * @throws TokenException
+ */
+function parseCondition(parser:AS3Parser):Node {
+    let tok = consume(parser, Operators.LEFT_PARENTHESIS);
+    let result:Node = new Node(NodeKind.CONDITION, tok.index, -1, null, [parseExpression(parser)]);
+    tok = consume(parser, Operators.RIGHT_PARENTHESIS);
+    result.end = tok.end;
+    return result;
+}
+
+function parseConditionalExpression(parser:AS3Parser):Node {
+    let result:Node = parseOrExpression(parser);
+    if (tokIs(parser, Operators.QUESTION_MARK)) {
+        let conditional:Node = new Node(NodeKind.CONDITIONAL, result.start, -1, null, [result]);
+        nextToken(parser, true); // ?
+        conditional.children.push(parseExpression(parser));
+        nextToken(parser, true); // :
+        conditional.children.push(parseExpression(parser));
+        conditional.end = conditional.lastChild.start;
+        return conditional;
+    }
+    return result;
+}
+
+function parseConst(parser:AS3Parser):Node {
+    let result = parseConstList(parser, null, null);
+    skip(parser, Operators.SEMI_COLUMN);
+    return result;
+}
+
+/**
+ * tok is const
+ *
+ * @param modifiers
+ * @param meta
+ * @throws TokenException
+ */
+function parseConstList(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
+    let tok = consume(parser, Keywords.CONST);
+    let result:Node = new Node(NodeKind.CONST_LIST, tok.index, -1);
+    result.children.push(convertMeta(parser, meta));
+    result.children.push(convertModifiers(parser, modifiers));
+    collectVarListContent(parser, result);
+
+    result.start = result.children.reduce((index:number, child:Node) => {
+        return Math.min(index, child ? child.start : Infinity);
+    }, tok.index);
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, 0);
+
+    return result;
+}
+
+function parseDecrement(parser:AS3Parser, node:Node):Node {
+    nextToken(parser, true);
+    let result:Node = new Node(NodeKind.POST_DEC, node.start, parser.tok.end);
+    result.children.push(node);
+    result.end = node.end;
+    return result;
+}
+
+/**
+ * tok is do
+ *
+ * @throws TokenException
+ */
+function parseDo(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.DO);
+    let result:Node = new Node(NodeKind.DO, tok.index, -1, null, [parseStatement(parser)]);
+    consume(parser, Keywords.WHILE);
+    let cond = parseCondition(parser);
+    result.children.push(cond);
+    result.end = cond.end;
+    if (tokIs(parser, Operators.SEMI_COLUMN)) {
+        nextToken(parser, true);
+    }
+    return result;
+}
+
+function parseDot(parser:AS3Parser, node:Node):Node {
+    nextToken(parser);
+    if (tokIs(parser, Operators.LEFT_PARENTHESIS)) {
+        nextToken(parser);
+        let result:Node = new Node(NodeKind.E4X_FILTER, parser.tok.index, -1);
         result.children.push(node);
-        while (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
-            this.nextToken(true);
-            result.children.push(this.parseExpression());
-            result.end = this.consume(Operators.RIGHT_SQUARE_BRACKET).end;
-        }
+        result.children.push(parseExpression(parser));
+        result.end = consume(parser, Operators.RIGHT_PARENTHESIS).end;
         return result;
-    }
-
-    /**
-     * tok is [
-     */
-    private parseArrayLiteral(): Node {
-        let tok = this.consume(Operators.LEFT_SQUARE_BRACKET);
-        let result: Node = new Node(NodeKind.ARRAY, tok.index, -1);
-        while (!this.tokIs(Operators.RIGHT_SQUARE_BRACKET)) {
-            result.children.push(this.parseExpression());
-            this.skip(Operators.COMMA);
-        }
-        result.end = this.consume(Operators.RIGHT_SQUARE_BRACKET).end;
-        return result;
-    }
-
-    private parseAssignmentExpression(): Node {
-        let result = new Node(NodeKind.ASSIGN, this.tok.index, this.tok.end, null, [this.parseConditionalExpression()]);
-        while (this.tokIs(Operators.EQUAL)
-            || this.tokIs(Operators.PLUS_EQUAL) || this.tokIs(Operators.MINUS_EQUAL)
-            || this.tokIs(Operators.TIMES_EQUAL) || this.tokIs(Operators.DIVIDED_EQUAL)
-            || this.tokIs(Operators.MODULO_EQUAL) || this.tokIs(Operators.AND_EQUAL) || this.tokIs(Operators.OR_EQUAL)
-            || this.tokIs(Operators.XOR_EQUAL)) {
-            result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            this.nextToken(true);
-            result.children.push(this.parseExpression());
-        }
-        if (result.lastChild) {
-            result.end = result.lastChild.end;
-        }
-        return result.children.length > 1 ? result : result.lastChild;
-    }
-
-    private parseBitwiseAndExpression(): Node {
-        let children = [this.parseEqualityExpression()];
-        let result = new Node(NodeKind.B_AND, this.tok.index, this.tok.end, this.tok.text, children);
-        while (this.tokIs(Operators.B_AND)) {
-            result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            this.nextToken(true);
-            result.children.push(this.parseEqualityExpression());
-        }
-        if (result.lastChild) {
-            result.end = result.lastChild.end;
-        }
-        return result.children.length > 1 ? result : result.lastChild;
-    }
-
-    private parseBitwiseOrExpression(): Node {
-        let children = [this.parseBitwiseXorExpression()];
-        let result = new Node(NodeKind.B_OR, this.tok.index, this.tok.end, this.tok.text, children);
-        while (this.tokIs(Operators.B_OR)) {
-            result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            this.nextToken(true);
-            result.children.push(this.parseBitwiseXorExpression());
-        }
-        if (result.lastChild) {
-            result.end = result.lastChild.end;
-        }
-        return result.children.length > 1 ? result : result.lastChild;
-    }
-
-    private parseBitwiseXorExpression(): Node {
-        let children = [this.parseBitwiseAndExpression()];
-        let result = new Node(NodeKind.B_XOR, this.tok.index, this.tok.end, this.tok.text, children);
-        while (this.tokIs(Operators.B_XOR)) {
-            result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            this.nextToken(true);
-            result.children.push(this.parseBitwiseAndExpression());
-        }
-        if (result.lastChild) {
-            result.end = result.lastChild.end;
-        }
-        return result.children.length > 1 ? result : result.lastChild;
-    }
-
-
-    private parseBlock(result?: Node): Node {
-        let tok = this.consume(Operators.LEFT_CURLY_BRACKET);
-        if (!result) {
-            result = new Node(NodeKind.BLOCK, tok.index, this.tok.end);
-        } else {
-            result.start = tok.index;
-        }
-        while (!this.tokIs(Operators.RIGHT_CURLY_BRACKET)) {
-            if (startsWith(this.tok.text, MULTIPLE_LINES_COMMENT)) {
-                this.currentFunctionNode.children.push(
-                    new Node(NodeKind.MULTI_LINE_COMMENT, this.tok.index, this.tok.end, this.tok.text)
-                    );
-                this.nextToken();
-            } else {
-                result.children.push(this.parseStatement());
-            }
-        }
-        result.end = this.consume(Operators.RIGHT_CURLY_BRACKET).end;
-        return result;
-    }
-
-    /**
-     * tok is catch
-     * 
-     * @throws TokenException
-     */
-    private parseCatch(): Node {
-        let tok = this.consume(Keywords.CATCH);
-        this.consume(Operators.LEFT_PARENTHESIS);
-        let result: Node = new Node(NodeKind.CATCH, tok.index, tok.end, null, [
-            new Node(NodeKind.NAME, this.tok.index, this.tok.end, this.tok.text)
-        ]);
-        this.nextToken(true); // name
-        if (this.tokIs(Operators.COLUMN)) {
-            this.nextToken(true); // :
-            result.children.push(new Node(NodeKind.TYPE, this.tok.index, this.tok.end, this.tok.text));
-            this.nextToken(true); // type
-        }
-        this.consume(Operators.RIGHT_PARENTHESIS);
-        let parseBlock = this.parseBlock();
-        result.children.push(parseBlock);
-        result.end = parseBlock.end;
-        return result;
-    }
-
-    /**
-     * tok is class
-     * 
-     * @param meta
-     * @param modifier
-     * @throws TokenException
-     */
-    private parseClass(meta: Node[], modifier: Token[]): Node {
-        let tok = this.consume(Keywords.CLASS);
-        let result: Node = new Node(NodeKind.CLASS, tok.index, tok.end);
-
-        if (this.currentAsDoc) {
-            result.children.push(this.currentAsDoc);
-            this.currentAsDoc = null;
-        }
-        if (this.currentMultiLineComment) {
-            result.children.push(this.currentMultiLineComment);
-            this.currentMultiLineComment = null;
-        }
-
-        let index = this.tok.index,
-            name = this.parseQualifiedName(true);
-        result.children.push(new Node(NodeKind.NAME, index, index + name.length, name));
-
-        result.children.push(this.convertMeta(meta));
-        result.children.push(this.convertModifiers(modifier));
-
-        // this.nextToken( true ); // name
-
-        do {
-            if (this.tokIs(Keywords.EXTENDS)) {
-                this.nextToken(true); // extends
-                index = this.tok.index;
-                name = this.parseQualifiedName(false);
-                result.children.push(new Node(NodeKind.EXTENDS, index, index + name.length, name));
-            } else if (this.tokIs(Keywords.IMPLEMENTS)) {
-                result.children.push(this.parseImplementsList());
-            }
-        }
-        while (!this.tokIs(Operators.LEFT_CURLY_BRACKET));
-        this.consume(Operators.LEFT_CURLY_BRACKET);
-        result.children.push(this.parseClassContent());
-        tok = this.consume(Operators.RIGHT_CURLY_BRACKET);
-
-        result.end = tok.end;
-        result.start = result.children.reduce((index: number, child: Node) => {
-            return Math.min(index, child ? child.start : Infinity);
-        }, index);
-
-        return result;
-    }
-
-    private parseClassConstant(result: Node, modifiers: Token[], meta: Node[]): void {
-        result.children.push(this.parseConstList(meta, modifiers));
-        if (this.tokIs(Operators.SEMI_COLUMN)) {
-            this.nextToken();
-        }
-        meta.length = 0;
-        modifiers.length = 0;
-    }
-
-    private parseClassField(result: Node, modifiers: Token[], meta: Node[]): void {
-        let varList: Node = this.parseVarList(meta, modifiers);
-        result.children.push(varList);
-        if (this.currentAsDoc) {
-            varList.children.push(this.currentAsDoc);
-            this.currentAsDoc = null;
-        }
-        if (this.currentMultiLineComment) {
-            result.children.push(this.currentMultiLineComment);
-            this.currentMultiLineComment = null;
-        }
-        if (this.tokIs(Operators.SEMI_COLUMN)) {
-            this.nextToken();
-        }
-        meta.length = 0;
-        modifiers.length = 0;
-    }
-
-    private parseClassFunctions(result: Node, modifiers: Token[], meta: Node[]): void {
-        result.children.push(this.parseFunction(meta, modifiers));
-        meta.length = 0;
-        modifiers.length = 0;
-    }
-
-    /**
-     * tok is (
-     * 
-     * @throws TokenException
-     */
-    private parseCondition(): Node {
-        let tok = this.consume(Operators.LEFT_PARENTHESIS);
-        let result: Node = new Node(NodeKind.CONDITION, tok.index, -1, null, [this.parseExpression()]);
-        tok = this.consume(Operators.RIGHT_PARENTHESIS);
-        result.end = tok.end;
-        return result;
-    }
-
-    private parseConditionalExpression(): Node {
-        let result: Node = this.parseOrExpression();
-        if (this.tokIs(Operators.QUESTION_MARK)) {
-            let conditional: Node = new Node(NodeKind.CONDITIONAL, result.start, -1, null, [result]);
-            this.nextToken(true); // ?
-            conditional.children.push(this.parseExpression());
-            this.nextToken(true); // :
-            conditional.children.push(this.parseExpression());
-            conditional.end = conditional.lastChild.start;
-            return conditional;
-        }
-        return result;
-    }
-
-    private parseConst(): Node {
-        let result = this.parseConstList(null, null);
-        this.skip(Operators.SEMI_COLUMN);
-        return result;
-    }
-
-    /**
-     * tok is const
-     * 
-     * @param modifiers
-     * @param meta
-     * @throws TokenException
-     */
-    private parseConstList(meta: Node[], modifiers: Token[]): Node {
-        let tok = this.consume(Keywords.CONST);
-        let result: Node = new Node(NodeKind.CONST_LIST, tok.index, -1);
-        result.children.push(this.convertMeta(meta));
-        result.children.push(this.convertModifiers(modifiers));
-        this.collectVarListContent(result);
-
-        result.start = result.children.reduce((index: number, child: Node) => {
-            return Math.min(index, child ? child.start : Infinity);
-        }, tok.index);
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, 0);
-
-        return result;
-    }
-
-    private parseDecrement(node: Node): Node {
-        this.nextToken(true);
-        let result: Node = new Node(NodeKind.POST_DEC, node.start, this.tok.end);
+    } else if (tokIs(parser, Operators.TIMES)) {
+        let result:Node = new Node(NodeKind.E4X_STAR, parser.tok.index, -1);
         result.children.push(node);
         result.end = node.end;
         return result;
     }
+    let result:Node = new Node(NodeKind.DOT, node.start, -1);
+    result.children.push(node);
+    result.children.push(new Node(NodeKind.LITERAL, parser.tok.index, parser.tok.end, parser.tok.text));
+    nextToken(parser, true);
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, 0);
+    return result;
+}
 
-    /**
-     * tok is do
-     * 
-     * @throws TokenException
-     */
-    private parseDo(): Node {
-        let tok = this.consume(Keywords.DO);
-        let result: Node = new Node(NodeKind.DO, tok.index, -1, null, [this.parseStatement()]);
-        this.consume(Keywords.WHILE);
-        let cond = this.parseCondition();
-        result.children.push(cond);
-        result.end = cond.end;
-        if (this.tokIs(Operators.SEMI_COLUMN)) {
-            this.nextToken(true);
-        }
-        return result;
+function parseEmptyStatement(parser:AS3Parser):Node {
+    let result:Node;
+    result = new Node(NodeKind.STMT_EMPTY, parser.tok.index, parser.tok.end, Operators.SEMI_COLUMN);
+    nextToken(parser, true);
+    return result;
+}
+
+function parseEncapsulatedExpression(parser:AS3Parser):Node {
+    let tok = consume(parser, Operators.LEFT_PARENTHESIS);
+    let result:Node = new Node(NodeKind.ENCAPSULATED, tok.index, -1);
+    result.children.push(parseExpressionList(parser));
+    tok = consume(parser, Operators.RIGHT_PARENTHESIS);
+    result.end = tok.end;
+    return result;
+}
+
+function parseEqualityExpression(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.EQUALITY, parser.tok.index, -1, null, [parseRelationalExpression(parser)]);
+    while (
+    tokIs(parser, Operators.DOUBLE_EQUAL) || tokIs(parser, Operators.DOUBLE_EQUAL_AS2) ||
+    tokIs(parser, Operators.STRICTLY_EQUAL) || tokIs(parser, Operators.NON_EQUAL) ||
+    tokIs(parser, Operators.NON_EQUAL_AS2_1) || tokIs(parser, Operators.NON_EQUAL_AS2_2) ||
+    tokIs(parser, Operators.NON_STRICTLY_EQUAL)
+        ) {
+        result.children.push(new Node(NodeKind.OP, parser.tok.index, parser.tok.end, parser.tok.text));
+        nextToken(parser, true);
+        result.children.push(parseRelationalExpression(parser));
     }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, 0);
+    return result.children.length > 1 ? result : result.children[0];
+}
 
-    private parseDot(node: Node): Node {
-        this.nextToken();
-        if (this.tokIs(Operators.LEFT_PARENTHESIS)) {
-            this.nextToken();
-            let result: Node = new Node(NodeKind.E4X_FILTER, this.tok.index, -1);
-            result.children.push(node);
-            result.children.push(this.parseExpression());
-            result.end = this.consume(Operators.RIGHT_PARENTHESIS).end;
-            return result;
-        } else if (this.tokIs(Operators.TIMES)) {
-            let result: Node = new Node(NodeKind.E4X_STAR, this.tok.index, -1);
-            result.children.push(node);
-            result.end = node.end;
-            return result;
-        }
-        let result: Node = new Node(NodeKind.DOT, node.start, -1);
-        result.children.push(node);
-        result.children.push(new Node(NodeKind.LITERAL, this.tok.index, this.tok.end, this.tok.text));
-        this.nextToken(true);
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, 0);
-        return result;
+function parseExpressionList(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.EXPR_LIST, parser.tok.index, -1, null, [parseAssignmentExpression(parser)]);
+    while (tokIs(parser, Operators.COMMA)) {
+        nextToken(parser, true);
+        result.children.push(parseAssignmentExpression(parser));
     }
-
-    private parseEmptyStatement(): Node {
-        let result: Node;
-        result = new Node(NodeKind.STMT_EMPTY, this.tok.index, this.tok.end, Operators.SEMI_COLUMN);
-        this.nextToken(true);
-        return result;
-    }
-
-    private parseEncapsulatedExpression(): Node {
-        let tok = this.consume(Operators.LEFT_PARENTHESIS);
-        let result: Node = new Node(NodeKind.ENCAPSULATED, tok.index, -1);
-        result.children.push(this.parseExpressionList());
-        tok = this.consume(Operators.RIGHT_PARENTHESIS);
-        result.end = tok.end;
-        return result;
-    }
-
-    private parseEqualityExpression(): Node {
-        let result: Node = new Node(NodeKind.EQUALITY, this.tok.index, -1, null, [this.parseRelationalExpression()]);
-        while (
-            this.tokIs(Operators.DOUBLE_EQUAL) || this.tokIs(Operators.DOUBLE_EQUAL_AS2) ||
-            this.tokIs(Operators.STRICTLY_EQUAL) || this.tokIs(Operators.NON_EQUAL) ||
-            this.tokIs(Operators.NON_EQUAL_AS2_1) || this.tokIs(Operators.NON_EQUAL_AS2_2) ||
-            this.tokIs(Operators.NON_STRICTLY_EQUAL)
-            ) {
-            result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            this.nextToken(true);
-            result.children.push(this.parseRelationalExpression());
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, 0);
-        return result.children.length > 1 ? result : result.children[0];
-    }
-
-    private parseExpressionList(): Node {
-        let result: Node = new Node(NodeKind.EXPR_LIST, this.tok.index, -1, null, [this.parseAssignmentExpression()]);
-        while (this.tokIs(Operators.COMMA)) {
-            this.nextToken(true);
-            result.children.push(this.parseAssignmentExpression());
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, 0);
-        return result.children.length > 1 ? result : result.children[0];
-    }
-
-    private parseFinally(): Node {
-        let result: Node;
-        let index = this.tok.index;
-        this.nextToken(true);
-        let block = this.parseBlock();
-        result = new Node(NodeKind.FINALLY, index, block.end, null, [block]);
-        return result;
-    }
-
-    /**
-     * tok is for
-     * 
-     * @throws TokenException
-     */
-    private parseFor(): Node {
-        let tok = this.consume(Keywords.FOR);
-
-        if (this.tokIs(Keywords.EACH)) {
-            this.nextToken();
-            return this.parseForEach(tok.index);
-        } else {
-            return this.parseTraditionalFor(tok.index);
-        }
-    }
-
-    /**
-     * tok is ( for each( var obj : Type in List )
-     * 
-     * @throws TokenException
-     */
-    private parseForEach(index: number): Node {
-        this.consume(Operators.LEFT_PARENTHESIS);
-
-        let result: Node = new Node(NodeKind.FOREACH, index, -1);
-        if (this.tokIs(Keywords.VAR)) {
-            let node: Node = new Node(NodeKind.VAR, this.tok.index, -1);
-            this.nextToken();
-            let child = this.parseNameTypeInit();
-            node.children.push(child);
-            node.end = child.end;
-            result.children.push(node);
-        } else {
-            result.children.push(new Node(NodeKind.NAME, this.tok.index, this.tok.end, this.tok.text));
-            // names allowed?
-            this.nextToken();
-        }
-        index = this.tok.index;
-        this.nextToken(); // in
-        let expr = this.parseExpression();
-        result.children.push(new Node(NodeKind.IN, index, expr.end, null, [expr]));
-        this.consume(Operators.RIGHT_PARENTHESIS);
-        let statement = this.parseStatement();
-        result.children.push(statement);
-        result.end = statement.end;
-        return result;
-    }
-
-    private parseForIn(result: Node): Node {
-        let index = this.tok.index;
-        this.nextToken();
-        let expr = this.parseExpression();
-        result.children.push(new Node(NodeKind.IN, index, expr.end, null, [expr]));
-        result.kind = NodeKind.FORIN;
-        this.consume(Operators.RIGHT_PARENTHESIS);
-        return result;
-    }
-
-    /**
-     * tok is function
-     * 
-     * @param modifiers
-     * @param meta
-     * @throws TokenException
-     */
-    private parseFunction(meta: Node[], modifiers: Token[]): Node {
-        let signature: Node[] = this.doParseSignature();
-        let result: Node = new Node(
-            this.findFunctionTypeFromSignature(signature), signature[0].start,
-            -1, signature[0].text
-        );
-
-        if (this.currentAsDoc) {
-            result.children.push(this.currentAsDoc);
-            this.currentAsDoc = null;
-        }
-        if (this.currentMultiLineComment) {
-            result.children.push(this.currentMultiLineComment);
-            this.currentMultiLineComment = null;
-        }
-        result.children.push(this.convertMeta(meta));
-        result.children.push(this.convertModifiers(modifiers));
-        result.children.push(signature[1]);
-        result.children.push(signature[2]);
-        result.children.push(signature[3]);
-        if (this.tokIs(Operators.SEMI_COLUMN)) {
-            this.consume(Operators.SEMI_COLUMN);
-        } else {
-            result.children.push(this.parseFunctionBlock());
-        }
-        this.currentFunctionNode = null;
-        result.start = result.children.reduce((index: number, child: Node) => {
-            return Math.min(index, child ? child.start : Infinity);
-        }, result.start);
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, 0);
-        return result;
-    }
-
-    /**
-     * tok is { exit tok is the first tok after }
-     * 
-     * @throws TokenException
-     * @throws TokenException
-     */
-
-    private parseFunctionBlock(): Node {
-        let block: Node = new Node(NodeKind.BLOCK, this.tok.index, -1);
-
-        this.currentFunctionNode = block;
-
-        this.parseBlock(block);
-
-        return block;
-    }
-
-    private parseFunctionCall(node: Node): Node {
-        let result: Node = new Node(NodeKind.CALL, node.start, -1);
-        result.children.push(node);
-        while (this.tokIs(Operators.LEFT_PARENTHESIS)) {
-            result.children.push(this.parseArgumentList());
-        }
-        while (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
-            result.children.push(this.parseArrayLiteral());
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, 0);
-        return result;
-    }
-
-    /**
-     * tok is function exit tok is the first token after the optional ;
-     * 
-     * @throws TokenException
-     */
-    private parseFunctionSignature(): Node {
-        let signature: Node[] = this.doParseSignature();
-        this.skip(Operators.SEMI_COLUMN);
-        let result: Node = new Node(
-            this.findFunctionTypeFromSignature(signature), signature[0].start,
-            -1, signature[0].text
-            );
-        result.children.push(signature[1]);
-        result.children.push(signature[2]);
-        result.children.push(signature[3]);
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, 0);
-        return result;
-    }
-
-    /**
-     * tok is if
-     * 
-     * @throws TokenException
-     */
-    private parseIf(): Node {
-        let tok = this.consume(Keywords.IF);
-        let result: Node = new Node(NodeKind.IF, tok.index, -1, null, [this.parseCondition()]);
-        result.children.push(this.parseStatement());
-        if (this.tokIs(Keywords.ELSE)) {
-            this.nextToken(true);
-            result.children.push(this.parseStatement());
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, 0);
-        return result;
-    }
-
-    /**
-     * tok is implements implements a,b,c exit tok is the first token after the
-     * list of qualfied names
-     * 
-     * @throws TokenException
-     */
-    private parseImplementsList(): Node {
-        this.consume(Keywords.IMPLEMENTS);
-        let result: Node = new Node(NodeKind.IMPLEMENTS_LIST, this.tok.index, -1);
-        let index = this.tok.index;
-        let name = this.parseQualifiedName(true);
-        result.children.push(new Node(NodeKind.IMPLEMENTS, index, index + name.length, name));
-        while (this.tokIs(Operators.COMMA)) {
-            this.nextToken(true);
-            let index = this.tok.index;
-            let name = this.parseQualifiedName(true);
-            result.children.push(new Node(NodeKind.IMPLEMENTS, index, index + name.length, name));
-        }
-        return result;
-    }
-
-    /**
-     * tok is import
-     * 
-     * @throws TokenException
-     */
-    private parseImport(): Node {
-        let tok = this.consume(Keywords.IMPORT);
-        let name = this.parseImportName();
-        let result: Node = new Node(NodeKind.IMPORT, tok.index, tok.index + name.length, name);
-        this.skip(Operators.SEMI_COLUMN);
-        return result;
-    }
-
-    /**
-     * tok is the first part of a name the last part can be a star exit tok is
-     * the first token, which doesn't belong to the name
-     * 
-     * @throws TokenException
-     */
-    private parseImportName(): string {
-        let result = '';
-
-        result += this.tok.text;
-        this.nextToken();
-        while (this.tokIs(Operators.DOT)) {
-            result += Operators.DOT;
-            this.nextToken(); // .
-            result += this.tok.text;
-            this.nextToken(); // part of name
-        }
-        return result;
-    }
-
-    private parseIncludeExpression(): Node {
-        let result: Node = new Node(NodeKind.INCLUDE, this.tok.index, -1);
-        let tok: Token;
-        if (this.tokIs(Keywords.INCLUDE)) {
-            tok = this.consume(Keywords.INCLUDE);
-        } else if (this.tokIs(Keywords.INCLUDE_AS2)) {
-            tok = this.consume(Keywords.INCLUDE_AS2);
-        }
-        if (tok) {
-            result.start = tok.index;
-        }
-        result.children.push(this.parseExpression());
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, 0);
-        return result;
-    }
-
-    private parseIncrement(node: Node): Node {
-        this.nextToken(true);
-        let result: Node = new Node(NodeKind.POST_INC, node.start, this.tok.end);
-        result.children.push(node);
-        return result;
-    }
-
-    /**
-     * tok is interface
-     * 
-     * @param meta
-     * @param modifier
-     * @throws TokenException
-     */
-    private parseInterface(meta: Node[], modifier: Token[]): Node {
-        let tok = this.consume(Keywords.INTERFACE);
-        let result: Node = new Node(NodeKind.INTERFACE, tok.index, -1);
-
-        if (this.currentAsDoc) {
-            result.children.push(this.currentAsDoc);
-            this.currentAsDoc = null;
-        }
-        if (this.currentMultiLineComment) {
-            result.children.push(this.currentMultiLineComment);
-            this.currentMultiLineComment = null;
-        }
-        let name = this.parseQualifiedName(true);
-        result.children.push(new Node(NodeKind.NAME, this.tok.index, this.tok.index + name.length, name));
-
-        result.children.push(this.convertMeta(meta));
-        result.children.push(this.convertModifiers(modifier));
-
-        if (this.tokIs(Keywords.EXTENDS)) {
-            this.nextToken(); // extends
-            name = this.parseQualifiedName(false);
-            result.children.push(new Node(NodeKind.EXTENDS, this.tok.index, this.tok.index + name.length, name));
-        }
-        while (this.tokIs(Operators.COMMA)) {
-            this.nextToken(); // comma
-            name = this.parseQualifiedName(false);
-            result.children.push(new Node(NodeKind.EXTENDS, this.tok.index, this.tok.index + name.length, name));
-        }
-        this.consume(Operators.LEFT_CURLY_BRACKET);
-        result.children.push(this.parseInterfaceContent());
-        tok = this.consume(Operators.RIGHT_CURLY_BRACKET);
-        result.end = tok.end;
-        result.start = result.children.reduce((index: number, child: Node) => {
-            return Math.min(index, child ? child.start : Infinity);
-        }, tok.index);
-        return result;
-    }
-
-    /**
-     * tok is function
-     * 
-     * @throws TokenException
-     */
-    private parseLambdaExpression(): Node {
-        let tok = this.consume(Keywords.FUNCTION);
-        let result: Node;
-
-        if (this.tok.text === Operators.LEFT_PARENTHESIS) {
-            result = new Node(NodeKind.LAMBDA, tok.index, this.tok.end);
-        } else {
-            result = new Node(NodeKind.FUNCTION, tok.index, this.tok.end, this.tok.text);
-            this.nextToken(true);
-        }
-        result.children.push(this.parseParameterList());
-        result.children.push(this.parseOptionalType());
-        result.children.push(this.parseBlock());
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, result.end);
-        return result;
-    }
-
-    /**
-     * tok is [ [id] [id ("test")] [id (name="test",type="a.b.c.Event")] exit
-     * token is the first token after ]
-     * 
-     * @throws TokenException
-     */
-    private parseMetaData(): Node {
-        let buffer = '';
-
-        let index = this.consume(Operators.LEFT_SQUARE_BRACKET).index;
-        while (!this.tokIs(Operators.RIGHT_SQUARE_BRACKET)) {
-            buffer += this.tok.text;
-            this.nextToken();
-        }
-        let end = this.tok.end;
-        this.skip(Operators.RIGHT_SQUARE_BRACKET);
-        return new Node(NodeKind.META, index, end, '[' + buffer + ']');
-    }
-
-    private parseMultiplicativeExpression(): Node {
-        let result: Node = new Node(NodeKind.MULTIPLICATION, this.tok.index, -1, null, [this.parseUnaryExpression()]);
-        while (this.tokIs(Operators.TIMES) || this.tokIs(Operators.SLASH) || this.tokIs(Operators.MODULO)) {
-            result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            this.nextToken(true);
-            result.children.push(this.parseUnaryExpression());
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, result.end);
-        return result.children.length > 1 ? result : result.children[0];
-    }
-
-    private parseNamespaceName(): string {
-        let name: string = this.tok.text;
-        this.nextToken(); // simple name for now
-        return name;
-    }
-
-    private parseNameTypeInit(): Node {
-        let result: Node = new Node(NodeKind.NAME_TYPE_INIT, this.tok.index, -1);
-        result.children.push(new Node(NodeKind.NAME, this.tok.index, this.tok.end, this.tok.text));
-        this.nextToken(true); // name
-        result.children.push(this.parseOptionalType());
-        result.children.push(this.parseOptionalInit());
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, result.end);
-        return result;
-    }
-
-    private parseNewExpression(): Node {
-        let tok = this.consume(Keywords.NEW);
-
-        let result: Node = new Node(NodeKind.NEW, tok.index, -1);
-        result.children.push(this.parseExpression()); // name
-        if (this.tokIs(Operators.VECTOR_START)) {
-            let index = this.tok.index;
-            let vec = this.parseVector();
-            result.children.push(new Node(NodeKind.VECTOR, index, vec.end, null, [vec]));
-        }
-        if (this.tokIs(Operators.LEFT_PARENTHESIS)) {
-            result.children.push(this.parseArgumentList());
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, result.end);
-        return result;
-    }
-
-    /**
-     * tok is {
-     */
-    private parseObjectLiteral(): Node {
-        let tok = this.consume(Operators.LEFT_CURLY_BRACKET);
-        let result: Node = new Node(NodeKind.OBJECT, tok.index, tok.end);
-        while (!this.tokIs(Operators.RIGHT_CURLY_BRACKET)) {
-            result.children.push(this.parseObjectLiteralPropertyDeclaration());
-            this.skip(Operators.COMMA);
-        }
-        tok = this.consume(Operators.RIGHT_CURLY_BRACKET);
-        result.end = tok.end;
-        return result;
-    }
-
-    /*
-     * tok is name
-     */
-    private parseObjectLiteralPropertyDeclaration(): Node {
-        let result: Node = new Node(NodeKind.PROP, this.tok.index, this.tok.end);
-        let name: Node = new Node(NodeKind.NAME, this.tok.index, this.tok.end, this.tok.text);
-        result.children.push(name);
-        this.nextToken(); // name
-        this.consume(Operators.COLUMN);
-        let expr = this.parseExpression();
-        let val = new Node(NodeKind.VALUE, this.tok.index, expr.end, null, [expr]);
-        result.children.push(val);
-        result.end = val.end;
-        return result;
-    }
-
-    /**
-     * if tok is "=" parse the expression otherwise do nothing
-     * 
-     * @return
-     */
-    private parseOptionalInit(): Node {
-        let result: Node = null;
-        if (this.tokIs(Operators.EQUAL)) {
-            this.nextToken(true);
-            let index = this.tok.index;
-            let expr = this.parseExpression();
-            result = new Node(NodeKind.INIT, index, expr.end, null, [expr]);
-        }
-        return result;
-    }
-
-    /**
-     * if tok is ":" parse the type otherwise do nothing
-     * 
-     * @return
-     * @throws TokenException
-     */
-    private parseOptionalType(): Node {
-        let result: Node = new Node(NodeKind.TYPE, this.tok.index, this.tok.index, '');
-        if (this.tokIs(Operators.COLUMN)) {
-            this.nextToken(true);
-            result = this.parseType();
-        }
-        return result;
-    }
-
-    private parseOrExpression(): Node {
-        let result: Node = new Node(NodeKind.OR, this.tok.index, -1, null, [this.parseAndExpression()]);
-        while (this.tokIs(Operators.LOGICAL_OR) || this.tokIs(Operators.LOGICAL_OR_AS2)) {
-            result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            this.nextToken(true);
-            result.children.push(this.parseAndExpression());
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, result.end);
-        return result.children.length > 1 ? result : result.children[0];
-    }
-
-    /**
-     * tok is package
-     * 
-     * @throws UnExpectedTokenException
-     */
-    private parsePackage(): Node {
-        let tok = this.consume(Keywords.PACKAGE);
-        let result: Node = new Node(NodeKind.PACKAGE, tok.index, -1);
-        let nameBuffer = '';
-
-        let index = this.tok.index;
-        while (!this.tokIs(Operators.LEFT_CURLY_BRACKET)) {
-            nameBuffer += this.tok.text;
-            this.nextToken();
-        }
-        result.children.push(new Node(NodeKind.NAME, index, index + nameBuffer.length, nameBuffer));
-        this.consume(Operators.LEFT_CURLY_BRACKET);
-        result.children.push(this.parsePackageContent());
-        tok = this.consume(Operators.RIGHT_CURLY_BRACKET);
-        result.end = tok.end;
-        return result;
-    }
-
-    /**
-     * tok is the name of a parameter or ...
-     */
-    private parseParameter(): Node {
-        let result: Node = new Node(NodeKind.PARAMETER, this.tok.index, -1);
-        if (this.tokIs(Operators.REST_PARAMETERS)) {
-            let index = this.tok.index;
-            this.nextToken(true); // ...
-            let rest: Node = new Node(NodeKind.REST, index, this.tok.end, this.tok.text);
-            this.nextToken(true); // rest
-            result.children.push(rest);
-        } else {
-            result.children.push(this.parseNameTypeInit());
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, result.end);
-        return result;
-    }
-
-    /**
-     * tok is (
-     * 
-     * @throws TokenException
-     */
-    private parseParameterList(): Node {
-        let tok = this.consume(Operators.LEFT_PARENTHESIS);
-
-        let result: Node = new Node(NodeKind.PARAMETER_LIST, tok.index, -1);
-        while (!this.tokIs(Operators.RIGHT_PARENTHESIS)) {
-            result.children.push(this.parseParameter());
-            if (this.tokIs(Operators.COMMA)) {
-                this.nextToken(true);
-            } else {
-                break;
-            }
-        }
-        tok = this.consume(Operators.RIGHT_PARENTHESIS);
-        result.end = tok.end;
-        return result;
-    }
-
-    /**
-     * tok is first part of the name exit tok is the first token after the name
-     * 
-     * @throws TokenException
-     */
-    private parseQualifiedName(skipPackage: boolean): string {
-        let buffer = '';
-
-        buffer += this.tok.text;
-        this.nextToken();
-        while (this.tokIs(Operators.DOT) || this.tokIs(Operators.DOUBLE_COLUMN)) {
-            buffer += this.tok.text;
-            this.nextToken();
-            buffer += this.tok.text;
-            this.nextToken(); // name
-        }
-
-        if (skipPackage) {
-            return buffer.substring(buffer.lastIndexOf(Operators.DOT) + 1);
-        }
-        return buffer;
-    }
-
-    private parseRelationalExpression(): Node {
-        let result: Node = new Node(NodeKind.RELATION, this.tok.index, -1, null, [this.parseShiftExpression()]);
-        while (this.tokIs(Operators.INFERIOR)
-            || this.tokIs(Operators.INFERIOR_AS2) || this.tokIs(Operators.INFERIOR_OR_EQUAL)
-            || this.tokIs(Operators.INFERIOR_OR_EQUAL_AS2) || this.tokIs(Operators.SUPERIOR)
-            || this.tokIs(Operators.SUPERIOR_AS2) || this.tokIs(Operators.SUPERIOR_OR_EQUAL)
-            || this.tokIs(Operators.SUPERIOR_OR_EQUAL_AS2) || this.tokIs(Keywords.IS) || this.tokIs(Keywords.IN)
-            && !this.isInFor || this.tokIs(Keywords.AS) || this.tokIs(Keywords.INSTANCE_OF)) {
-            if (!this.tokIs(Keywords.AS)) {
-                result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            } else {
-                result.children.push(new Node(NodeKind.AS, this.tok.index, this.tok.end, this.tok.text));
-            }
-            this.nextToken(true);
-            result.children.push(this.parseShiftExpression());
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, result.end);
-        return result.children.length > 1 ? result : result.children[0];
-    }
-
-    private parseReturnStatement(): Node {
-        let result: Node;
-
-        let index = this.tok.index,
-            end = this.tok.end;
-        this.nextTokenAllowNewLine();
-        if (this.tokIs(NEW_LINE) || this.tokIs(Operators.SEMI_COLUMN)) {
-            this.nextToken(true);
-            result = new Node(NodeKind.RETURN, index, end, '');
-        } else {
-            let expr = this.parseExpression();
-            result = new Node(NodeKind.RETURN, index, expr.end, null, [expr]);
-            this.skip(Operators.SEMI_COLUMN);
-        }
-        return result;
-    }
-
-    private parseThrowStatement(): Node {
-        let tok = this.consume(Keywords.THROW);
-        let expr = this.parseExpression();
-
-        return new Node(NodeKind.RETURN, tok.index, expr.end, null, [expr]);
-    }
-
-    private parseBreakOrContinueStatement(): Node {
-        let tok: Token = this.tok;
-        let kind: NodeKind;
-        if (this.tokIs(Keywords.BREAK) || this.tokIs(Keywords.CONTINUE)) {
-            kind = this.tokIs(Keywords.BREAK) ? NodeKind.BREAK : NodeKind.CONTINUE;
-            this.nextToken();
-        } else {
-            let pos = this.sourceFile.getLineAndCharacterFromPosition(this.tok.index);
-            throw new Error('unexpected token : ' +
-                this.tok.text + '(' + pos.line + ',' + pos.col + ')' +
-                ' in file ' + this.sourceFile.path +
-                'expected: continue or break'
-            );
-        }
-        let result: Node;
-        if (this.tokIs(NEW_LINE) || this.tokIs(Operators.SEMI_COLUMN)) {
-            this.nextToken(true);
-            result = new Node(kind, tok.index, tok.end, '');
-        } else {
-            let ident = this.tryParse(() => {
-                let expr = this.parsePrimaryExpression();
-                if (expr.kind === NodeKind.IDENTIFIER) {
-                    return expr;
-                } else {
-                    throw new Error();
-                }
-            });
-            if (!ident) {
-                let pos = this.sourceFile.getLineAndCharacterFromPosition(this.tok.index);
-                throw new Error(
-                    `unexpected token : ${this.tok.text}(${pos.line},${pos.col})` +
-                    ` in file ${ this.sourceFile.path } expected: ident`
-                );
-            }
-            result = new Node(kind, tok.index, ident.end, null, [ident]);
-        }
-        this.skip(Operators.SEMI_COLUMN);
-        return result;
-    }
-
-    private parseShiftExpression(): Node {
-        let result: Node = new Node(NodeKind.SHIFT, this.tok.index, -1, null, [this.parseAdditiveExpression()]);
-        while (this.tokIs(Operators.DOUBLE_SHIFT_LEFT)
-            || this.tokIs(Operators.TRIPLE_SHIFT_LEFT) || this.tokIs(Operators.DOUBLE_SHIFT_RIGHT)
-            || this.tokIs(Operators.TRIPLE_SHIFT_RIGHT)) {
-            result.children.push(new Node(NodeKind.OP, this.tok.index, this.tok.end, this.tok.text));
-            this.nextToken(true);
-            result.children.push(this.parseAdditiveExpression());
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, result.end);
-        return result.children.length > 1 ? result : result.children[0];
-    }
-
-    /**
-     * tok is switch
-     * 
-     * @throws TokenException
-     */
-    private parseSwitch(): Node {
-        let tok = this.consume(Keywords.SWITCH);
-        let result: Node = new Node(NodeKind.SWITCH, tok.index, tok.end, null, [this.parseCondition()]);
-        if (this.tokIs(Operators.LEFT_CURLY_BRACKET)) {
-            this.nextToken();
-            result.children.push(this.parseSwitchCases());
-            result.end = this.consume(Operators.RIGHT_CURLY_BRACKET).end;
-        }
-        return result;
-    }
-
-    /**
-     * tok is case, default or the first token of the first statement
-     * 
-     * @throws TokenException
-     */
-    private parseSwitchBlock(): Node {
-        let result: Node = new Node(NodeKind.SWITCH_BLOCK, this.tok.index, this.tok.end);
-        while (!this.tokIs(Keywords.CASE) &&
-                !this.tokIs(Keywords.DEFAULT) &&
-                !this.tokIs(Operators.RIGHT_CURLY_BRACKET)) {
-            result.children.push(this.parseStatement());
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, result.end);
-        return result;
-    }
-
-    /**
-     * tok is { exit tok is }
-     * 
-     * @throws TokenException
-     */
-    private parseSwitchCases(): Node {
-        let result: Node = new Node(NodeKind.CASES, this.tok.index, this.tok.end);
-        while (true) {
-            if (this.tokIs(Operators.RIGHT_CURLY_BRACKET)) {
-                break;
-            } else if (this.tokIs(Keywords.CASE)) {
-                let index = this.tok.index;
-                this.nextToken(true); // case
-                let expr = this.parseExpression();
-                let caseNode: Node = new Node(NodeKind.CASE, index, expr.end, null, [expr]);
-                this.consume(Operators.COLUMN);
-                let block = this.parseSwitchBlock();
-                caseNode.children.push(block);
-                caseNode.end = block.end;
-                result.children.push(caseNode);
-            } else if (this.tokIs(Keywords.DEFAULT)) {
-                let index = this.tok.index;
-                this.nextToken(true); // default
-                this.consume(Operators.COLUMN);
-                let caseNode: Node = new Node(NodeKind.CASE, index, -1, null,
-                    [new Node(NodeKind.DEFAULT, index, this.tok.end, Keywords.DEFAULT)]);
-                let block = this.parseSwitchBlock();
-                caseNode.end = block.end;
-                caseNode.children.push(block);
-                result.children.push(caseNode);
-            }
-        }
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, result.end);
-        return result;
-    }
-
-    /**
-     * tok is ( for( var x : number = 0; i < length; i++ ) for( var s : string in
-     * Object )
-     * 
-     * @throws TokenException
-     */
-    private parseTraditionalFor(index: number): Node {
-        this.consume(Operators.LEFT_PARENTHESIS);
-
-        let result: Node = new Node(NodeKind.FOR, index, -1);
-        if (!this.tokIs(Operators.SEMI_COLUMN)) {
-            if (this.tokIs(Keywords.VAR)) {
-                let varList = this.parseVarList(null, null);
-                result.children.push(new Node(NodeKind.INIT, varList.start, varList.end, null, [varList]));
-            } else {
-                this.isInFor = true;
-                let expr = this.parseExpression();
-                result.children.push(new Node(NodeKind.INIT, expr.start, expr.end, null, [expr]));
-                this.isInFor = false;
-            }
-            if (this.tokIs(Keywords.IN)) {
-                return this.parseForIn(result);
-            }
-        }
-        this.consume(Operators.SEMI_COLUMN);
-        if (!this.tokIs(Operators.SEMI_COLUMN)) {
-            let expr = this.parseExpression();
-            result.children.push(new Node(NodeKind.COND, expr.start, expr.end, null, [expr]));
-        }
-        this.consume(Operators.SEMI_COLUMN);
-        if (!this.tokIs(Operators.RIGHT_PARENTHESIS)) {
-            let expr = this.parseExpressionList();
-            result.children.push(new Node(NodeKind.ITER, expr.start, expr.end, null, [expr]));
-        }
-        this.consume(Operators.RIGHT_PARENTHESIS);
-        result.children.push(this.parseStatement());
-        return result;
-    }
-
-    private parseTry(): Node {
-        let result: Node;
-        let index = this.tok.index;
-        this.nextToken(true);
-        let block = this.parseBlock();
-        result = new Node(NodeKind.TRY, index, block.end, null, [block]);
-        return result;
-    }
-
-    private parseType(): Node {
-        let result: Node;
-        if (this.tok.text === VECTOR) {
-            result = this.parseVector();
-        } else {
-            let index = this.tok.index,
-                name = this.parseQualifiedName(true);
-            result = new Node(NodeKind.TYPE, index, index + name.length, name);
-            // this.nextToken( true );
-        }
-        return result;
-    }
-
-    private parseUnaryExpressionNotPlusMinus(): Node {
-        let result: Node;
-        let index = this.tok.index;
-        if (this.tokIs(Keywords.DELETE)) {
-            this.nextToken(true);
-            let expr = this.parseExpression();
-            result = new Node(NodeKind.DELETE, index, expr.end, null, [expr]);
-        } else if (this.tokIs(Keywords.VOID)) {
-            this.nextToken(true);
-            let expr = this.parseExpression();
-            result = new Node(NodeKind.VOID, index, expr.end, null, [expr]);
-        } else if (this.tokIs(Keywords.TYPEOF)) {
-            this.nextToken(true);
-            let expr = this.parseExpression();
-            result = new Node(NodeKind.TYPEOF, index, expr.end, null, [expr]);
-        } else if (this.tokIs('!') || this.tokIs('not')) {
-            this.nextToken(true);
-            let expr = this.parseExpression();
-            result = new Node(NodeKind.NOT, index, expr.end, null, [expr]);
-        } else if (this.tokIs('~')) {
-            this.nextToken(true);
-            let expr = this.parseExpression();
-            result = new Node(NodeKind.B_NOT, index, expr.end, null, [expr]);
-        } else {
-            result = this.parseUnaryPostfixExpression();
-        }
-        return result;
-    }
-
-    private parseUnaryPostfixExpression(): Node {
-        let node: Node = this.parseAccessExpresion();
-
-        if (this.tokIs(Operators.INCREMENT)) {
-            node = this.parseIncrement(node);
-        } else if (this.tokIs(Operators.DECREMENT)) {
-            node = this.parseDecrement(node);
-        }
-        return node;
-    }
-
-    private parseAccessExpresion(): Node {
-        let node: Node = this.parsePrimaryExpression();
-
-        while (true) {
-            if (this.tokIs(Operators.LEFT_PARENTHESIS)) {
-                node = this.parseFunctionCall(node);
-            }
-            if (this.tokIs(Operators.DOT) || this.tokIs(Operators.DOUBLE_COLUMN)) {
-                node = this.parseDot(node);
-            } else if (this.tokIs(Operators.LEFT_SQUARE_BRACKET)) {
-                node = this.parseArrayAccessor(node);
-            } else {
-                break;
-            }
-        }
-        return node;
-    }
-
-    private parseUse(): Node {
-        let tok = this.consume(Keywords.USE);
-        this.consume(Keywords.NAMESPACE);
-        let nameIndex = this.tok.index;
-        let namespace = this.parseNamespaceName();
-        let result: Node = new Node(NodeKind.USE, tok.index, nameIndex + namespace.length, namespace);
-        this.skip(Operators.SEMI_COLUMN);
-        return result;
-    }
-
-    private parseVar(): Node {
-        let result: Node;
-        result = this.parseVarList(null, null);
-        this.skip(Operators.SEMI_COLUMN);
-        return result;
-    }
-
-    /**
-     * tok is var x, y : String, z : number = 0;
-     * 
-     * @param modifiers
-     * @param meta
-     * @throws TokenException
-     */
-    private parseVarList(meta: Node[], modifiers: Token[]): Node {
-        let tok = this.consume(Keywords.VAR);
-        let result: Node = new Node(NodeKind.VAR_LIST, tok.index, tok.end);
-        result.children.push(this.convertMeta(meta));
-        result.children.push(this.convertModifiers(modifiers));
-        this.collectVarListContent(result);
-        result.start = result.children.reduce((index: number, child: Node) => {
-            return Math.min(index, child ? child.start : Infinity);
-        }, tok.index);
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, tok.end);
-        return result;
-    }
-
-    private parseVector(): Node {
-        let result: Node = new Node(NodeKind.VECTOR, this.tok.index, -1, '');
-        if (this.tok.text === VECTOR) {
-            this.nextToken();
-        }
-        this.consume(Operators.VECTOR_START);
-
-        result.children.push(this.parseType());
-
-        result.end = this.consume(Operators.SUPERIOR).end;
-
-        return result;
-    }
-
-    private parseShortVector(): Node {
-        let vector: Node = new Node(NodeKind.VECTOR, this.tok.index, -1, '');
-        this.consume(Operators.INFERIOR);
-        vector.children.push(this.parseType());
-        vector.end = this.consume(Operators.SUPERIOR).end;
-
-        let arrayLiteral = this.parseArrayLiteral();
-
-        return new Node(NodeKind.SHORT_VECTOR, vector.start, arrayLiteral.end, null, [vector, arrayLiteral]);
-    }
-
-    /**
-     * tok is while
-     * 
-     * @throws TokenException
-     */
-    private parseWhile(): Node {
-        let tok = this.consume(Keywords.WHILE);
-        let result: Node = new Node(NodeKind.WHILE, tok.index, tok.end);
-        result.children.push(this.parseCondition());
-        result.children.push(this.parseStatement());
-        result.end = result.children.reduce((index: number, child: Node) => {
-            return Math.max(index, child ? child.end : 0);
-        }, tok.end);
-        return result;
-    }
-
-
-    /**
-     * Skip the current token, if it equals to the parameter
-     * 
-     * @param text
-     * @throws UnExpectedTokenException
-     */
-    private skip(text: string): void {
-        if (this.tokIs(text)) {
-            this.nextToken();
-        }
-    }
-
-    /**
-     * Compare the current token to the parameter
-     * 
-     * @param text
-     * @return true, if tok's text property equals the parameter
-     */
-    private tokIs(text: string): boolean {
-        return this.tok.text === text;
-    }
-
-    private tryToParseCommentNode(result: Node, modifiers: Token[]): void {
-        if (startsWith(this.tok.text, ASDOC_COMMENT)) {
-            this.currentAsDoc = new Node(NodeKind.AS_DOC, this.tok.index, -1, this.tok.text);
-            this.nextToken();
-        } else if (startsWith(this.tok.text, MULTIPLE_LINES_COMMENT)) {
-            result.children.push(new Node(NodeKind.MULTI_LINE_COMMENT, this.tok.index, -1, this.tok.text));
-            this.nextToken();
-        } else {
-            if (modifiers) {
-                modifiers.push(this.tok);
-            }
-            this.nextTokenIgnoringDocumentation();
-        }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, 0);
+    return result.children.length > 1 ? result : result.children[0];
+}
+
+function parseFinally(parser:AS3Parser):Node {
+    let result:Node;
+    let index = parser.tok.index;
+    nextToken(parser, true);
+    let block = parseBlock(parser);
+    result = new Node(NodeKind.FINALLY, index, block.end, null, [block]);
+    return result;
+}
+
+/**
+ * tok is for
+ *
+ * @throws TokenException
+ */
+function parseFor(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.FOR);
+
+    if (tokIs(parser, Keywords.EACH)) {
+        nextToken(parser);
+        return parseForEach(parser, tok.index);
+    } else {
+        return parseTraditionalFor(parser, tok.index);
     }
 }
 
-export function parse(filePath: string, content: string): Node {
+/**
+ * tok is ( for each( var obj : Type in List )
+ *
+ * @throws TokenException
+ */
+function parseForEach(parser:AS3Parser, index:number):Node {
+    consume(parser, Operators.LEFT_PARENTHESIS);
+
+    let result:Node = new Node(NodeKind.FOREACH, index, -1);
+    if (tokIs(parser, Keywords.VAR)) {
+        let node:Node = new Node(NodeKind.VAR, parser.tok.index, -1);
+        nextToken(parser);
+        let child = parseNameTypeInit(parser);
+        node.children.push(child);
+        node.end = child.end;
+        result.children.push(node);
+    } else {
+        result.children.push(new Node(NodeKind.NAME, parser.tok.index, parser.tok.end, parser.tok.text));
+        // names allowed?
+        nextToken(parser);
+    }
+    index = parser.tok.index;
+    nextToken(parser); // in
+    let expr = parseExpression(parser);
+    result.children.push(new Node(NodeKind.IN, index, expr.end, null, [expr]));
+    consume(parser, Operators.RIGHT_PARENTHESIS);
+    let statement = parseStatement(parser);
+    result.children.push(statement);
+    result.end = statement.end;
+    return result;
+}
+
+function parseForIn(parser:AS3Parser, result:Node):Node {
+    let index = parser.tok.index;
+    nextToken(parser);
+    let expr = parseExpression(parser);
+    result.children.push(new Node(NodeKind.IN, index, expr.end, null, [expr]));
+    result.kind = NodeKind.FORIN;
+    consume(parser, Operators.RIGHT_PARENTHESIS);
+    return result;
+}
+
+/**
+ * tok is function
+ *
+ * @param modifiers
+ * @param meta
+ * @throws TokenException
+ */
+function parseFunction(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
+    let signature:Node[] = doParseSignature(parser);
+    let result:Node = new Node(
+        findFunctionTypeFromSignature(parser, signature), signature[0].start,
+        -1, signature[0].text
+    );
+
+    if (parser.currentAsDoc) {
+        result.children.push(parser.currentAsDoc);
+        parser.currentAsDoc = null;
+    }
+    if (parser.currentMultiLineComment) {
+        result.children.push(parser.currentMultiLineComment);
+        parser.currentMultiLineComment = null;
+    }
+    result.children.push(convertMeta(parser, meta));
+    result.children.push(convertModifiers(parser, modifiers));
+    result.children.push(signature[1]);
+    result.children.push(signature[2]);
+    result.children.push(signature[3]);
+    if (tokIs(parser, Operators.SEMI_COLUMN)) {
+        consume(parser, Operators.SEMI_COLUMN);
+    } else {
+        result.children.push(parseFunctionBlock(parser));
+    }
+    parser.currentFunctionNode = null;
+    result.start = result.children.reduce((index:number, child:Node) => {
+        return Math.min(index, child ? child.start : Infinity);
+    }, result.start);
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, 0);
+    return result;
+}
+
+/**
+ * tok is { exit tok is the first tok after }
+ *
+ * @throws TokenException
+ * @throws TokenException
+ */
+
+function parseFunctionBlock(parser:AS3Parser):Node {
+    let block:Node = new Node(NodeKind.BLOCK, parser.tok.index, -1);
+
+    parser.currentFunctionNode = block;
+
+    parseBlock(parser, block);
+
+    return block;
+}
+
+function parseFunctionCall(parser:AS3Parser, node:Node):Node {
+    let result:Node = new Node(NodeKind.CALL, node.start, -1);
+    result.children.push(node);
+    while (tokIs(parser, Operators.LEFT_PARENTHESIS)) {
+        result.children.push(parseArgumentList(parser));
+    }
+    while (tokIs(parser, Operators.LEFT_SQUARE_BRACKET)) {
+        result.children.push(parseArrayLiteral(parser));
+    }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, 0);
+    return result;
+}
+
+/**
+ * tok is function exit tok is the first token after the optional ;
+ *
+ * @throws TokenException
+ */
+function parseFunctionSignature(parser:AS3Parser):Node {
+    let signature:Node[] = doParseSignature(parser);
+    skip(parser, Operators.SEMI_COLUMN);
+    let result:Node = new Node(
+        findFunctionTypeFromSignature(parser, signature), signature[0].start,
+        -1, signature[0].text
+    );
+    result.children.push(signature[1]);
+    result.children.push(signature[2]);
+    result.children.push(signature[3]);
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, 0);
+    return result;
+}
+
+/**
+ * tok is if
+ *
+ * @throws TokenException
+ */
+function parseIf(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.IF);
+    let result:Node = new Node(NodeKind.IF, tok.index, -1, null, [parseCondition(parser)]);
+    result.children.push(parseStatement(parser));
+    if (tokIs(parser, Keywords.ELSE)) {
+        nextToken(parser, true);
+        result.children.push(parseStatement(parser));
+    }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, 0);
+    return result;
+}
+
+/**
+ * tok is implements implements a,b,c exit tok is the first token after the
+ * list of qualfied names
+ *
+ * @throws TokenException
+ */
+function parseImplementsList(parser:AS3Parser):Node {
+    consume(parser, Keywords.IMPLEMENTS);
+    let result:Node = new Node(NodeKind.IMPLEMENTS_LIST, parser.tok.index, -1);
+    let index = parser.tok.index;
+    let name = parseQualifiedName(parser, true);
+    result.children.push(new Node(NodeKind.IMPLEMENTS, index, index + name.length, name));
+    while (tokIs(parser, Operators.COMMA)) {
+        nextToken(parser, true);
+        let index = parser.tok.index;
+        let name = parseQualifiedName(parser, true);
+        result.children.push(new Node(NodeKind.IMPLEMENTS, index, index + name.length, name));
+    }
+    return result;
+}
+
+/**
+ * tok is import
+ *
+ * @throws TokenException
+ */
+function parseImport(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.IMPORT);
+    let name = parseImportName(parser);
+    let result:Node = new Node(NodeKind.IMPORT, tok.index, tok.index + name.length, name);
+    skip(parser, Operators.SEMI_COLUMN);
+    return result;
+}
+
+/**
+ * tok is the first part of a name the last part can be a star exit tok is
+ * the first token, which doesn't belong to the name
+ *
+ * @throws TokenException
+ */
+function parseImportName(parser:AS3Parser):string {
+    let result = '';
+
+    result += parser.tok.text;
+    nextToken(parser);
+    while (tokIs(parser, Operators.DOT)) {
+        result += Operators.DOT;
+        nextToken(parser); // .
+        result += parser.tok.text;
+        nextToken(parser); // part of name
+    }
+    return result;
+}
+
+function parseIncludeExpression(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.INCLUDE, parser.tok.index, -1);
+    let tok:Token;
+    if (tokIs(parser, Keywords.INCLUDE)) {
+        tok = consume(parser, Keywords.INCLUDE);
+    } else if (tokIs(parser, Keywords.INCLUDE_AS2)) {
+        tok = consume(parser, Keywords.INCLUDE_AS2);
+    }
+    if (tok) {
+        result.start = tok.index;
+    }
+    result.children.push(parseExpression(parser));
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, 0);
+    return result;
+}
+
+function parseIncrement(parser:AS3Parser, node:Node):Node {
+    nextToken(parser, true);
+    let result:Node = new Node(NodeKind.POST_INC, node.start, parser.tok.end);
+    result.children.push(node);
+    return result;
+}
+
+/**
+ * tok is interface
+ *
+ * @param meta
+ * @param modifier
+ * @throws TokenException
+ */
+function parseInterface(parser:AS3Parser, meta:Node[], modifier:Token[]):Node {
+    let tok = consume(parser, Keywords.INTERFACE);
+    let result:Node = new Node(NodeKind.INTERFACE, tok.index, -1);
+
+    if (parser.currentAsDoc) {
+        result.children.push(parser.currentAsDoc);
+        parser.currentAsDoc = null;
+    }
+    if (parser.currentMultiLineComment) {
+        result.children.push(parser.currentMultiLineComment);
+        parser.currentMultiLineComment = null;
+    }
+    let name = parseQualifiedName(parser, true);
+    result.children.push(new Node(NodeKind.NAME, parser.tok.index, parser.tok.index + name.length, name));
+
+    result.children.push(convertMeta(parser, meta));
+    result.children.push(convertModifiers(parser, modifier));
+
+    if (tokIs(parser, Keywords.EXTENDS)) {
+        nextToken(parser); // extends
+        name = parseQualifiedName(parser, false);
+        result.children.push(new Node(NodeKind.EXTENDS, parser.tok.index, parser.tok.index + name.length, name));
+    }
+    while (tokIs(parser, Operators.COMMA)) {
+        nextToken(parser); // comma
+        name = parseQualifiedName(parser, false);
+        result.children.push(new Node(NodeKind.EXTENDS, parser.tok.index, parser.tok.index + name.length, name));
+    }
+    consume(parser, Operators.LEFT_CURLY_BRACKET);
+    result.children.push(parseInterfaceContent(parser));
+    tok = consume(parser, Operators.RIGHT_CURLY_BRACKET);
+    result.end = tok.end;
+    result.start = result.children.reduce((index:number, child:Node) => {
+        return Math.min(index, child ? child.start : Infinity);
+    }, tok.index);
+    return result;
+}
+
+/**
+ * tok is function
+ *
+ * @throws TokenException
+ */
+function parseLambdaExpression(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.FUNCTION);
+    let result:Node;
+
+    if (parser.tok.text === Operators.LEFT_PARENTHESIS) {
+        result = new Node(NodeKind.LAMBDA, tok.index, parser.tok.end);
+    } else {
+        result = new Node(NodeKind.FUNCTION, tok.index, parser.tok.end, parser.tok.text);
+        nextToken(parser, true);
+    }
+    result.children.push(parseParameterList(parser));
+    result.children.push(parseOptionalType(parser));
+    result.children.push(parseBlock(parser));
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, result.end);
+    return result;
+}
+
+/**
+ * tok is [ [id] [id ("test")] [id (name="test",type="a.b.c.Event")] exit
+ * token is the first token after ]
+ *
+ * @throws TokenException
+ */
+function parseMetaData(parser:AS3Parser):Node {
+    let buffer = '';
+
+    let index = consume(parser, Operators.LEFT_SQUARE_BRACKET).index;
+    while (!tokIs(parser, Operators.RIGHT_SQUARE_BRACKET)) {
+        buffer += parser.tok.text;
+        nextToken(parser);
+    }
+    let end = parser.tok.end;
+    skip(parser, Operators.RIGHT_SQUARE_BRACKET);
+    return new Node(NodeKind.META, index, end, '[' + buffer + ']');
+}
+
+function parseMultiplicativeExpression(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.MULTIPLICATION, parser.tok.index, -1, null, [parseUnaryExpression(parser)]);
+    while (tokIs(parser, Operators.TIMES) || tokIs(parser, Operators.SLASH) || tokIs(parser, Operators.MODULO)) {
+        result.children.push(new Node(NodeKind.OP, parser.tok.index, parser.tok.end, parser.tok.text));
+        nextToken(parser, true);
+        result.children.push(parseUnaryExpression(parser));
+    }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, result.end);
+    return result.children.length > 1 ? result : result.children[0];
+}
+
+function parseNamespaceName(parser:AS3Parser):string {
+    let name:string = parser.tok.text;
+    nextToken(parser); // simple name for now
+    return name;
+}
+
+function parseNameTypeInit(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.NAME_TYPE_INIT, parser.tok.index, -1);
+    result.children.push(new Node(NodeKind.NAME, parser.tok.index, parser.tok.end, parser.tok.text));
+    nextToken(parser, true); // name
+    result.children.push(parseOptionalType(parser));
+    result.children.push(parseOptionalInit(parser));
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, result.end);
+    return result;
+}
+
+function parseNewExpression(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.NEW);
+
+    let result:Node = new Node(NodeKind.NEW, tok.index, -1);
+    result.children.push(parseExpression(parser)); // name
+    if (tokIs(parser, Operators.VECTOR_START)) {
+        let index = parser.tok.index;
+        let vec = parseVector(parser);
+        result.children.push(new Node(NodeKind.VECTOR, index, vec.end, null, [vec]));
+    }
+    if (tokIs(parser, Operators.LEFT_PARENTHESIS)) {
+        result.children.push(parseArgumentList(parser));
+    }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, result.end);
+    return result;
+}
+
+/**
+ * tok is {
+     */
+function parseObjectLiteral(parser:AS3Parser):Node {
+    let tok = consume(parser, Operators.LEFT_CURLY_BRACKET);
+    let result:Node = new Node(NodeKind.OBJECT, tok.index, tok.end);
+    while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
+        result.children.push(parseObjectLiteralPropertyDeclaration(parser));
+        skip(parser, Operators.COMMA);
+    }
+    tok = consume(parser, Operators.RIGHT_CURLY_BRACKET);
+    result.end = tok.end;
+    return result;
+}
+
+/*
+ * tok is name
+ */
+function parseObjectLiteralPropertyDeclaration(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.PROP, parser.tok.index, parser.tok.end);
+    let name:Node = new Node(NodeKind.NAME, parser.tok.index, parser.tok.end, parser.tok.text);
+    result.children.push(name);
+    nextToken(parser); // name
+    consume(parser, Operators.COLUMN);
+    let expr = parseExpression(parser);
+    let val = new Node(NodeKind.VALUE, parser.tok.index, expr.end, null, [expr]);
+    result.children.push(val);
+    result.end = val.end;
+    return result;
+}
+
+/**
+ * if tok is "=" parse the expression otherwise do nothing
+ *
+ * @return
+ */
+function parseOptionalInit(parser:AS3Parser):Node {
+    let result:Node = null;
+    if (tokIs(parser, Operators.EQUAL)) {
+        nextToken(parser, true);
+        let index = parser.tok.index;
+        let expr = parseExpression(parser);
+        result = new Node(NodeKind.INIT, index, expr.end, null, [expr]);
+    }
+    return result;
+}
+
+/**
+ * if tok is ":" parse the type otherwise do nothing
+ *
+ * @return
+ * @throws TokenException
+ */
+function parseOptionalType(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.TYPE, parser.tok.index, parser.tok.index, '');
+    if (tokIs(parser, Operators.COLUMN)) {
+        nextToken(parser, true);
+        result = parseType(parser);
+    }
+    return result;
+}
+
+function parseOrExpression(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.OR, parser.tok.index, -1, null, [parseAndExpression(parser)]);
+    while (tokIs(parser, Operators.LOGICAL_OR) || tokIs(parser, Operators.LOGICAL_OR_AS2)) {
+        result.children.push(new Node(NodeKind.OP, parser.tok.index, parser.tok.end, parser.tok.text));
+        nextToken(parser, true);
+        result.children.push(parseAndExpression(parser));
+    }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, result.end);
+    return result.children.length > 1 ? result : result.children[0];
+}
+
+/**
+ * tok is package
+ *
+ * @throws UnExpectedTokenException
+ */
+function parsePackage(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.PACKAGE);
+    let result:Node = new Node(NodeKind.PACKAGE, tok.index, -1);
+    let nameBuffer = '';
+
+    let index = parser.tok.index;
+    while (!tokIs(parser, Operators.LEFT_CURLY_BRACKET)) {
+        nameBuffer += parser.tok.text;
+        nextToken(parser);
+    }
+    result.children.push(new Node(NodeKind.NAME, index, index + nameBuffer.length, nameBuffer));
+    consume(parser, Operators.LEFT_CURLY_BRACKET);
+    result.children.push(parsePackageContent(parser));
+    tok = consume(parser, Operators.RIGHT_CURLY_BRACKET);
+    result.end = tok.end;
+    return result;
+}
+
+/**
+ * tok is the name of a parameter or ...
+ */
+function parseParameter(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.PARAMETER, parser.tok.index, -1);
+    if (tokIs(parser, Operators.REST_PARAMETERS)) {
+        let index = parser.tok.index;
+        nextToken(parser, true); // ...
+        let rest:Node = new Node(NodeKind.REST, index, parser.tok.end, parser.tok.text);
+        nextToken(parser, true); // rest
+        result.children.push(rest);
+    } else {
+        result.children.push(parseNameTypeInit(parser));
+    }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, result.end);
+    return result;
+}
+
+/**
+ * tok is (
+ *
+ * @throws TokenException
+ */
+function parseParameterList(parser:AS3Parser):Node {
+    let tok = consume(parser, Operators.LEFT_PARENTHESIS);
+
+    let result:Node = new Node(NodeKind.PARAMETER_LIST, tok.index, -1);
+    while (!tokIs(parser, Operators.RIGHT_PARENTHESIS)) {
+        result.children.push(parseParameter(parser));
+        if (tokIs(parser, Operators.COMMA)) {
+            nextToken(parser, true);
+        } else {
+            break;
+        }
+    }
+    tok = consume(parser, Operators.RIGHT_PARENTHESIS);
+    result.end = tok.end;
+    return result;
+}
+
+/**
+ * tok is first part of the name exit tok is the first token after the name
+ *
+ * @throws TokenException
+ */
+function parseQualifiedName(parser:AS3Parser, skipPackage:boolean):string {
+    let buffer = '';
+
+    buffer += parser.tok.text;
+    nextToken(parser);
+    while (tokIs(parser, Operators.DOT) || tokIs(parser, Operators.DOUBLE_COLUMN)) {
+        buffer += parser.tok.text;
+        nextToken(parser);
+        buffer += parser.tok.text;
+        nextToken(parser); // name
+    }
+
+    if (skipPackage) {
+        return buffer.substring(buffer.lastIndexOf(Operators.DOT) + 1);
+    }
+    return buffer;
+}
+
+function parseRelationalExpression(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.RELATION, parser.tok.index, -1, null, [parseShiftExpression(parser)]);
+    while (tokIs(parser, Operators.INFERIOR)
+    || tokIs(parser, Operators.INFERIOR_AS2) || tokIs(parser, Operators.INFERIOR_OR_EQUAL)
+    || tokIs(parser, Operators.INFERIOR_OR_EQUAL_AS2) || tokIs(parser, Operators.SUPERIOR)
+    || tokIs(parser, Operators.SUPERIOR_AS2) || tokIs(parser, Operators.SUPERIOR_OR_EQUAL)
+    || tokIs(parser, Operators.SUPERIOR_OR_EQUAL_AS2) || tokIs(parser, Keywords.IS) || tokIs(parser, Keywords.IN)
+    && !parser.isInFor || tokIs(parser, Keywords.AS) || tokIs(parser, Keywords.INSTANCE_OF)) {
+        if (!tokIs(parser, Keywords.AS)) {
+            result.children.push(new Node(NodeKind.OP, parser.tok.index, parser.tok.end, parser.tok.text));
+        } else {
+            result.children.push(new Node(NodeKind.AS, parser.tok.index, parser.tok.end, parser.tok.text));
+        }
+        nextToken(parser, true);
+        result.children.push(parseShiftExpression(parser));
+    }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, result.end);
+    return result.children.length > 1 ? result : result.children[0];
+}
+
+function parseReturnStatement(parser:AS3Parser):Node {
+    let result:Node;
+
+    let index = parser.tok.index,
+        end = parser.tok.end;
+    nextTokenAllowNewLine(parser);
+    if (tokIs(parser, NEW_LINE) || tokIs(parser, Operators.SEMI_COLUMN)) {
+        nextToken(parser, true);
+        result = new Node(NodeKind.RETURN, index, end, '');
+    } else {
+        let expr = parseExpression(parser);
+        result = new Node(NodeKind.RETURN, index, expr.end, null, [expr]);
+        skip(parser, Operators.SEMI_COLUMN);
+    }
+    return result;
+}
+
+function parseThrowStatement(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.THROW);
+    let expr = parseExpression(parser);
+
+    return new Node(NodeKind.RETURN, tok.index, expr.end, null, [expr]);
+}
+
+function parseBreakOrContinueStatement(parser:AS3Parser):Node {
+    let tok:Token = parser.tok;
+    let kind:NodeKind;
+    if (tokIs(parser, Keywords.BREAK) || tokIs(parser, Keywords.CONTINUE)) {
+        kind = tokIs(parser, Keywords.BREAK) ? NodeKind.BREAK : NodeKind.CONTINUE;
+        nextToken(parser);
+    } else {
+        let pos = parser.sourceFile.getLineAndCharacterFromPosition(parser.tok.index);
+        throw new Error('unexpected token : ' +
+            parser.tok.text + '(' + pos.line + ',' + pos.col + ')' +
+            ' in file ' + parser.sourceFile.path +
+            'expected: continue or break'
+        );
+    }
+    let result:Node;
+    if (tokIs(parser, NEW_LINE) || tokIs(parser, Operators.SEMI_COLUMN)) {
+        nextToken(parser, true);
+        result = new Node(kind, tok.index, tok.end, '');
+    } else {
+        let ident = tryParse(parser, () => {
+            let expr = parsePrimaryExpression(parser);
+            if (expr.kind === NodeKind.IDENTIFIER) {
+                return expr;
+            } else {
+                throw new Error();
+            }
+        });
+        if (!ident) {
+            let pos = parser.sourceFile.getLineAndCharacterFromPosition(parser.tok.index);
+            throw new Error(
+                `unexpected token : ${parser.tok.text}(${pos.line},${pos.col})` +
+                ` in file ${ parser.sourceFile.path } expected: ident`
+            );
+        }
+        result = new Node(kind, tok.index, ident.end, null, [ident]);
+    }
+    skip(parser, Operators.SEMI_COLUMN);
+    return result;
+}
+
+function parseShiftExpression(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.SHIFT, parser.tok.index, -1, null, [parseAdditiveExpression(parser)]);
+    while (tokIs(parser, Operators.DOUBLE_SHIFT_LEFT)
+    || tokIs(parser, Operators.TRIPLE_SHIFT_LEFT) || tokIs(parser, Operators.DOUBLE_SHIFT_RIGHT)
+    || tokIs(parser, Operators.TRIPLE_SHIFT_RIGHT)) {
+        result.children.push(new Node(NodeKind.OP, parser.tok.index, parser.tok.end, parser.tok.text));
+        nextToken(parser, true);
+        result.children.push(parseAdditiveExpression(parser));
+    }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, result.end);
+    return result.children.length > 1 ? result : result.children[0];
+}
+
+/**
+ * tok is switch
+ *
+ * @throws TokenException
+ */
+function parseSwitch(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.SWITCH);
+    let result:Node = new Node(NodeKind.SWITCH, tok.index, tok.end, null, [parseCondition(parser)]);
+    if (tokIs(parser, Operators.LEFT_CURLY_BRACKET)) {
+        nextToken(parser);
+        result.children.push(parseSwitchCases(parser));
+        result.end = consume(parser, Operators.RIGHT_CURLY_BRACKET).end;
+    }
+    return result;
+}
+
+/**
+ * tok is case, default or the first token of the first statement
+ *
+ * @throws TokenException
+ */
+function parseSwitchBlock(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.SWITCH_BLOCK, parser.tok.index, parser.tok.end);
+    while (!tokIs(parser, Keywords.CASE) && !tokIs(parser, Keywords.DEFAULT) && !tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
+        result.children.push(parseStatement(parser));
+    }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, result.end);
+    return result;
+}
+
+/**
+ * tok is { exit tok is }
+ *
+ * @throws TokenException
+ */
+function parseSwitchCases(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.CASES, parser.tok.index, parser.tok.end);
+    while (true) {
+        if (tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
+            break;
+        } else if (tokIs(parser, Keywords.CASE)) {
+            let index = parser.tok.index;
+            nextToken(parser, true); // case
+            let expr = parseExpression(parser);
+            let caseNode:Node = new Node(NodeKind.CASE, index, expr.end, null, [expr]);
+            consume(parser, Operators.COLUMN);
+            let block = parseSwitchBlock(parser);
+            caseNode.children.push(block);
+            caseNode.end = block.end;
+            result.children.push(caseNode);
+        } else if (tokIs(parser, Keywords.DEFAULT)) {
+            let index = parser.tok.index;
+            nextToken(parser, true); // default
+            consume(parser, Operators.COLUMN);
+            let caseNode:Node = new Node(NodeKind.CASE, index, -1, null,
+                [new Node(NodeKind.DEFAULT, index, parser.tok.end, Keywords.DEFAULT)]);
+            let block = parseSwitchBlock(parser);
+            caseNode.end = block.end;
+            caseNode.children.push(block);
+            result.children.push(caseNode);
+        }
+    }
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, result.end);
+    return result;
+}
+
+/**
+ * tok is ( for( var x : number = 0; i < length; i++ ) for( var s : string in
+ * Object )
+ *
+ * @throws TokenException
+ */
+function parseTraditionalFor(parser:AS3Parser, index:number):Node {
+    consume(parser, Operators.LEFT_PARENTHESIS);
+
+    let result:Node = new Node(NodeKind.FOR, index, -1);
+    if (!tokIs(parser, Operators.SEMI_COLUMN)) {
+        if (tokIs(parser, Keywords.VAR)) {
+            let varList = parseVarList(parser, null, null);
+            result.children.push(new Node(NodeKind.INIT, varList.start, varList.end, null, [varList]));
+        } else {
+            parser.isInFor = true;
+            let expr = parseExpression(parser);
+            result.children.push(new Node(NodeKind.INIT, expr.start, expr.end, null, [expr]));
+            parser.isInFor = false;
+        }
+        if (tokIs(parser, Keywords.IN)) {
+            return parseForIn(parser, result);
+        }
+    }
+    consume(parser, Operators.SEMI_COLUMN);
+    if (!tokIs(parser, Operators.SEMI_COLUMN)) {
+        let expr = parseExpression(parser);
+        result.children.push(new Node(NodeKind.COND, expr.start, expr.end, null, [expr]));
+    }
+    consume(parser, Operators.SEMI_COLUMN);
+    if (!tokIs(parser, Operators.RIGHT_PARENTHESIS)) {
+        let expr = parseExpressionList(parser);
+        result.children.push(new Node(NodeKind.ITER, expr.start, expr.end, null, [expr]));
+    }
+    consume(parser, Operators.RIGHT_PARENTHESIS);
+    result.children.push(parseStatement(parser));
+    return result;
+}
+
+function parseTry(parser:AS3Parser):Node {
+    let result:Node;
+    let index = parser.tok.index;
+    nextToken(parser, true);
+    let block = parseBlock(parser);
+    result = new Node(NodeKind.TRY, index, block.end, null, [block]);
+    return result;
+}
+
+function parseType(parser:AS3Parser):Node {
+    let result:Node;
+    if (parser.tok.text === VECTOR) {
+        result = parseVector(parser);
+    } else {
+        let index = parser.tok.index,
+            name = parseQualifiedName(parser, true);
+        result = new Node(NodeKind.TYPE, index, index + name.length, name);
+        // nextToken(parser,  true );
+    }
+    return result;
+}
+
+function parseUnaryExpressionNotPlusMinus(parser:AS3Parser):Node {
+    let result:Node;
+    let index = parser.tok.index;
+    if (tokIs(parser, Keywords.DELETE)) {
+        nextToken(parser, true);
+        let expr = parseExpression(parser);
+        result = new Node(NodeKind.DELETE, index, expr.end, null, [expr]);
+    } else if (tokIs(parser, Keywords.VOID)) {
+        nextToken(parser, true);
+        let expr = parseExpression(parser);
+        result = new Node(NodeKind.VOID, index, expr.end, null, [expr]);
+    } else if (tokIs(parser, Keywords.TYPEOF)) {
+        nextToken(parser, true);
+        let expr = parseExpression(parser);
+        result = new Node(NodeKind.TYPEOF, index, expr.end, null, [expr]);
+    } else if (tokIs(parser, '!') || tokIs(parser, 'not')) {
+        nextToken(parser, true);
+        let expr = parseExpression(parser);
+        result = new Node(NodeKind.NOT, index, expr.end, null, [expr]);
+    } else if (tokIs(parser, '~')) {
+        nextToken(parser, true);
+        let expr = parseExpression(parser);
+        result = new Node(NodeKind.B_NOT, index, expr.end, null, [expr]);
+    } else {
+        result = parseUnaryPostfixExpression(parser);
+    }
+    return result;
+}
+
+function parseUnaryPostfixExpression(parser:AS3Parser):Node {
+    let node:Node = parseAccessExpresion(parser);
+
+    if (tokIs(parser, Operators.INCREMENT)) {
+        node = parseIncrement(parser, node);
+    } else if (tokIs(parser, Operators.DECREMENT)) {
+        node = parseDecrement(parser, node);
+    }
+    return node;
+}
+
+function parseAccessExpresion(parser:AS3Parser):Node {
+    let node:Node = parsePrimaryExpression(parser);
+
+    while (true) {
+        if (tokIs(parser, Operators.LEFT_PARENTHESIS)) {
+            node = parseFunctionCall(parser, node);
+        }
+        if (tokIs(parser, Operators.DOT) || tokIs(parser, Operators.DOUBLE_COLUMN)) {
+            node = parseDot(parser, node);
+        } else if (tokIs(parser, Operators.LEFT_SQUARE_BRACKET)) {
+            node = parseArrayAccessor(parser, node);
+        } else {
+            break;
+        }
+    }
+    return node;
+}
+
+function parseUse(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.USE);
+    consume(parser, Keywords.NAMESPACE);
+    let nameIndex = parser.tok.index;
+    let namespace = parseNamespaceName(parser);
+    let result:Node = new Node(NodeKind.USE, tok.index, nameIndex + namespace.length, namespace);
+    skip(parser, Operators.SEMI_COLUMN);
+    return result;
+}
+
+function parseVar(parser:AS3Parser):Node {
+    let result:Node;
+    result = parseVarList(parser, null, null);
+    skip(parser, Operators.SEMI_COLUMN);
+    return result;
+}
+
+/**
+ * tok is var x, y : String, z : number = 0;
+ *
+ * @param modifiers
+ * @param meta
+ * @throws TokenException
+ */
+function parseVarList(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
+    let tok = consume(parser, Keywords.VAR);
+    let result:Node = new Node(NodeKind.VAR_LIST, tok.index, tok.end);
+    result.children.push(convertMeta(parser, meta));
+    result.children.push(convertModifiers(parser, modifiers));
+    collectVarListContent(parser, result);
+    result.start = result.children.reduce((index:number, child:Node) => {
+        return Math.min(index, child ? child.start : Infinity);
+    }, tok.index);
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, tok.end);
+    return result;
+}
+
+function parseVector(parser:AS3Parser):Node {
+    let result:Node = new Node(NodeKind.VECTOR, parser.tok.index, -1, '');
+    if (parser.tok.text === VECTOR) {
+        nextToken(parser);
+    }
+    consume(parser, Operators.VECTOR_START);
+
+    result.children.push(parseType(parser));
+
+    result.end = consume(parser, Operators.SUPERIOR).end;
+
+    return result;
+}
+
+function parseShortVector(parser:AS3Parser):Node {
+    let vector:Node = new Node(NodeKind.VECTOR, parser.tok.index, -1, '');
+    consume(parser, Operators.INFERIOR);
+    vector.children.push(parseType(parser));
+    vector.end = consume(parser, Operators.SUPERIOR).end;
+
+    let arrayLiteral = parseArrayLiteral(parser);
+
+    return new Node(NodeKind.SHORT_VECTOR, vector.start, arrayLiteral.end, null, [vector, arrayLiteral]);
+}
+
+/**
+ * tok is while
+ *
+ * @throws TokenException
+ */
+function parseWhile(parser:AS3Parser):Node {
+    let tok = consume(parser, Keywords.WHILE);
+    let result:Node = new Node(NodeKind.WHILE, tok.index, tok.end);
+    result.children.push(parseCondition(parser));
+    result.children.push(parseStatement(parser));
+    result.end = result.children.reduce((index:number, child:Node) => {
+        return Math.max(index, child ? child.end : 0);
+    }, tok.end);
+    return result;
+}
+
+
+/**
+ * Skip the current token, if it equals to the parameter
+ *
+ * @param text
+ * @throws UnExpectedTokenException
+ */
+function skip(parser:AS3Parser, text:string):void {
+    if (tokIs(parser, text)) {
+        nextToken(parser);
+    }
+}
+
+/**
+ * Compare the current token to the parameter
+ *
+ * @param text
+ * @return true, if tok's text property equals the parameter
+ */
+function tokIs(parser:AS3Parser, text:string):boolean {
+    return parser.tok.text === text;
+}
+
+function tryToParseCommentNode(parser:AS3Parser, result:Node, modifiers:Token[]):void {
+    if (startsWith(parser.tok.text, ASDOC_COMMENT)) {
+        parser.currentAsDoc = new Node(NodeKind.AS_DOC, parser.tok.index, -1, parser.tok.text);
+        nextToken(parser);
+    } else if (startsWith(parser.tok.text, MULTIPLE_LINES_COMMENT)) {
+        result.children.push(new Node(NodeKind.MULTI_LINE_COMMENT, parser.tok.index, -1, parser.tok.text));
+        nextToken(parser);
+    } else {
+        if (modifiers) {
+            modifiers.push(parser.tok);
+        }
+        nextTokenIgnoringDocumentation(parser);
+    }
+}
+
+export function parse(filePath:string, content:string):Node {
     let parser = new AS3Parser();
     return parser.buildAst(filePath, content);
 }
