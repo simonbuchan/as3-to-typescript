@@ -1,3 +1,2 @@
-import {parse} from './parse/parser';
-
-export = parse
+import parse from "./parse/index";
+export = parse;

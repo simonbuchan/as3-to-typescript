@@ -1,6 +1,6 @@
 /*jshint node:true*/
 
-import {parse} from './parse/parser';
+import parse from './parse/index';
 import {emit} from './emit/emitter';
 import fs = require('fs-extra');
 import path = require('path');
