@@ -1,4 +1,4 @@
-import Node from '../syntax/node';
+import Node, {createNode} from '../syntax/node';
 import NodeKind from '../syntax/nodeKind';
 import * as Keywords from '../syntax/keywords'
 import * as Operators from '../syntax/operators'
@@ -66,23 +66,28 @@ function parseFor(parser:AS3Parser):Node {
 function parseForEach(parser:AS3Parser, index:number):Node {
     consume(parser, Operators.LEFT_PARENTHESIS);
 
-    let result:Node = new Node(NodeKind.FOREACH, index, -1);
+    let result:Node = createNode({kind: NodeKind.FOREACH, start: index, end: -1});
     if (tokIs(parser, Keywords.VAR)) {
-        let node:Node = new Node(NodeKind.VAR, parser.tok.index, -1);
+        let node:Node = createNode({kind: NodeKind.VAR, start: parser.tok.index, end: -1});
         nextToken(parser);
         let child = parseNameTypeInit(parser);
         node.children.push(child);
         node.end = child.end;
         result.children.push(node);
     } else {
-        result.children.push(new Node(NodeKind.NAME, parser.tok.index, parser.tok.end, parser.tok.text));
+        result.children.push(createNode({
+            kind: NodeKind.NAME,
+            start: parser.tok.index,
+            end: parser.tok.end,
+            text: parser.tok.text
+        }));
         // names allowed?
         nextToken(parser);
     }
     index = parser.tok.index;
     nextToken(parser); // in
     let expr = parseExpression(parser);
-    result.children.push(new Node(NodeKind.IN, index, expr.end, null, [expr]));
+    result.children.push(createNode({kind: NodeKind.IN, start: index, end: expr.end, text: null, children: [expr]}));
     consume(parser, Operators.RIGHT_PARENTHESIS);
     let statement = parseStatement(parser);
     result.children.push(statement);
@@ -94,15 +99,27 @@ function parseForEach(parser:AS3Parser, index:number):Node {
 function parseTraditionalFor(parser:AS3Parser, index:number):Node {
     consume(parser, Operators.LEFT_PARENTHESIS);
 
-    let result:Node = new Node(NodeKind.FOR, index, -1);
+    let result:Node = createNode({kind: NodeKind.FOR, start: index, end: -1});
     if (!tokIs(parser, Operators.SEMI_COLUMN)) {
         if (tokIs(parser, Keywords.VAR)) {
             let varList = parseVarList(parser, null, null);
-            result.children.push(new Node(NodeKind.INIT, varList.start, varList.end, null, [varList]));
+            result.children.push(createNode({
+                kind: NodeKind.INIT,
+                start: varList.start,
+                end: varList.end,
+                text: null,
+                children: [varList]
+            }));
         } else {
             parser.isInFor = true;
             let expr = parseExpression(parser);
-            result.children.push(new Node(NodeKind.INIT, expr.start, expr.end, null, [expr]));
+            result.children.push(createNode({
+                kind: NodeKind.INIT,
+                start: expr.start,
+                end: expr.end,
+                text: null,
+                children: [expr]
+            }));
             parser.isInFor = false;
         }
         if (tokIs(parser, Keywords.IN)) {
@@ -112,12 +129,24 @@ function parseTraditionalFor(parser:AS3Parser, index:number):Node {
     consume(parser, Operators.SEMI_COLUMN);
     if (!tokIs(parser, Operators.SEMI_COLUMN)) {
         let expr = parseExpression(parser);
-        result.children.push(new Node(NodeKind.COND, expr.start, expr.end, null, [expr]));
+        result.children.push(createNode({
+            kind: NodeKind.COND,
+            start: expr.start,
+            end: expr.end,
+            text: null,
+            children: [expr]
+        }));
     }
     consume(parser, Operators.SEMI_COLUMN);
     if (!tokIs(parser, Operators.RIGHT_PARENTHESIS)) {
         let expr = parseExpressionList(parser);
-        result.children.push(new Node(NodeKind.ITER, expr.start, expr.end, null, [expr]));
+        result.children.push(createNode({
+            kind: NodeKind.ITER,
+            start: expr.start,
+            end: expr.end,
+            text: null,
+            children: [expr]
+        }));
     }
     consume(parser, Operators.RIGHT_PARENTHESIS);
     result.children.push(parseStatement(parser));
@@ -129,7 +158,7 @@ function parseForIn(parser:AS3Parser, result:Node):Node {
     let index = parser.tok.index;
     nextToken(parser);
     let expr = parseExpression(parser);
-    result.children.push(new Node(NodeKind.IN, index, expr.end, null, [expr]));
+    result.children.push(createNode({kind: NodeKind.IN, start: index, end: expr.end, text: null, children: [expr]}));
     result.kind = NodeKind.FORIN;
     consume(parser, Operators.RIGHT_PARENTHESIS);
     return result;
@@ -138,7 +167,13 @@ function parseForIn(parser:AS3Parser, result:Node):Node {
 
 function parseIf(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.IF);
-    let result:Node = new Node(NodeKind.IF, tok.index, -1, null, [parseCondition(parser)]);
+    let result:Node = createNode({
+        kind: NodeKind.IF,
+        start: tok.index,
+        end: -1,
+        text: null,
+        children: [parseCondition(parser)]
+    });
     result.children.push(parseStatement(parser));
     if (tokIs(parser, Keywords.ELSE)) {
         nextToken(parser, true);
@@ -153,7 +188,13 @@ function parseIf(parser:AS3Parser):Node {
 
 function parseSwitch(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.SWITCH);
-    let result:Node = new Node(NodeKind.SWITCH, tok.index, tok.end, null, [parseCondition(parser)]);
+    let result:Node = createNode({
+        kind: NodeKind.SWITCH,
+        start: tok.index,
+        end: tok.end,
+        text: null,
+        children: [parseCondition(parser)]
+    });
     if (tokIs(parser, Operators.LEFT_CURLY_BRACKET)) {
         nextToken(parser);
         result.children.push(parseSwitchCases(parser));
@@ -164,7 +205,7 @@ function parseSwitch(parser:AS3Parser):Node {
 
 
 function parseSwitchCases(parser:AS3Parser):Node {
-    let result:Node = new Node(NodeKind.CASES, parser.tok.index, parser.tok.end);
+    let result:Node = createNode({kind: NodeKind.CASES, start: parser.tok.index, end: parser.tok.end});
     while (true) {
         if (tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
             break;
@@ -172,7 +213,13 @@ function parseSwitchCases(parser:AS3Parser):Node {
             let index = parser.tok.index;
             nextToken(parser, true); // case
             let expr = parseExpression(parser);
-            let caseNode:Node = new Node(NodeKind.CASE, index, expr.end, null, [expr]);
+            let caseNode:Node = createNode({
+                kind: NodeKind.CASE,
+                start: index,
+                end: expr.end,
+                text: null,
+                children: [expr]
+            });
             consume(parser, Operators.COLUMN);
             let block = parseSwitchBlock(parser);
             caseNode.children.push(block);
@@ -182,8 +229,13 @@ function parseSwitchCases(parser:AS3Parser):Node {
             let index = parser.tok.index;
             nextToken(parser, true); // default
             consume(parser, Operators.COLUMN);
-            let caseNode:Node = new Node(NodeKind.CASE, index, -1, null,
-                [new Node(NodeKind.DEFAULT, index, parser.tok.end, Keywords.DEFAULT)]);
+            let caseNode:Node = createNode({
+                kind: NodeKind.CASE,
+                start: index,
+                end: -1,
+                text: null,
+                children: [createNode(NodeKind.DEFAULT, index, parser.tok.end, Keywords.DEFAULT)]
+            });
             let block = parseSwitchBlock(parser);
             caseNode.end = block.end;
             caseNode.children.push(block);
@@ -198,7 +250,7 @@ function parseSwitchCases(parser:AS3Parser):Node {
 
 
 function parseSwitchBlock(parser:AS3Parser):Node {
-    let result:Node = new Node(NodeKind.SWITCH_BLOCK, parser.tok.index, parser.tok.end);
+    let result:Node = createNode({kind: NodeKind.SWITCH_BLOCK, start: parser.tok.index, end: parser.tok.end});
     while (!tokIs(parser, Keywords.CASE) && !tokIs(parser, Keywords.DEFAULT) && !tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
         result.children.push(parseStatement(parser));
     }
@@ -211,7 +263,13 @@ function parseSwitchBlock(parser:AS3Parser):Node {
 
 function parseDo(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.DO);
-    let result:Node = new Node(NodeKind.DO, tok.index, -1, null, [parseStatement(parser)]);
+    let result:Node = createNode({
+        kind: NodeKind.DO,
+        start: tok.index,
+        end: -1,
+        text: null,
+        children: [parseStatement(parser)]
+    });
     consume(parser, Keywords.WHILE);
     let cond = parseCondition(parser);
     result.children.push(cond);
@@ -225,7 +283,7 @@ function parseDo(parser:AS3Parser):Node {
 
 function parseWhile(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.WHILE);
-    let result:Node = new Node(NodeKind.WHILE, tok.index, tok.end);
+    let result:Node = createNode({kind: NodeKind.WHILE, start: tok.index, end: tok.end});
     result.children.push(parseCondition(parser));
     result.children.push(parseStatement(parser));
     result.end = result.children.reduce((index:number, child:Node) => {
@@ -240,7 +298,7 @@ function parseTry(parser:AS3Parser):Node {
     let index = parser.tok.index;
     nextToken(parser, true);
     let block = parseBlock(parser);
-    result = new Node(NodeKind.TRY, index, block.end, null, [block]);
+    result = createNode({kind: NodeKind.TRY, start: index, end: block.end, text: null, children: [block]});
     return result;
 }
 
@@ -248,13 +306,20 @@ function parseTry(parser:AS3Parser):Node {
 function parseCatch(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.CATCH);
     consume(parser, Operators.LEFT_PARENTHESIS);
-    let result:Node = new Node(NodeKind.CATCH, tok.index, tok.end, null, [
-        new Node(NodeKind.NAME, parser.tok.index, parser.tok.end, parser.tok.text)
-    ]);
+    let result:Node = createNode({
+        kind: NodeKind.CATCH, start: tok.index, end: tok.end, text: null, children: [
+            createNode(NodeKind.NAME, parser.tok.index, parser.tok.end, parser.tok.text)
+        ]
+    });
     nextToken(parser, true); // name
     if (tokIs(parser, Operators.COLUMN)) {
         nextToken(parser, true); // :
-        result.children.push(new Node(NodeKind.TYPE, parser.tok.index, parser.tok.end, parser.tok.text));
+        result.children.push(createNode({
+            kind: NodeKind.TYPE,
+            start: parser.tok.index,
+            end: parser.tok.end,
+            text: parser.tok.text
+        }));
         nextToken(parser, true); // type
     }
     consume(parser, Operators.RIGHT_PARENTHESIS);
@@ -270,7 +335,7 @@ function parseFinally(parser:AS3Parser):Node {
     let index = parser.tok.index;
     nextToken(parser, true);
     let block = parseBlock(parser);
-    result = new Node(NodeKind.FINALLY, index, block.end, null, [block]);
+    result = createNode({kind: NodeKind.FINALLY, start: index, end: block.end, text: null, children: [block]});
     return result;
 }
 
@@ -298,10 +363,10 @@ function parseReturnStatement(parser:AS3Parser):Node {
     nextTokenAllowNewLine(parser);
     if (tokIs(parser, NEW_LINE) || tokIs(parser, Operators.SEMI_COLUMN)) {
         nextToken(parser, true);
-        result = new Node(NodeKind.RETURN, index, end, '');
+        result = createNode({kind: NodeKind.RETURN, start: index, end: end, text: ''});
     } else {
         let expr = parseExpression(parser);
-        result = new Node(NodeKind.RETURN, index, expr.end, null, [expr]);
+        result = createNode({kind: NodeKind.RETURN, start: index, end: expr.end, text: null, children: [expr]});
         skip(parser, Operators.SEMI_COLUMN);
     }
     return result;
@@ -312,7 +377,7 @@ function parseThrowStatement(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.THROW);
     let expr = parseExpression(parser);
 
-    return new Node(NodeKind.RETURN, tok.index, expr.end, null, [expr]);
+    return createNode({kind: NodeKind.RETURN, start: tok.index, end: expr.end, text: null, children: [expr]});
 }
 
 
@@ -333,7 +398,7 @@ function parseBreakOrContinueStatement(parser:AS3Parser):Node {
     let result:Node;
     if (tokIs(parser, NEW_LINE) || tokIs(parser, Operators.SEMI_COLUMN)) {
         nextToken(parser, true);
-        result = new Node(kind, tok.index, tok.end, '');
+        result = createNode({kind: kind, start: tok.index, end: tok.end, text: ''});
     } else {
         let ident = tryParse(parser, () => {
             let expr = parsePrimaryExpression(parser);
@@ -350,7 +415,7 @@ function parseBreakOrContinueStatement(parser:AS3Parser):Node {
                 ` in file ${ parser.sourceFile.path } expected: ident`
             );
         }
-        result = new Node(kind, tok.index, ident.end, null, [ident]);
+        result = createNode({kind: kind, start: tok.index, end: ident.end, text: null, children: [ident]});
     }
     skip(parser, Operators.SEMI_COLUMN);
     return result;
@@ -359,7 +424,12 @@ function parseBreakOrContinueStatement(parser:AS3Parser):Node {
 
 function parseEmptyStatement(parser:AS3Parser):Node {
     let result:Node;
-    result = new Node(NodeKind.STMT_EMPTY, parser.tok.index, parser.tok.end, Operators.SEMI_COLUMN);
+    result = createNode({
+        kind: NodeKind.STMT_EMPTY,
+        start: parser.tok.index,
+        end: parser.tok.end,
+        text: Operators.SEMI_COLUMN
+    });
     nextToken(parser, true);
     return result;
 }
@@ -367,7 +437,13 @@ function parseEmptyStatement(parser:AS3Parser):Node {
 
 function parseCondition(parser:AS3Parser):Node {
     let tok = consume(parser, Operators.LEFT_PARENTHESIS);
-    let result:Node = new Node(NodeKind.CONDITION, tok.index, -1, null, [parseExpression(parser)]);
+    let result:Node = createNode({
+        kind: NodeKind.CONDITION,
+        start: tok.index,
+        end: -1,
+        text: null,
+        children: [parseExpression(parser)]
+    });
     tok = consume(parser, Operators.RIGHT_PARENTHESIS);
     result.end = tok.end;
     return result;

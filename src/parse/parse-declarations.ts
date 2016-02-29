@@ -1,4 +1,4 @@
-import Node from '../syntax/node';
+import Node, {createNode} from '../syntax/node';
 import NodeKind from '../syntax/nodeKind';
 import Token from './token';
 import * as Keywords from '../syntax/keywords';
@@ -15,7 +15,7 @@ import {parseOptionalType} from './parse-types';
  * tok is empty, since nextToken has not been called before
  */
 export function parseCompilationUnit(parser:AS3Parser):Node {
-    let result:Node = new Node(NodeKind.COMPILATION_UNIT, -1, -1);
+    let result:Node = createNode({kind: NodeKind.COMPILATION_UNIT, start: -1, end: -1});
 
     nextTokenIgnoringDocumentation(parser);
     if (tokIs(parser, Keywords.PACKAGE)) {
@@ -28,7 +28,7 @@ export function parseCompilationUnit(parser:AS3Parser):Node {
 
 function parsePackage(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.PACKAGE);
-    let result:Node = new Node(NodeKind.PACKAGE, tok.index, -1);
+    let result:Node = createNode({kind: NodeKind.PACKAGE, start: tok.index, end: -1});
     let nameBuffer = '';
 
     let index = parser.tok.index;
@@ -36,7 +36,12 @@ function parsePackage(parser:AS3Parser):Node {
         nameBuffer += parser.tok.text;
         nextToken(parser);
     }
-    result.children.push(new Node(NodeKind.NAME, index, index + nameBuffer.length, nameBuffer));
+    result.children.push(createNode({
+        kind: NodeKind.NAME,
+        start: index,
+        end: index + nameBuffer.length,
+        text: nameBuffer
+    }));
     consume(parser, Operators.LEFT_CURLY_BRACKET);
     result.children.push(parsePackageContent(parser));
     tok = consume(parser, Operators.RIGHT_CURLY_BRACKET);
@@ -46,7 +51,7 @@ function parsePackage(parser:AS3Parser):Node {
 
 
 function parsePackageContent(parser:AS3Parser):Node {
-    let result:Node = new Node(NodeKind.CONTENT, parser.tok.index, -1);
+    let result:Node = createNode({kind: NodeKind.CONTENT, start: parser.tok.index, end: -1});
     let modifiers:Token[] = [];
     let meta:Node[] = [];
 
@@ -70,12 +75,20 @@ function parsePackageContent(parser:AS3Parser):Node {
         } else if (tokIs(parser, Keywords.FUNCTION)) {
             parseClassFunctions(parser, result, modifiers, meta);
         } else if (startsWith(parser.tok.text, ASDOC_COMMENT)) {
-            parser.currentAsDoc = new Node(NodeKind.AS_DOC, parser.tok.index,
-                parser.tok.index + parser.tok.index - 1, parser.tok.text);
+            parser.currentAsDoc = createNode({
+                kind: NodeKind.AS_DOC,
+                start: parser.tok.index,
+                end: parser.tok.index + parser.tok.index - 1,
+                text: parser.tok.text
+            });
             nextToken(parser);
         } else if (startsWith(parser.tok.text, MULTIPLE_LINES_COMMENT)) {
-            parser.currentMultiLineComment = new Node(NodeKind.MULTI_LINE_COMMENT, parser.tok.index,
-                parser.tok.index + parser.tok.index - 1, parser.tok.text);
+            parser.currentMultiLineComment = createNode({
+                kind: NodeKind.MULTI_LINE_COMMENT,
+                start: parser.tok.index,
+                end: parser.tok.index + parser.tok.index - 1,
+                text: parser.tok.text
+            });
             nextToken(parser);
         } else {
             modifiers.push(parser.tok);
@@ -92,7 +105,7 @@ function parsePackageContent(parser:AS3Parser):Node {
 function parseImport(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.IMPORT);
     let name = parseImportName(parser);
-    let result:Node = new Node(NodeKind.IMPORT, tok.index, tok.index + name.length, name);
+    let result:Node = createNode({kind: NodeKind.IMPORT, start: tok.index, end: tok.index + name.length, text: name});
     skip(parser, Operators.SEMI_COLUMN);
     return result;
 }
@@ -122,7 +135,12 @@ function parseUse(parser:AS3Parser):Node {
     consume(parser, Keywords.NAMESPACE);
     let nameIndex = parser.tok.index;
     let namespace = parseNamespaceName(parser);
-    let result:Node = new Node(NodeKind.USE, tok.index, nameIndex + namespace.length, namespace);
+    let result:Node = createNode({
+        kind: NodeKind.USE,
+        start: tok.index,
+        end: nameIndex + namespace.length,
+        text: namespace
+    });
     skip(parser, Operators.SEMI_COLUMN);
     return result;
 }
@@ -136,7 +154,7 @@ function parseNamespaceName(parser:AS3Parser):string {
 
 
 function parseIncludeExpression(parser:AS3Parser):Node {
-    let result:Node = new Node(NodeKind.INCLUDE, parser.tok.index, -1);
+    let result:Node = createNode({kind: NodeKind.INCLUDE, start: parser.tok.index, end: -1});
     let tok:Token;
     if (tokIs(parser, Keywords.INCLUDE)) {
         tok = consume(parser, Keywords.INCLUDE);
@@ -164,13 +182,13 @@ function parseMetaData(parser:AS3Parser):Node {
     }
     let end = parser.tok.end;
     skip(parser, Operators.RIGHT_SQUARE_BRACKET);
-    return new Node(NodeKind.META, index, end, '[' + buffer + ']');
+    return createNode({kind: NodeKind.META, start: index, end: end, text: '[' + buffer + ']'});
 }
 
 
 function parseClass(parser:AS3Parser, meta:Node[], modifier:Token[]):Node {
     let tok = consume(parser, Keywords.CLASS);
-    let result:Node = new Node(NodeKind.CLASS, tok.index, tok.end);
+    let result:Node = createNode({kind: NodeKind.CLASS, start: tok.index, end: tok.end});
 
     if (parser.currentAsDoc) {
         result.children.push(parser.currentAsDoc);
@@ -183,7 +201,7 @@ function parseClass(parser:AS3Parser, meta:Node[], modifier:Token[]):Node {
 
     let index = parser.tok.index,
         name = parseQualifiedName(parser, true);
-    result.children.push(new Node(NodeKind.NAME, index, index + name.length, name));
+    result.children.push(createNode({kind: NodeKind.NAME, start: index, end: index + name.length, text: name}));
 
     result.children.push(convertMeta(parser, meta));
     result.children.push(convertModifiers(parser, modifier));
@@ -195,7 +213,7 @@ function parseClass(parser:AS3Parser, meta:Node[], modifier:Token[]):Node {
             nextToken(parser, true); // extends
             index = parser.tok.index;
             name = parseQualifiedName(parser, false);
-            result.children.push(new Node(NodeKind.EXTENDS, index, index + name.length, name));
+            result.children.push(createNode({kind: NodeKind.EXTENDS, start: index, end: index + name.length, text: name}));
         } else if (tokIs(parser, Keywords.IMPLEMENTS)) {
             result.children.push(parseImplementsList(parser));
         }
@@ -216,22 +234,22 @@ function parseClass(parser:AS3Parser, meta:Node[], modifier:Token[]):Node {
 
 function parseImplementsList(parser:AS3Parser):Node {
     consume(parser, Keywords.IMPLEMENTS);
-    let result:Node = new Node(NodeKind.IMPLEMENTS_LIST, parser.tok.index, -1);
+    let result:Node = createNode({kind: NodeKind.IMPLEMENTS_LIST, start: parser.tok.index, end: -1});
     let index = parser.tok.index;
     let name = parseQualifiedName(parser, true);
-    result.children.push(new Node(NodeKind.IMPLEMENTS, index, index + name.length, name));
+    result.children.push(createNode({kind: NodeKind.IMPLEMENTS, start: index, end: index + name.length, text: name}));
     while (tokIs(parser, Operators.COMMA)) {
         nextToken(parser, true);
         let index = parser.tok.index;
         let name = parseQualifiedName(parser, true);
-        result.children.push(new Node(NodeKind.IMPLEMENTS, index, index + name.length, name));
+        result.children.push(createNode({kind: NodeKind.IMPLEMENTS, start: index, end: index + name.length, text: name}));
     }
     return result;
 }
 
 
 function parseClassContent(parser:AS3Parser):Node {
-    let result:Node = new Node(NodeKind.CONTENT, parser.tok.index, -1);
+    let result:Node = createNode({kind: NodeKind.CONTENT, start: parser.tok.index, end: -1});
     let modifiers:Token[] = [];
     let meta:Node[] = [];
 
@@ -293,7 +311,7 @@ function parseClassConstant(parser:AS3Parser, result:Node, modifiers:Token[], me
 
 function parseInterface(parser:AS3Parser, meta:Node[], modifier:Token[]):Node {
     let tok = consume(parser, Keywords.INTERFACE);
-    let result:Node = new Node(NodeKind.INTERFACE, tok.index, -1);
+    let result:Node = createNode({kind: NodeKind.INTERFACE, start: tok.index, end: -1});
 
     if (parser.currentAsDoc) {
         result.children.push(parser.currentAsDoc);
@@ -304,7 +322,12 @@ function parseInterface(parser:AS3Parser, meta:Node[], modifier:Token[]):Node {
         parser.currentMultiLineComment = null;
     }
     let name = parseQualifiedName(parser, true);
-    result.children.push(new Node(NodeKind.NAME, parser.tok.index, parser.tok.index + name.length, name));
+    result.children.push(createNode({
+        kind: NodeKind.NAME,
+        start: parser.tok.index,
+        end: parser.tok.index + name.length,
+        text: name
+    }));
 
     result.children.push(convertMeta(parser, meta));
     result.children.push(convertModifiers(parser, modifier));
@@ -312,12 +335,22 @@ function parseInterface(parser:AS3Parser, meta:Node[], modifier:Token[]):Node {
     if (tokIs(parser, Keywords.EXTENDS)) {
         nextToken(parser); // extends
         name = parseQualifiedName(parser, false);
-        result.children.push(new Node(NodeKind.EXTENDS, parser.tok.index, parser.tok.index + name.length, name));
+        result.children.push(createNode({
+            kind: NodeKind.EXTENDS,
+            start: parser.tok.index,
+            end: parser.tok.index + name.length,
+            text: name
+        }));
     }
     while (tokIs(parser, Operators.COMMA)) {
         nextToken(parser); // comma
         name = parseQualifiedName(parser, false);
-        result.children.push(new Node(NodeKind.EXTENDS, parser.tok.index, parser.tok.index + name.length, name));
+        result.children.push(createNode({
+            kind: NodeKind.EXTENDS,
+            start: parser.tok.index,
+            end: parser.tok.index + name.length,
+            text: name
+        }));
     }
     consume(parser, Operators.LEFT_CURLY_BRACKET);
     result.children.push(parseInterfaceContent(parser));
@@ -331,7 +364,7 @@ function parseInterface(parser:AS3Parser, meta:Node[], modifier:Token[]):Node {
 
 
 function parseInterfaceContent(parser:AS3Parser):Node {
-    let result:Node = new Node(NodeKind.CONTENT, parser.tok.index, -1);
+    let result:Node = createNode({kind: NodeKind.CONTENT, start: parser.tok.index, end: -1});
 
     while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
         if (tokIs(parser, Keywords.IMPORT)) {
@@ -365,9 +398,8 @@ function parseClassFunctions(parser:AS3Parser, result:Node, modifiers:Token[], m
 
 function parseFunction(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
     let signature:Node[] = doParseSignature(parser);
-    let result:Node = new Node(
-        findFunctionTypeFromSignature(signature),
-        signature[0].start, -1, signature[0].text);
+    let result:Node = createNode(
+        {kind: findFunctionTypeFromSignature(signature), start: signature[0].start, end: -1, text: signature[0].text});
 
     if (parser.currentAsDoc) {
         result.children.push(parser.currentAsDoc);
@@ -401,9 +433,8 @@ function parseFunction(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
 function parseFunctionSignature(parser:AS3Parser):Node {
     let signature:Node[] = doParseSignature(parser);
     skip(parser, Operators.SEMI_COLUMN);
-    let result:Node = new Node(
-        findFunctionTypeFromSignature(signature), signature[0].start,
-        -1, signature[0].text
+    let result:Node = createNode(
+        {kind: findFunctionTypeFromSignature(signature), start: signature[0].start, end: -1, text: signature[0].text}
     );
     result.children.push(signature[1]);
     result.children.push(signature[2]);
@@ -417,12 +448,17 @@ function parseFunctionSignature(parser:AS3Parser):Node {
 
 function doParseSignature(parser:AS3Parser):Node[] {
     let tok = consume(parser, Keywords.FUNCTION);
-    let type:Node = new Node(NodeKind.TYPE, tok.index, tok.end, Keywords.FUNCTION);
+    let type:Node = createNode({kind: NodeKind.TYPE, start: tok.index, end: tok.end, text: Keywords.FUNCTION});
     if (tokIs(parser, Keywords.SET) || tokIs(parser, Keywords.GET)) {
-        type = new Node(NodeKind.TYPE, tok.index, parser.tok.end, parser.tok.text);
+        type = createNode({kind: NodeKind.TYPE, start: tok.index, end: parser.tok.end, text: parser.tok.text});
         nextToken(parser); // set or get
     }
-    let name:Node = new Node(NodeKind.NAME, parser.tok.index, parser.tok.end, parser.tok.text);
+    let name:Node = createNode({
+        kind: NodeKind.NAME,
+        start: parser.tok.index,
+        end: parser.tok.end,
+        text: parser.tok.text
+    });
     nextToken(parser); // name
     let params:Node = parseParameterList(parser);
     let returnType:Node = parseOptionalType(parser);
@@ -448,7 +484,7 @@ function findFunctionTypeFromSignature(signature:Node[]):NodeKind {
 
 
 function parseFunctionBlock(parser:AS3Parser):Node {
-    let block:Node = new Node(NodeKind.BLOCK, parser.tok.index, -1);
+    let block:Node = createNode({kind: NodeKind.BLOCK, start: parser.tok.index, end: -1});
 
     parser.currentFunctionNode = block;
 
@@ -460,7 +496,7 @@ function parseFunctionBlock(parser:AS3Parser):Node {
 
 export function parseVarList(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
     let tok = consume(parser, Keywords.VAR);
-    let result:Node = new Node(NodeKind.VAR_LIST, tok.index, tok.end);
+    let result:Node = createNode({kind: NodeKind.VAR_LIST, start: tok.index, end: tok.end});
     result.children.push(convertMeta(parser, meta));
     result.children.push(convertModifiers(parser, modifiers));
     collectVarListContent(parser, result);
@@ -476,7 +512,7 @@ export function parseVarList(parser:AS3Parser, meta:Node[], modifiers:Token[]):N
 
 export function parseConstList(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
     let tok = consume(parser, Keywords.CONST);
-    let result:Node = new Node(NodeKind.CONST_LIST, tok.index, -1);
+    let result:Node = createNode({kind: NodeKind.CONST_LIST, start: tok.index, end: -1});
     result.children.push(convertMeta(parser, meta));
     result.children.push(convertModifiers(parser, modifiers));
     collectVarListContent(parser, result);
@@ -504,10 +540,20 @@ function collectVarListContent(parser:AS3Parser, result:Node):Node {
 
 function tryToParseCommentNode(parser:AS3Parser, result:Node, modifiers:Token[]):void {
     if (startsWith(parser.tok.text, ASDOC_COMMENT)) {
-        parser.currentAsDoc = new Node(NodeKind.AS_DOC, parser.tok.index, -1, parser.tok.text);
+        parser.currentAsDoc = createNode({
+            kind: NodeKind.AS_DOC,
+            start: parser.tok.index,
+            end: -1,
+            text: parser.tok.text
+        });
         nextToken(parser);
     } else if (startsWith(parser.tok.text, MULTIPLE_LINES_COMMENT)) {
-        result.children.push(new Node(NodeKind.MULTI_LINE_COMMENT, parser.tok.index, -1, parser.tok.text));
+        result.children.push(createNode({
+            kind: NodeKind.MULTI_LINE_COMMENT,
+            start: parser.tok.index,
+            end: -1,
+            text: parser.tok.text
+        }));
         nextToken(parser);
     } else {
         if (modifiers) {
@@ -523,7 +569,7 @@ function convertMeta(parser:AS3Parser, metadataList:Node[]):Node {
         return null;
     }
 
-    let result:Node = new Node(NodeKind.META_LIST, parser.tok.index, -1);
+    let result:Node = createNode({kind: NodeKind.META_LIST, start: parser.tok.index, end: -1});
     result.children = metadataList ? metadataList.slice(0) : [];
     if (result.lastChild) {
         result.end = result.lastChild.end;
@@ -540,12 +586,12 @@ function convertModifiers(parser:AS3Parser, modifierList:Token[]):Node {
         return null;
     }
 
-    let result:Node = new Node(NodeKind.MOD_LIST, parser.tok.index, -1);
+    let result:Node = createNode({kind: NodeKind.MOD_LIST, start: parser.tok.index, end: -1});
 
     let end = parser.tok.index;
     result.children = modifierList.map(tok => {
         end = tok.index + tok.text.length;
-        return new Node(NodeKind.MODIFIER, tok.index, end, tok.text);
+        return createNode({kind: NodeKind.MODIFIER, start: tok.index, end: end, text: tok.text});
     });
     result.end = end;
     result.start = result.children.reduce((index:number, child:Node) => {

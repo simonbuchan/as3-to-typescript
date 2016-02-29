@@ -1,6 +1,6 @@
 import NodeKind from '../syntax/nodeKind';
 import * as Keywords from '../syntax/keywords';
-import Node from '../syntax/node';
+import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
 
 
@@ -88,14 +88,15 @@ function filterAST(node: Node): Node {
                 child.kind !== NodeKind.MULTI_LINE_COMMENT;
     }
 
-    let newNode = new Node(
-            node.kind,
-            node.start,
-            node.end,
-            node.text,
-            node.children
-                    .filter(isInteresting)
-                    .map(filterAST));
+    let newNode = createNode({
+        kind: node.kind,
+        start: node.start,
+        end: node.end,
+        text: node.text,
+        children: node.children
+            .filter(isInteresting)
+            .map(filterAST)
+    });
 
     newNode.children.forEach(child => child.parent = newNode);
 

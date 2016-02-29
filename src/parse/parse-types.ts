@@ -1,4 +1,4 @@
-import Node from '../syntax/node';
+import Node, {createNode} from '../syntax/node';
 import NodeKind from '../syntax/nodeKind';
 import * as Operators from '../syntax/operators';
 import * as Keywords from '../syntax/keywords';
@@ -10,7 +10,7 @@ import {parseQualifiedName} from './parse-common';
  * if tok is ":" parse the type otherwise do nothing
  */
 export function parseOptionalType(parser:AS3Parser):Node {
-    let result:Node = new Node(NodeKind.TYPE, parser.tok.index, parser.tok.index, '');
+    let result:Node = createNode({kind: NodeKind.TYPE, start: parser.tok.index, end: parser.tok.index, text: ''});
     if (tokIs(parser, Operators.COLUMN)) {
         nextToken(parser, true);
         result = parseType(parser);
@@ -25,14 +25,14 @@ export function parseType(parser:AS3Parser):Node {
     } else {
         let index = parser.tok.index,
             name = parseQualifiedName(parser, true);
-        result = new Node(NodeKind.TYPE, index, index + name.length, name);
+        result = createNode({kind: NodeKind.TYPE, start: index, end: index + name.length, text: name});
         // nextToken(parser,  true );
     }
     return result;
 }
 
 export function parseVector(parser:AS3Parser):Node {
-    let result:Node = new Node(NodeKind.VECTOR, parser.tok.index, -1, '');
+    let result:Node = createNode({kind: NodeKind.VECTOR, start: parser.tok.index, end: -1, text: ''});
     if (parser.tok.text === VECTOR) {
         nextToken(parser);
     }

@@ -1,14 +1,30 @@
 import NodeKind from './nodeKind';
 
+interface CreateNodeOptions {
+    kind: NodeKind;
+    start: number;
+    end: number;
+    text?: string;
+    children?: Node[];
+}
+
+export function createNode(options: CreateNodeOptions) {
+    var node = new Node();
+    node.kind = options.kind;
+    node.start = options.start;
+    node.end = options.end;
+    node.text = options.text;
+    node.children = options.children || [];
+    return node;
+}
+
 export default class Node {
-    constructor (
-        public kind: NodeKind,
-        public start: number,
-        public end: number,
-        public text?: string,
-        public children: Node[] = [],
-        public parent?: Node) {
-    }
+    public kind: NodeKind;
+    public start: number;
+    public end: number;
+    public text: string;
+    public children: Node[];
+    public parent: Node; // only during emit
 
     findChild(kind: NodeKind): Node {
         for (var i = 0; i < this.children.length; i++) {
