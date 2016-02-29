@@ -29,15 +29,19 @@ function fixturePaths() {
     });
 }
 
+function readNormalizedSync(path) {
+  return fs.readFileSync(path, 'UTF-8').replace(/\r\n?/g, '\n');
+}
+
 function generate() {
   fs.emptyDirSync(GENERATED_DIR);
   fixturePaths().forEach(function (fixture) {
     console.log('compiling : ' + fixture.name);
-    var source = fs.readFileSync(fixture.source, 'UTF-8');
+    var source = readNormalizedSync(fixture.source);
     var ast = parse(fixture.source, source);
     fs.outputFileSync(fixture.generatedAst, JSON.stringify(ast, null, 2));
     var output = emit(ast, source);
-    fs.outputFileSync(fixture.generatedTs, output);
+    fs.outputFileSync(fixture.generatedTs, output.replace(/\r\n?/g, '\n'));
   });
 }
 
@@ -47,8 +51,8 @@ function acceptGenerated() {
 }
 
 function printDiff(expectedPath, generatedPath) {
-  var expected = fs.readFileSync(expectedPath, 'UTF-8');
-  var generated = fs.readFileSync(generatedPath, 'UTF-8');
+  var expected = readNormalizedSync(expectedPath);
+  var generated = readNormalizedSync(generatedPath);
   if (expected === generated) {
     return false;
   }

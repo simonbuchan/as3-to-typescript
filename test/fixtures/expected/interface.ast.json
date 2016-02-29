@@ -5,63 +5,63 @@
   "children": [
     {
       "kind": 69,
-      "start": 610,
-      "end": 2045,
+      "start": 594,
+      "end": 1972,
       "children": [
         {
           "kind": 62,
-          "start": 618,
-          "end": 660,
+          "start": 602,
+          "end": 644,
           "text": "com.deCampredon.flexAcacia.validation.core",
           "children": []
         },
         {
           "kind": 25,
-          "start": 666,
-          "end": 2042,
+          "start": 648,
+          "end": 1970,
           "children": [
             {
               "kind": 47,
-              "start": 666,
-              "end": 695,
+              "start": 648,
+              "end": 677,
               "text": "flash.events.IEventDispatcher",
               "children": []
             },
             {
               "kind": 51,
-              "start": 831,
-              "end": 2042,
+              "start": 805,
+              "end": 1970,
               "children": [
                 {
                   "kind": 6,
-                  "start": 1229,
-                  "end": 2457,
-                  "text": "/**\r\n\t * This interface specifies methods and property that a constraint Object must implement.\r\n\t * \r\n\t * @author Francois de Campredon\r\n\t */",
+                  "start": 1189,
+                  "end": 2377,
+                  "text": "/**\n\t * This interface specifies methods and property that a constraint Object must implement.\n\t * \n\t * @author Francois de Campredon\n\t */",
                   "children": []
                 },
                 {
                   "kind": 62,
-                  "start": 1262,
-                  "end": 1272,
+                  "start": 1221,
+                  "end": 1231,
                   "text": "Constraint",
                   "children": []
                 },
                 {
                   "kind": 56,
-                  "start": 831,
-                  "end": 1083,
+                  "start": 805,
+                  "end": 1049,
                   "children": [
                     {
                       "kind": 55,
-                      "start": 831,
-                      "end": 892,
+                      "start": 805,
+                      "end": 866,
                       "text": "[Event(name=\"valid\",type=\"mx.events.ValidationResultEvent\")]",
                       "children": []
                     },
                     {
                       "kind": 55,
-                      "start": 1020,
-                      "end": 1083,
+                      "start": 986,
+                      "end": 1049,
                       "text": "[Event(name=\"invalid\",type=\"mx.events.ValidationResultEvent\")]",
                       "children": []
                     }
@@ -69,13 +69,13 @@
                 },
                 {
                   "kind": 58,
-                  "start": 1234,
-                  "end": 1240,
+                  "start": 1193,
+                  "end": 1199,
                   "children": [
                     {
                       "kind": 59,
-                      "start": 1234,
-                      "end": 1240,
+                      "start": 1193,
+                      "end": 1199,
                       "text": "public",
                       "children": []
                     }
@@ -83,32 +83,32 @@
                 },
                 {
                   "kind": 37,
-                  "start": 1289,
-                  "end": 1305,
+                  "start": 1247,
+                  "end": 1263,
                   "text": "IEventDispatcher",
                   "children": []
                 },
                 {
                   "kind": 25,
-                  "start": 1306,
-                  "end": 2037,
+                  "start": 1262,
+                  "end": 1966,
                   "children": [
                     {
                       "kind": 47,
-                      "start": 1306,
-                      "end": 1317,
+                      "start": 1262,
+                      "end": 1273,
                       "text": "something.*",
                       "children": []
                     },
                     {
                       "kind": 49,
-                      "start": 1345,
-                      "end": 1360,
+                      "start": 1299,
+                      "end": 1314,
                       "children": [
                         {
                           "kind": 99,
-                          "start": 1353,
-                          "end": 1360,
+                          "start": 1307,
+                          "end": 1314,
                           "text": "'hello'",
                           "children": []
                         }
@@ -116,27 +116,27 @@
                     },
                     {
                       "kind": 43,
-                      "start": 1564,
-                      "end": 1591,
+                      "start": 1512,
+                      "end": 1539,
                       "text": "get",
                       "children": [
                         {
                           "kind": 62,
-                          "start": 1577,
-                          "end": 1582,
+                          "start": 1525,
+                          "end": 1530,
                           "text": "field",
                           "children": []
                         },
                         {
                           "kind": 71,
-                          "start": 1582,
-                          "end": 1584,
+                          "start": 1530,
+                          "end": 1532,
                           "children": []
                         },
                         {
                           "kind": 88,
-                          "start": 1585,
-                          "end": 1591,
+                          "start": 1533,
+                          "end": 1539,
                           "text": "String",
                           "children": []
                         }
@@ -144,43 +144,43 @@
                     },
                     {
                       "kind": 81,
-                      "start": 1596,
-                      "end": 1633,
+                      "start": 1543,
+                      "end": 1580,
                       "text": "set",
                       "children": [
                         {
                           "kind": 62,
-                          "start": 1609,
-                          "end": 1614,
+                          "start": 1556,
+                          "end": 1561,
                           "text": "field",
                           "children": []
                         },
                         {
                           "kind": 71,
-                          "start": 1614,
-                          "end": 1628,
+                          "start": 1561,
+                          "end": 1575,
                           "children": [
                             {
                               "kind": 70,
-                              "start": 1615,
-                              "end": 1627,
+                              "start": 1562,
+                              "end": 1574,
                               "children": [
                                 {
                                   "kind": 63,
-                                  "start": 1615,
-                                  "end": 1627,
+                                  "start": 1562,
+                                  "end": 1574,
                                   "children": [
                                     {
                                       "kind": 62,
-                                      "start": 1615,
-                                      "end": 1620,
+                                      "start": 1562,
+                                      "end": 1567,
                                       "text": "value",
                                       "children": []
                                     },
                                     {
                                       "kind": 88,
-                                      "start": 1621,
-                                      "end": 1627,
+                                      "start": 1568,
+                                      "end": 1574,
                                       "text": "String",
                                       "children": []
                                     },
@@ -193,8 +193,8 @@
                         },
                         {
                           "kind": 88,
-                          "start": 1629,
-                          "end": 1633,
+                          "start": 1576,
+                          "end": 1580,
                           "text": "void",
                           "children": []
                         }
@@ -202,43 +202,43 @@
                     },
                     {
                       "kind": 81,
-                      "start": 1702,
-                      "end": 1739,
+                      "start": 1644,
+                      "end": 1681,
                       "text": "set",
                       "children": [
                         {
                           "kind": 62,
-                          "start": 1715,
-                          "end": 1721,
+                          "start": 1657,
+                          "end": 1663,
                           "text": "groups",
                           "children": []
                         },
                         {
                           "kind": 71,
-                          "start": 1721,
-                          "end": 1734,
+                          "start": 1663,
+                          "end": 1676,
                           "children": [
                             {
                               "kind": 70,
-                              "start": 1722,
-                              "end": 1733,
+                              "start": 1664,
+                              "end": 1675,
                               "children": [
                                 {
                                   "kind": 63,
-                                  "start": 1722,
-                                  "end": 1733,
+                                  "start": 1664,
+                                  "end": 1675,
                                   "children": [
                                     {
                                       "kind": 62,
-                                      "start": 1722,
-                                      "end": 1727,
+                                      "start": 1664,
+                                      "end": 1669,
                                       "text": "value",
                                       "children": []
                                     },
                                     {
                                       "kind": 88,
-                                      "start": 1728,
-                                      "end": 1733,
+                                      "start": 1670,
+                                      "end": 1675,
                                       "text": "Array",
                                       "children": []
                                     },
@@ -251,8 +251,8 @@
                         },
                         {
                           "kind": 88,
-                          "start": 1735,
-                          "end": 1739,
+                          "start": 1677,
+                          "end": 1681,
                           "text": "void",
                           "children": []
                         }
@@ -260,27 +260,27 @@
                     },
                     {
                       "kind": 43,
-                      "start": 1744,
-                      "end": 1771,
+                      "start": 1685,
+                      "end": 1712,
                       "text": "get",
                       "children": [
                         {
                           "kind": 62,
-                          "start": 1757,
-                          "end": 1763,
+                          "start": 1698,
+                          "end": 1704,
                           "text": "groups",
                           "children": []
                         },
                         {
                           "kind": 71,
-                          "start": 1763,
-                          "end": 1765,
+                          "start": 1704,
+                          "end": 1706,
                           "children": []
                         },
                         {
                           "kind": 88,
-                          "start": 1766,
-                          "end": 1771,
+                          "start": 1707,
+                          "end": 1712,
                           "text": "Array",
                           "children": []
                         }
@@ -288,43 +288,43 @@
                     },
                     {
                       "kind": 42,
-                      "start": 1870,
-                      "end": 1907,
+                      "start": 1805,
+                      "end": 1842,
                       "text": "function",
                       "children": [
                         {
                           "kind": 62,
-                          "start": 1879,
-                          "end": 1887,
+                          "start": 1814,
+                          "end": 1822,
                           "text": "validate",
                           "children": []
                         },
                         {
                           "kind": 71,
-                          "start": 1887,
-                          "end": 1902,
+                          "start": 1822,
+                          "end": 1837,
                           "children": [
                             {
                               "kind": 70,
-                              "start": 1888,
-                              "end": 1901,
+                              "start": 1823,
+                              "end": 1836,
                               "children": [
                                 {
                                   "kind": 63,
-                                  "start": 1888,
-                                  "end": 1901,
+                                  "start": 1823,
+                                  "end": 1836,
                                   "children": [
                                     {
                                       "kind": 62,
-                                      "start": 1888,
-                                      "end": 1894,
+                                      "start": 1823,
+                                      "end": 1829,
                                       "text": "target",
                                       "children": []
                                     },
                                     {
                                       "kind": 88,
-                                      "start": 1895,
-                                      "end": 1901,
+                                      "start": 1830,
+                                      "end": 1836,
                                       "text": "Object",
                                       "children": []
                                     },
@@ -337,8 +337,8 @@
                         },
                         {
                           "kind": 88,
-                          "start": 1903,
-                          "end": 1907,
+                          "start": 1838,
+                          "end": 1842,
                           "text": "void",
                           "children": []
                         }
@@ -346,27 +346,27 @@
                     },
                     {
                       "kind": 42,
-                      "start": 2010,
-                      "end": 2037,
+                      "start": 1939,
+                      "end": 1966,
                       "text": "function",
                       "children": [
                         {
                           "kind": 62,
-                          "start": 2019,
-                          "end": 2024,
+                          "start": 1948,
+                          "end": 1953,
                           "text": "clone",
                           "children": []
                         },
                         {
                           "kind": 71,
-                          "start": 2024,
-                          "end": 2026,
+                          "start": 1953,
+                          "end": 1955,
                           "children": []
                         },
                         {
                           "kind": 88,
-                          "start": 2027,
-                          "end": 2037,
+                          "start": 1956,
+                          "end": 1966,
                           "text": "Constraint",
                           "children": []
                         }
@@ -382,7 +382,7 @@
     },
     {
       "kind": 25,
-      "start": 2045,
+      "start": 1972,
       "end": -1,
       "children": []
     }

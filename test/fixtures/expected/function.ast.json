@@ -6,7 +6,7 @@
     {
       "kind": 69,
       "start": 0,
-      "end": 298,
+      "end": 284,
       "children": [
         {
           "kind": 62,
@@ -17,31 +17,31 @@
         },
         {
           "kind": 25,
-          "start": 33,
-          "end": 295,
+          "start": 30,
+          "end": 282,
           "children": [
             {
               "kind": 42,
-              "start": 33,
-              "end": 295,
+              "start": 30,
+              "end": 282,
               "text": "function",
               "children": [
                 {
                   "kind": 6,
-                  "start": 83,
-                  "end": 165,
-                  "text": "/**\r\n     * hey\r\n     */",
+                  "start": 77,
+                  "end": 153,
+                  "text": "/**\n     * hey\n     */",
                   "children": []
                 },
                 {
                   "kind": 56,
-                  "start": 33,
-                  "end": 54,
+                  "start": 30,
+                  "end": 51,
                   "children": [
                     {
                       "kind": 55,
-                      "start": 33,
-                      "end": 54,
+                      "start": 30,
+                      "end": 51,
                       "text": "[Meta('dosomething')]",
                       "children": []
                     }
@@ -49,13 +49,13 @@
                 },
                 {
                   "kind": 58,
-                  "start": 90,
-                  "end": 96,
+                  "start": 83,
+                  "end": 89,
                   "children": [
                     {
                       "kind": 59,
-                      "start": 90,
-                      "end": 96,
+                      "start": 83,
+                      "end": 89,
                       "text": "public",
                       "children": []
                     }
@@ -63,37 +63,37 @@
                 },
                 {
                   "kind": 62,
-                  "start": 106,
-                  "end": 111,
+                  "start": 99,
+                  "end": 104,
                   "text": "hello",
                   "children": []
                 },
                 {
                   "kind": 71,
-                  "start": 111,
-                  "end": 123,
+                  "start": 104,
+                  "end": 116,
                   "children": [
                     {
                       "kind": 70,
-                      "start": 112,
-                      "end": 122,
+                      "start": 105,
+                      "end": 115,
                       "children": [
                         {
                           "kind": 63,
-                          "start": 112,
-                          "end": 122,
+                          "start": 105,
+                          "end": 115,
                           "children": [
                             {
                               "kind": 62,
-                              "start": 112,
-                              "end": 117,
+                              "start": 105,
+                              "end": 110,
                               "text": "param",
                               "children": []
                             },
                             {
                               "kind": 88,
-                              "start": 119,
-                              "end": 122,
+                              "start": 112,
+                              "end": 115,
                               "text": "int",
                               "children": []
                             },
@@ -106,14 +106,14 @@
                 },
                 {
                   "kind": 94,
-                  "start": 125,
-                  "end": 137,
+                  "start": 118,
+                  "end": 130,
                   "text": "",
                   "children": [
                     {
                       "kind": 88,
-                      "start": 133,
-                      "end": 136,
+                      "start": 126,
+                      "end": 129,
                       "text": "int",
                       "children": []
                     }
@@ -121,45 +121,45 @@
                 },
                 {
                   "kind": 12,
-                  "start": 138,
-                  "end": 295,
+                  "start": 131,
+                  "end": 282,
                   "children": [
                     {
                       "kind": 93,
-                      "start": 149,
-                      "end": 211,
+                      "start": 141,
+                      "end": 202,
                       "children": [
                         null,
                         null,
                         {
                           "kind": 63,
-                          "start": 153,
-                          "end": 174,
+                          "start": 145,
+                          "end": 166,
                           "children": [
                             {
                               "kind": 62,
-                              "start": 153,
-                              "end": 156,
+                              "start": 145,
+                              "end": 148,
                               "text": "hey",
                               "children": []
                             },
                             {
                               "kind": 88,
-                              "start": 158,
-                              "end": 164,
+                              "start": 150,
+                              "end": 156,
                               "text": "String",
                               "children": []
                             },
                             {
                               "kind": 50,
-                              "start": 167,
-                              "end": 174,
+                              "start": 159,
+                              "end": 166,
                               "text": null,
                               "children": [
                                 {
                                   "kind": 99,
-                                  "start": 167,
-                                  "end": 174,
+                                  "start": 159,
+                                  "end": 166,
                                   "text": "\"hello\"",
                                   "children": []
                                 }
@@ -169,52 +169,52 @@
                         },
                         {
                           "kind": 63,
-                          "start": 189,
-                          "end": 211,
+                          "start": 180,
+                          "end": 202,
                           "children": [
                             {
                               "kind": 62,
-                              "start": 189,
-                              "end": 192,
+                              "start": 180,
+                              "end": 183,
                               "text": "arr",
                               "children": []
                             },
                             {
                               "kind": 88,
-                              "start": 194,
-                              "end": 199,
+                              "start": 185,
+                              "end": 190,
                               "text": "Array",
                               "children": []
                             },
                             {
                               "kind": 50,
-                              "start": 202,
-                              "end": 211,
+                              "start": 193,
+                              "end": 202,
                               "text": null,
                               "children": [
                                 {
                                   "kind": 3,
-                                  "start": 202,
-                                  "end": 211,
+                                  "start": 193,
+                                  "end": 202,
                                   "children": [
                                     {
                                       "kind": 99,
-                                      "start": 203,
-                                      "end": 204,
+                                      "start": 194,
+                                      "end": 195,
                                       "text": "1",
                                       "children": []
                                     },
                                     {
                                       "kind": 99,
-                                      "start": 206,
-                                      "end": 207,
+                                      "start": 197,
+                                      "end": 198,
                                       "text": "2",
                                       "children": []
                                     },
                                     {
                                       "kind": 99,
-                                      "start": 209,
-                                      "end": 210,
+                                      "start": 200,
+                                      "end": 201,
                                       "text": "3",
                                       "children": []
                                     }
@@ -228,25 +228,25 @@
                     },
                     {
                       "kind": 14,
-                      "start": 232,
-                      "end": 252,
+                      "start": 221,
+                      "end": 241,
                       "children": [
                         {
                           "kind": 30,
-                          "start": 232,
-                          "end": 240,
+                          "start": 221,
+                          "end": 229,
                           "children": [
                             {
                               "kind": 100,
-                              "start": 232,
-                              "end": 235,
+                              "start": 221,
+                              "end": 224,
                               "text": "arr",
                               "children": []
                             },
                             {
                               "kind": 99,
-                              "start": 236,
-                              "end": 240,
+                              "start": 225,
+                              "end": 229,
                               "text": "push",
                               "children": []
                             }
@@ -254,25 +254,25 @@
                         },
                         {
                           "kind": 2,
-                          "start": 240,
-                          "end": 252,
+                          "start": 229,
+                          "end": 241,
                           "children": [
                             {
                               "kind": 30,
-                              "start": 241,
-                              "end": 251,
+                              "start": 230,
+                              "end": 240,
                               "children": [
                                 {
                                   "kind": 100,
-                                  "start": 241,
-                                  "end": 244,
+                                  "start": 230,
+                                  "end": 233,
                                   "text": "hey",
                                   "children": []
                                 },
                                 {
                                   "kind": 99,
-                                  "start": 245,
-                                  "end": 251,
+                                  "start": 234,
+                                  "end": 240,
                                   "text": "length",
                                   "children": []
                                 }
@@ -284,25 +284,25 @@
                     },
                     {
                       "kind": 80,
-                      "start": 263,
-                      "end": 287,
+                      "start": 251,
+                      "end": 275,
                       "text": null,
                       "children": [
                         {
                           "kind": 14,
-                          "start": 270,
-                          "end": 287,
+                          "start": 258,
+                          "end": 275,
                           "children": [
                             {
                               "kind": 94,
-                              "start": 270,
-                              "end": 282,
+                              "start": 258,
+                              "end": 270,
                               "text": "",
                               "children": [
                                 {
                                   "kind": 88,
-                                  "start": 278,
-                                  "end": 281,
+                                  "start": 266,
+                                  "end": 269,
                                   "text": "int",
                                   "children": []
                                 }
@@ -310,13 +310,13 @@
                             },
                             {
                               "kind": 2,
-                              "start": 282,
-                              "end": 287,
+                              "start": 270,
+                              "end": 275,
                               "children": [
                                 {
                                   "kind": 100,
-                                  "start": 283,
-                                  "end": 286,
+                                  "start": 271,
+                                  "end": 274,
                                   "text": "arr",
                                   "children": []
                                 }
@@ -336,7 +336,7 @@
     },
     {
       "kind": 25,
-      "start": 298,
+      "start": 284,
       "end": -1,
       "children": []
     }
