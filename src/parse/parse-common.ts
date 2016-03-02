@@ -31,20 +31,14 @@ export function parseQualifiedName(parser:AS3Parser, skipPackage:boolean):string
 export function parseBlock(parser:AS3Parser, result?:Node):Node {
     let tok = consume(parser, Operators.LEFT_CURLY_BRACKET);
     if (!result) {
-        result = createNode({kind: NodeKind.BLOCK, start: tok.index, end: parser.tok.end});
+        result = createNode(NodeKind.BLOCK, {start: tok.index, end: parser.tok.end});
     } else {
         result.start = tok.index;
     }
     while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
         if (startsWith(parser.tok.text, MULTIPLE_LINES_COMMENT)) {
             parser.currentFunctionNode.children.push(
-                createNode({
-                    kind: NodeKind.MULTI_LINE_COMMENT,
-                    start: parser.tok.index,
-                    end: parser.tok.end,
-                    text: parser.tok.text
-                })
-            );
+                createNode(NodeKind.MULTI_LINE_COMMENT, {tok: parser.tok}));
             nextToken(parser);
         } else {
             result.children.push(parseStatement(parser));
@@ -58,7 +52,7 @@ export function parseBlock(parser:AS3Parser, result?:Node):Node {
 export function parseParameterList(parser:AS3Parser):Node {
     let tok = consume(parser, Operators.LEFT_PARENTHESIS);
 
-    let result:Node = createNode({kind: NodeKind.PARAMETER_LIST, start: tok.index, end: -1});
+    let result:Node = createNode(NodeKind.PARAMETER_LIST, {start: tok.index});
     while (!tokIs(parser, Operators.RIGHT_PARENTHESIS)) {
         result.children.push(parseParameter(parser));
         if (tokIs(parser, Operators.COMMA)) {
@@ -77,11 +71,11 @@ export function parseParameterList(parser:AS3Parser):Node {
  * tok is the name of a parameter or ...
  */
 function parseParameter(parser:AS3Parser):Node {
-    let result:Node = createNode({kind: NodeKind.PARAMETER, start: parser.tok.index, end: -1});
+    let result:Node = createNode(NodeKind.PARAMETER, {start: parser.tok.index});
     if (tokIs(parser, Operators.REST_PARAMETERS)) {
         let index = parser.tok.index;
         nextToken(parser, true); // ...
-        let rest:Node = createNode({kind: NodeKind.REST, start: index, end: parser.tok.end, text: parser.tok.text});
+        let rest:Node = createNode(NodeKind.REST, {start: index, end: parser.tok.end, text: parser.tok.text});
         nextToken(parser, true); // rest
         result.children.push(rest);
     } else {
@@ -95,13 +89,8 @@ function parseParameter(parser:AS3Parser):Node {
 
 
 export function parseNameTypeInit(parser:AS3Parser):Node {
-    let result:Node = createNode({kind: NodeKind.NAME_TYPE_INIT, start: parser.tok.index, end: -1});
-    result.children.push(createNode({
-        kind: NodeKind.NAME,
-        start: parser.tok.index,
-        end: parser.tok.end,
-        text: parser.tok.text
-    }));
+    let result:Node = createNode(NodeKind.NAME_TYPE_INIT, {start: parser.tok.index});
+    result.children.push(createNode(NodeKind.NAME, {tok: parser.tok}));
     nextToken(parser, true); // name
     result.children.push(parseOptionalType(parser));
     result.children.push(parseOptionalInit(parser));
@@ -123,7 +112,7 @@ function parseOptionalInit(parser:AS3Parser):Node {
         nextToken(parser, true);
         let index = parser.tok.index;
         let expr = parseExpression(parser);
-        result = createNode({kind: NodeKind.INIT, start: index, end: expr.end, text: null, children: [expr]});
+        result = createNode(NodeKind.INIT, {start: index, end: expr.end, text: null}, expr);
     }
     return result;
 }

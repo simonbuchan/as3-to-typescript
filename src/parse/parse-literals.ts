@@ -8,7 +8,7 @@ import {parseType} from "./parse-types";
 
 export function parseArrayLiteral(parser:AS3Parser):Node {
     let tok = consume(parser, Operators.LEFT_SQUARE_BRACKET);
-    let result:Node = createNode({kind: NodeKind.ARRAY, start: tok.index, end: -1});
+    let result:Node = createNode(NodeKind.ARRAY, {start: tok.index});
     while (!tokIs(parser, Operators.RIGHT_SQUARE_BRACKET)) {
         result.children.push(parseExpression(parser));
         skip(parser, Operators.COMMA);
@@ -20,7 +20,7 @@ export function parseArrayLiteral(parser:AS3Parser):Node {
 
 export function parseObjectLiteral(parser:AS3Parser):Node {
     let tok = consume(parser, Operators.LEFT_CURLY_BRACKET);
-    let result:Node = createNode({kind: NodeKind.OBJECT, start: tok.index, end: tok.end});
+    let result:Node = createNode(NodeKind.OBJECT, {start: tok.index, end: tok.end});
     while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
         result.children.push(parseObjectLiteralPropertyDeclaration(parser));
         skip(parser, Operators.COMMA);
@@ -32,18 +32,13 @@ export function parseObjectLiteral(parser:AS3Parser):Node {
 
 
 function parseObjectLiteralPropertyDeclaration(parser:AS3Parser):Node {
-    let result:Node = createNode({kind: NodeKind.PROP, start: parser.tok.index, end: parser.tok.end});
-    let name:Node = createNode({
-        kind: NodeKind.NAME,
-        start: parser.tok.index,
-        end: parser.tok.end,
-        text: parser.tok.text
-    });
+    let result:Node = createNode(NodeKind.PROP, {start: parser.tok.index, end: parser.tok.end});
+    let name:Node = createNode(NodeKind.NAME, {tok: parser.tok});
     result.children.push(name);
     nextToken(parser); // name
     consume(parser, Operators.COLUMN);
     let expr = parseExpression(parser);
-    let val = createNode({kind: NodeKind.VALUE, start: parser.tok.index, end: expr.end, text: null, children: [expr]});
+    let val = createNode(NodeKind.VALUE, {start: parser.tok.index, end: expr.end, text: null}, expr);
     result.children.push(val);
     result.end = val.end;
     return result;
@@ -51,18 +46,16 @@ function parseObjectLiteralPropertyDeclaration(parser:AS3Parser):Node {
 
 
 export function parseShortVector(parser:AS3Parser):Node {
-    let vector:Node = createNode({kind: NodeKind.VECTOR, start: parser.tok.index, end: -1, text: ''});
+    let vector:Node = createNode(NodeKind.VECTOR, {start: parser.tok.index, end: -1, text: ''});
     consume(parser, Operators.INFERIOR);
     vector.children.push(parseType(parser));
     vector.end = consume(parser, Operators.SUPERIOR).end;
 
     let arrayLiteral = parseArrayLiteral(parser);
 
-    return createNode({
-        kind: NodeKind.SHORT_VECTOR,
-        start: vector.start,
-        end: arrayLiteral.end,
-        text: null,
-        children: [vector, arrayLiteral]
-    });
+    return createNode(
+        NodeKind.SHORT_VECTOR,
+        {start: vector.start, end: arrayLiteral.end, text: null},
+        vector,
+        arrayLiteral);
 }

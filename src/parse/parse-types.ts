@@ -10,7 +10,7 @@ import {parseQualifiedName} from './parse-common';
  * if tok is ":" parse the type otherwise do nothing
  */
 export function parseOptionalType(parser:AS3Parser):Node {
-    let result:Node = createNode({kind: NodeKind.TYPE, start: parser.tok.index, end: parser.tok.index, text: ''});
+    let result:Node = createNode(NodeKind.TYPE, {start: parser.tok.index, end: parser.tok.index, text: ''});
     if (tokIs(parser, Operators.COLUMN)) {
         nextToken(parser, true);
         result = parseType(parser);
@@ -23,16 +23,16 @@ export function parseType(parser:AS3Parser):Node {
     if (parser.tok.text === VECTOR) {
         result = parseVector(parser);
     } else {
-        let index = parser.tok.index,
-            name = parseQualifiedName(parser, true);
-        result = createNode({kind: NodeKind.TYPE, start: index, end: index + name.length, text: name});
+        let index = parser.tok.index;
+        let name = parseQualifiedName(parser, true);
+        result = createNode(NodeKind.TYPE, {start: index, text: name});
         // nextToken(parser,  true );
     }
     return result;
 }
 
 export function parseVector(parser:AS3Parser):Node {
-    let result:Node = createNode({kind: NodeKind.VECTOR, start: parser.tok.index, end: -1, text: ''});
+    let result:Node = createNode(NodeKind.VECTOR, {start: parser.tok.index, text: ''});
     if (parser.tok.text === VECTOR) {
         nextToken(parser);
     }

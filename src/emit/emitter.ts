@@ -81,22 +81,15 @@ function visitNode(emitter: Emitter, node: Node): void {
 
 
 function filterAST(node: Node): Node {
-    //we don't care about comment
     function isInteresting(child: Node): boolean {
-        return !!child &&
-                child.kind !== NodeKind.AS_DOC &&
-                child.kind !== NodeKind.MULTI_LINE_COMMENT;
+        // we don't care about comment
+        return !!child && child.kind !== NodeKind.AS_DOC && child.kind !== NodeKind.MULTI_LINE_COMMENT;
     }
 
-    let newNode = createNode({
-        kind: node.kind,
-        start: node.start,
-        end: node.end,
-        text: node.text,
-        children: node.children
-            .filter(isInteresting)
-            .map(filterAST)
-    });
+    let newNode = createNode(
+        node.kind,
+        node,
+        ... node.children.filter(isInteresting).map(filterAST));
 
     newNode.children.forEach(child => child.parent = newNode);
 

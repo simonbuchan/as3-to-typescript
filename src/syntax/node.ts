@@ -1,20 +1,41 @@
 import NodeKind from './nodeKind';
+import Token from '../parse/token';
 
 interface CreateNodeOptions {
-    kind: NodeKind;
-    start: number;
-    end: number;
+    start?: number;
+    end?: number;
     text?: string;
-    children?: Node[];
+    tok?: Token;
 }
 
-export function createNode(options: CreateNodeOptions) {
-    var node = new Node();
-    node.kind = options.kind;
-    node.start = options.start;
-    node.end = options.end;
-    node.text = options.text;
-    node.children = options.children || [];
+export function createNode(kind: NodeKind, options?: CreateNodeOptions, ... children: Node[]) {
+    let start = -1;
+    let end = -1;
+    let text:string;
+    if (options) {
+        text = options.text;
+        if ('tok' in options) {
+            start = options.tok.index;
+            end = options.tok.end;
+            text = options.tok.text
+        }
+        if ('start' in options) {
+            start = options.start;
+        }
+        if ('end' in options) {
+            end = options.end;
+        } else if (('start' in options) && text) {
+            end = start + text.length;
+        }
+    }
+
+    // Initialize in this order to emit the same .ast.json test files
+    let node = new Node();
+    node.kind = kind;
+    node.start = start;
+    node.end = end;
+    node.text = text;
+    node.children = children;
     return node;
 }
 
