@@ -108,7 +108,6 @@
                   "kind": 94,
                   "start": 118,
                   "end": 130,
-                  "text": "",
                   "children": [
                     {
                       "kind": 88,
@@ -154,7 +153,6 @@
                               "kind": 50,
                               "start": 159,
                               "end": 166,
-                              "text": null,
                               "children": [
                                 {
                                   "kind": 99,
@@ -190,7 +188,6 @@
                               "kind": 50,
                               "start": 193,
                               "end": 202,
-                              "text": null,
                               "children": [
                                 {
                                   "kind": 3,
@@ -286,7 +283,6 @@
                       "kind": 80,
                       "start": 251,
                       "end": 275,
-                      "text": null,
                       "children": [
                         {
                           "kind": 14,
@@ -297,7 +293,6 @@
                               "kind": 94,
                               "start": 258,
                               "end": 270,
-                              "text": "",
                               "children": [
                                 {
                                   "kind": 88,

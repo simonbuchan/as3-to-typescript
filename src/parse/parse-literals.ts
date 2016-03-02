@@ -38,7 +38,7 @@ function parseObjectLiteralPropertyDeclaration(parser:AS3Parser):Node {
     nextToken(parser); // name
     consume(parser, Operators.COLUMN);
     let expr = parseExpression(parser);
-    let val = createNode(NodeKind.VALUE, {start: parser.tok.index, end: expr.end, text: null}, expr);
+    let val = createNode(NodeKind.VALUE, {start: parser.tok.index, end: expr.end}, expr);
     result.children.push(val);
     result.end = val.end;
     return result;
@@ -46,16 +46,12 @@ function parseObjectLiteralPropertyDeclaration(parser:AS3Parser):Node {
 
 
 export function parseShortVector(parser:AS3Parser):Node {
-    let vector:Node = createNode(NodeKind.VECTOR, {start: parser.tok.index, end: -1, text: ''});
+    let vector:Node = createNode(NodeKind.VECTOR, {start: parser.tok.index});
     consume(parser, Operators.INFERIOR);
     vector.children.push(parseType(parser));
     vector.end = consume(parser, Operators.SUPERIOR).end;
 
     let arrayLiteral = parseArrayLiteral(parser);
 
-    return createNode(
-        NodeKind.SHORT_VECTOR,
-        {start: vector.start, end: arrayLiteral.end, text: null},
-        vector,
-        arrayLiteral);
+    return createNode(NodeKind.SHORT_VECTOR, {start: vector.start, end: arrayLiteral.end}, vector, arrayLiteral);
 }

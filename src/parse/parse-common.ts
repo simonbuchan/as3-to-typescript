@@ -112,7 +112,7 @@ function parseOptionalInit(parser:AS3Parser):Node {
         nextToken(parser, true);
         let index = parser.tok.index;
         let expr = parseExpression(parser);
-        result = createNode(NodeKind.INIT, {start: index, end: expr.end, text: null}, expr);
+        result = createNode(NodeKind.INIT, {start: index, end: expr.end}, expr);
     }
     return result;
 }

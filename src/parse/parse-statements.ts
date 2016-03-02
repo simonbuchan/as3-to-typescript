@@ -82,7 +82,7 @@ function parseForEach(parser:AS3Parser, index:number):Node {
     index = parser.tok.index;
     nextToken(parser); // in
     let expr = parseExpression(parser);
-    result.children.push(createNode(NodeKind.IN, {start: index, end: expr.end, text: null}, expr));
+    result.children.push(createNode(NodeKind.IN, {start: index, end: expr.end}, expr));
     consume(parser, Operators.RIGHT_PARENTHESIS);
     let statement = parseStatement(parser);
     result.children.push(statement);
@@ -98,17 +98,11 @@ function parseTraditionalFor(parser:AS3Parser, index:number):Node {
     if (!tokIs(parser, Operators.SEMI_COLUMN)) {
         if (tokIs(parser, Keywords.VAR)) {
             let varList = parseVarList(parser, null, null);
-            result.children.push(createNode(
-                NodeKind.INIT,
-                {start: varList.start, end: varList.end, text: null},
-                varList));
+            result.children.push(createNode(NodeKind.INIT, {start: varList.start, end: varList.end}, varList));
         } else {
             parser.isInFor = true;
             let expr = parseExpression(parser);
-            result.children.push(createNode(
-                NodeKind.INIT,
-                {start: expr.start, end: expr.end, text: null},
-                expr));
+            result.children.push(createNode(NodeKind.INIT, {start: expr.start, end: expr.end}, expr));
             parser.isInFor = false;
         }
         if (tokIs(parser, Keywords.IN)) {
@@ -118,18 +112,12 @@ function parseTraditionalFor(parser:AS3Parser, index:number):Node {
     consume(parser, Operators.SEMI_COLUMN);
     if (!tokIs(parser, Operators.SEMI_COLUMN)) {
         let expr = parseExpression(parser);
-        result.children.push(createNode(
-            NodeKind.COND,
-            {start: expr.start, end: expr.end, text: null},
-            expr));
+        result.children.push(createNode(NodeKind.COND, {start: expr.start, end: expr.end}, expr));
     }
     consume(parser, Operators.SEMI_COLUMN);
     if (!tokIs(parser, Operators.RIGHT_PARENTHESIS)) {
         let expr = parseExpressionList(parser);
-        result.children.push(createNode(
-            NodeKind.ITER,
-            {start: expr.start, end: expr.end, text: null},
-            expr));
+        result.children.push(createNode(NodeKind.ITER, {start: expr.start, end: expr.end}, expr));
     }
     consume(parser, Operators.RIGHT_PARENTHESIS);
     result.children.push(parseStatement(parser));
@@ -141,7 +129,7 @@ function parseForIn(parser:AS3Parser, result:Node):Node {
     let index = parser.tok.index;
     nextToken(parser);
     let expr = parseExpression(parser);
-    result.children.push(createNode(NodeKind.IN, {start: index, end: expr.end, text: null}, expr));
+    result.children.push(createNode(NodeKind.IN, {start: index, end: expr.end}, expr));
     result.kind = NodeKind.FORIN;
     consume(parser, Operators.RIGHT_PARENTHESIS);
     return result;
@@ -150,7 +138,7 @@ function parseForIn(parser:AS3Parser, result:Node):Node {
 
 function parseIf(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.IF);
-    let result:Node = createNode(NodeKind.IF, {start: tok.index, text: null}, parseCondition(parser));
+    let result:Node = createNode(NodeKind.IF, {start: tok.index}, parseCondition(parser));
     result.children.push(parseStatement(parser));
     if (tokIs(parser, Keywords.ELSE)) {
         nextToken(parser, true);
@@ -165,7 +153,7 @@ function parseIf(parser:AS3Parser):Node {
 
 function parseSwitch(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.SWITCH);
-    let result:Node = createNode(NodeKind.SWITCH, {start: tok.index, end: tok.end, text: null}, parseCondition(parser));
+    let result:Node = createNode(NodeKind.SWITCH, {start: tok.index, end: tok.end}, parseCondition(parser));
     if (tokIs(parser, Operators.LEFT_CURLY_BRACKET)) {
         nextToken(parser);
         result.children.push(parseSwitchCases(parser));
@@ -184,7 +172,7 @@ function parseSwitchCases(parser:AS3Parser):Node {
             let index = parser.tok.index;
             nextToken(parser, true); // case
             let expr = parseExpression(parser);
-            let caseNode:Node = createNode(NodeKind.CASE, {start: index, end: expr.end, text: null}, expr);
+            let caseNode:Node = createNode(NodeKind.CASE, {start: index, end: expr.end}, expr);
             consume(parser, Operators.COLUMN);
             let block = parseSwitchBlock(parser);
             caseNode.children.push(block);
@@ -196,7 +184,7 @@ function parseSwitchCases(parser:AS3Parser):Node {
             consume(parser, Operators.COLUMN);
             let caseNode:Node = createNode(
                 NodeKind.CASE,
-                {start: index, text: null},
+                {start: index},
                 createNode(NodeKind.DEFAULT, {start: index, end: parser.tok.end, text: Keywords.DEFAULT}));
             let block = parseSwitchBlock(parser);
             caseNode.end = block.end;
@@ -225,7 +213,7 @@ function parseSwitchBlock(parser:AS3Parser):Node {
 
 function parseDo(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.DO);
-    let result:Node = createNode(NodeKind.DO, {start: tok.index, text: null}, parseStatement(parser));
+    let result:Node = createNode(NodeKind.DO, {start: tok.index}, parseStatement(parser));
     consume(parser, Keywords.WHILE);
     let cond = parseCondition(parser);
     result.children.push(cond);
@@ -254,7 +242,7 @@ function parseTry(parser:AS3Parser):Node {
     let index = parser.tok.index;
     nextToken(parser, true);
     let block = parseBlock(parser);
-    result = createNode(NodeKind.TRY, {start: index, end: block.end, text: null}, block);
+    result = createNode(NodeKind.TRY, {start: index, end: block.end}, block);
     return result;
 }
 
@@ -264,7 +252,7 @@ function parseCatch(parser:AS3Parser):Node {
     consume(parser, Operators.LEFT_PARENTHESIS);
     let result:Node = createNode(
         NodeKind.CATCH,
-        {start: tok.index, end: tok.end, text: null},
+        {start: tok.index, end: tok.end},
         createNode(NodeKind.NAME, {tok: parser.tok}));
     nextToken(parser, true); // name
     if (tokIs(parser, Operators.COLUMN)) {
@@ -285,7 +273,7 @@ function parseFinally(parser:AS3Parser):Node {
     let index = parser.tok.index;
     nextToken(parser, true);
     let block = parseBlock(parser);
-    result = createNode(NodeKind.FINALLY, {start: index, end: block.end, text: null}, block);
+    result = createNode(NodeKind.FINALLY, {start: index, end: block.end}, block);
     return result;
 }
 
@@ -313,10 +301,10 @@ function parseReturnStatement(parser:AS3Parser):Node {
     nextTokenAllowNewLine(parser);
     if (tokIs(parser, NEW_LINE) || tokIs(parser, Operators.SEMI_COLUMN)) {
         nextToken(parser, true);
-        result = createNode(NodeKind.RETURN, {start: index, end: end, text: ''});
+        result = createNode(NodeKind.RETURN, {start: index, end: end});
     } else {
         let expr = parseExpression(parser);
-        result = createNode(NodeKind.RETURN, {start: index, end: expr.end, text: null}, expr);
+        result = createNode(NodeKind.RETURN, {start: index, end: expr.end}, expr);
         skip(parser, Operators.SEMI_COLUMN);
     }
     return result;
@@ -327,7 +315,7 @@ function parseThrowStatement(parser:AS3Parser):Node {
     let tok = consume(parser, Keywords.THROW);
     let expr = parseExpression(parser);
 
-    return createNode(NodeKind.RETURN, {start: tok.index, end: expr.end, text: null}, expr);
+    return createNode(NodeKind.RETURN, {start: tok.index, end: expr.end}, expr);
 }
 
 
@@ -348,7 +336,7 @@ function parseBreakOrContinueStatement(parser:AS3Parser):Node {
     let result:Node;
     if (tokIs(parser, NEW_LINE) || tokIs(parser, Operators.SEMI_COLUMN)) {
         nextToken(parser, true);
-        result = createNode(kind, {start: tok.index, end: tok.end, text: ''});
+        result = createNode(kind, {start: tok.index, end: tok.end});
     } else {
         let ident = tryParse(parser, () => {
             let expr = parsePrimaryExpression(parser);
@@ -365,7 +353,7 @@ function parseBreakOrContinueStatement(parser:AS3Parser):Node {
                 ` in file ${ parser.sourceFile.path } expected: ident`
             );
         }
-        result = createNode(kind, {start: tok.index, end: ident.end, text: null}, ident);
+        result = createNode(kind, {start: tok.index, end: ident.end}, ident);
     }
     skip(parser, Operators.SEMI_COLUMN);
     return result;
@@ -381,7 +369,7 @@ function parseEmptyStatement(parser:AS3Parser):Node {
 
 function parseCondition(parser:AS3Parser):Node {
     let tok = consume(parser, Operators.LEFT_PARENTHESIS);
-    let result:Node = createNode(NodeKind.CONDITION, {start: tok.index, text: null}, parseExpression(parser));
+    let result:Node = createNode(NodeKind.CONDITION, {start: tok.index}, parseExpression(parser));
     tok = consume(parser, Operators.RIGHT_PARENTHESIS);
     result.end = tok.end;
     return result;

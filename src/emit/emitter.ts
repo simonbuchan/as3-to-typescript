@@ -526,30 +526,31 @@ function emitDeclaration(emitter: Emitter, node: Node): void {
 
 function emitType(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
+    if (!node.text) {
+        return;
+    }
     emitter.skip(node.text.length);
-    let type: string;
     switch (node.text) {
         case 'String':
-            type = 'string';
+            emitter.insert('string');
             break;
         case 'Boolean':
-            type = 'boolean';
+            emitter.insert('boolean');
             break;
         case 'Number':
         case 'int':
         case 'uint':
-            type = 'number';
+            emitter.insert('number');
             break;
         case '*':
-            type = 'any';
+            emitter.insert('any');
             break;
         case 'Array':
-            type = 'any[]';
+            emitter.insert('any[]');
             break;
         default:
-            type = node.text;
+            emitter.insert(node.text);
     }
-    emitter.insert(type);
 }
 
 

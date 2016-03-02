@@ -9,10 +9,7 @@ import {parseArrayLiteral, parseObjectLiteral, parseShortVector} from './parse-l
 
 
 export function parseExpressionList(parser:AS3Parser):Node {
-    let result:Node = createNode(
-        NodeKind.EXPR_LIST,
-        {start: parser.tok.index, text: null},
-        parseAssignmentExpression(parser));
+    let result:Node = createNode(NodeKind.EXPR_LIST, {start: parser.tok.index}, parseAssignmentExpression(parser));
     while (tokIs(parser, Operators.COMMA)) {
         nextToken(parser, true);
         result.children.push(parseAssignmentExpression(parser));
@@ -99,7 +96,7 @@ function parseNewExpression(parser:AS3Parser):Node {
     if (tokIs(parser, Operators.VECTOR_START)) {
         let index = parser.tok.index;
         let vec = parseVector(parser);
-        result.children.push(createNode(NodeKind.VECTOR, {start: index, end: vec.end, text: null}, vec));
+        result.children.push(createNode(NodeKind.VECTOR, {start: index, end: vec.end}, vec));
     }
     if (tokIs(parser, Operators.LEFT_PARENTHESIS)) {
         result.children.push(parseArgumentList(parser));
@@ -124,11 +121,7 @@ function parseEncapsulatedExpression(parser:AS3Parser):Node {
 function parseAssignmentExpression(parser:AS3Parser):Node {
     let result = createNode(
         NodeKind.ASSIGN,
-        {
-            start: parser.tok.index,
-            end: parser.tok.end,
-            text: null
-        },
+        {start: parser.tok.index, end: parser.tok.end},
         parseConditionalExpression(parser));
     while (tokIs(parser, Operators.EQUAL)
     || tokIs(parser, Operators.PLUS_EQUAL) || tokIs(parser, Operators.MINUS_EQUAL)
@@ -149,10 +142,7 @@ function parseAssignmentExpression(parser:AS3Parser):Node {
 function parseConditionalExpression(parser:AS3Parser):Node {
     let result:Node = parseOrExpression(parser);
     if (tokIs(parser, Operators.QUESTION_MARK)) {
-        let conditional:Node = createNode(
-            NodeKind.CONDITIONAL,
-            {start: result.start, text: null},
-            result);
+        let conditional:Node = createNode(NodeKind.CONDITIONAL, {start: result.start}, result);
         nextToken(parser, true); // ?
         conditional.children.push(parseExpression(parser));
         nextToken(parser, true); // :
@@ -165,10 +155,7 @@ function parseConditionalExpression(parser:AS3Parser):Node {
 
 
 function parseOrExpression(parser:AS3Parser):Node {
-    let result:Node = createNode(
-        NodeKind.OR,
-        {start: parser.tok.index, text: null},
-        parseAndExpression(parser));
+    let result:Node = createNode(NodeKind.OR, {start: parser.tok.index}, parseAndExpression(parser));
     while (tokIs(parser, Operators.LOGICAL_OR) || tokIs(parser, Operators.LOGICAL_OR_AS2)) {
         result.children.push(createNode(NodeKind.OP, {tok: parser.tok}));
         nextToken(parser, true);
@@ -184,7 +171,7 @@ function parseOrExpression(parser:AS3Parser):Node {
 function parseAndExpression(parser:AS3Parser):Node {
     let result = createNode(
         NodeKind.AND,
-        {start: parser.tok.index, end: parser.tok.end, text: null},
+        {start: parser.tok.index, end: parser.tok.end},
         parseBitwiseOrExpression(parser));
     while (tokIs(parser, Operators.AND) || tokIs(parser, Operators.AND_AS2)) {
         result.children.push(createNode(NodeKind.OP, {tok: parser.tok}));
@@ -241,10 +228,7 @@ function parseBitwiseAndExpression(parser:AS3Parser):Node {
 
 
 function parseEqualityExpression(parser:AS3Parser):Node {
-    let result:Node = createNode(
-        NodeKind.EQUALITY,
-        {start: parser.tok.index, text: null},
-        parseRelationalExpression(parser));
+    let result:Node = createNode(NodeKind.EQUALITY, {start: parser.tok.index}, parseRelationalExpression(parser));
     while (
     tokIs(parser, Operators.DOUBLE_EQUAL) || tokIs(parser, Operators.DOUBLE_EQUAL_AS2) ||
     tokIs(parser, Operators.STRICTLY_EQUAL) || tokIs(parser, Operators.NON_EQUAL) ||
@@ -263,10 +247,7 @@ function parseEqualityExpression(parser:AS3Parser):Node {
 
 
 function parseRelationalExpression(parser:AS3Parser):Node {
-    let result:Node = createNode(
-        NodeKind.RELATION,
-        {start: parser.tok.index, text: null},
-        parseShiftExpression(parser));
+    let result:Node = createNode(NodeKind.RELATION, {start: parser.tok.index}, parseShiftExpression(parser));
     while (tokIs(parser, Operators.INFERIOR)
     || tokIs(parser, Operators.INFERIOR_AS2) || tokIs(parser, Operators.INFERIOR_OR_EQUAL)
     || tokIs(parser, Operators.INFERIOR_OR_EQUAL_AS2) || tokIs(parser, Operators.SUPERIOR)
@@ -289,10 +270,7 @@ function parseRelationalExpression(parser:AS3Parser):Node {
 
 
 function parseShiftExpression(parser:AS3Parser):Node {
-    let result:Node = createNode(
-        NodeKind.SHIFT,
-        {start: parser.tok.index, text: null},
-        parseAdditiveExpression(parser));
+    let result:Node = createNode(NodeKind.SHIFT, {start: parser.tok.index}, parseAdditiveExpression(parser));
     while (tokIs(parser, Operators.DOUBLE_SHIFT_LEFT)
     || tokIs(parser, Operators.TRIPLE_SHIFT_LEFT) || tokIs(parser, Operators.DOUBLE_SHIFT_RIGHT)
     || tokIs(parser, Operators.TRIPLE_SHIFT_RIGHT)) {
@@ -310,7 +288,7 @@ function parseShiftExpression(parser:AS3Parser):Node {
 function parseAdditiveExpression(parser:AS3Parser):Node {
     let result = createNode(
         NodeKind.ADD,
-        {start: parser.tok.index, end: parser.tok.end, text: null},
+        {start: parser.tok.index, end: parser.tok.end},
         parseMultiplicativeExpression(parser));
     while (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2) || tokIs(parser, Operators.MINUS)) {
         result.children.push(createNode(NodeKind.OP, {tok: parser.tok}));
@@ -325,10 +303,7 @@ function parseAdditiveExpression(parser:AS3Parser):Node {
 
 
 function parseMultiplicativeExpression(parser:AS3Parser):Node {
-    let result:Node = createNode(
-        NodeKind.MULTIPLICATION,
-        {start: parser.tok.index, text: null},
-        parseUnaryExpression(parser));
+    let result:Node = createNode(NodeKind.MULTIPLICATION, {start: parser.tok.index}, parseUnaryExpression(parser));
     while (tokIs(parser, Operators.TIMES) || tokIs(parser, Operators.SLASH) || tokIs(parser, Operators.MODULO)) {
         result.children.push(createNode(NodeKind.OP, {tok: parser.tok}));
         nextToken(parser, true);
@@ -346,28 +321,16 @@ function parseUnaryExpression(parser:AS3Parser):Node {
         index = parser.tok.index;
     if (tokIs(parser, Operators.INCREMENT)) {
         nextToken(parser);
-        result = createNode(
-            NodeKind.PRE_INC,
-            {start: parser.tok.index, end: index, text: null},
-            parseUnaryExpression(parser));
+        result = createNode(NodeKind.PRE_INC, {start: parser.tok.index, end: index}, parseUnaryExpression(parser));
     } else if (tokIs(parser, Operators.DECREMENT)) {
         nextToken(parser);
-        result = createNode(
-            NodeKind.PRE_DEC,
-            {start: parser.tok.index, end: index, text: null},
-            parseUnaryExpression(parser));
+        result = createNode(NodeKind.PRE_DEC, {start: parser.tok.index, end: index}, parseUnaryExpression(parser));
     } else if (tokIs(parser, Operators.MINUS)) {
         nextToken(parser);
-        result = createNode(
-            NodeKind.MINUS,
-            {start: parser.tok.index, end: index, text: null},
-            parseUnaryExpression(parser));
+        result = createNode(NodeKind.MINUS, {start: parser.tok.index, end: index}, parseUnaryExpression(parser));
     } else if (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2)) {
         nextToken(parser);
-        result = createNode(
-            NodeKind.PLUS,
-            {start: parser.tok.index, end: index, text: null},
-            parseUnaryExpression(parser));
+        result = createNode(NodeKind.PLUS, {start: parser.tok.index, end: index}, parseUnaryExpression(parser));
     } else {
         return parseUnaryExpressionNotPlusMinus(parser);
     }
@@ -381,23 +344,23 @@ function parseUnaryExpressionNotPlusMinus(parser:AS3Parser):Node {
     if (tokIs(parser, Keywords.DELETE)) {
         nextToken(parser, true);
         let expr = parseExpression(parser);
-        result = createNode(NodeKind.DELETE, {start: index, end: expr.end, text: null}, expr);
+        result = createNode(NodeKind.DELETE, {start: index, end: expr.end}, expr);
     } else if (tokIs(parser, Keywords.VOID)) {
         nextToken(parser, true);
         let expr = parseExpression(parser);
-        result = createNode(NodeKind.VOID, {start: index, end: expr.end, text: null}, expr);
+        result = createNode(NodeKind.VOID, {start: index, end: expr.end}, expr);
     } else if (tokIs(parser, Keywords.TYPEOF)) {
         nextToken(parser, true);
         let expr = parseExpression(parser);
-        result = createNode(NodeKind.TYPEOF, {start: index, end: expr.end, text: null}, expr);
+        result = createNode(NodeKind.TYPEOF, {start: index, end: expr.end}, expr);
     } else if (tokIs(parser, '!') || tokIs(parser, 'not')) {
         nextToken(parser, true);
         let expr = parseExpression(parser);
-        result = createNode(NodeKind.NOT, {start: index, end: expr.end, text: null}, expr);
+        result = createNode(NodeKind.NOT, {start: index, end: expr.end}, expr);
     } else if (tokIs(parser, '~')) {
         nextToken(parser, true);
         let expr = parseExpression(parser);
-        result = createNode(NodeKind.B_NOT, {start: index, end: expr.end, text: null}, expr);
+        result = createNode(NodeKind.B_NOT, {start: index, end: expr.end}, expr);
     } else {
         result = parseUnaryPostfixExpression(parser);
     }
