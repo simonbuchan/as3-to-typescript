@@ -47,7 +47,7 @@ export interface CheckPoint {
 
 /**
  * convert a actionscript to a stream of tokens
- * 
+ *
  * @author rbokel
  * @author xagnetti
  */
@@ -185,7 +185,11 @@ function nextToken(scanner: AS3Scanner): Token {
             return scanCharacterSequence(scanner, currentCharacter, ['^=']);
         case '>':
             if (scanner.inVector) {
-                scanner.inVector = false;
+                // Support deep vectors (such as `Vector.<Vector.<Vector.<Class>>>`)
+                let checkpoint = scanner.getCheckPoint();
+                let nextToken = scanner.nextToken()
+                scanner.rewind(checkpoint);
+                if (nextToken.text !== ">") scanner.inVector = false;
                 break;
             }
             return scanCharacterSequence(scanner, currentCharacter, ['>>>=', '>>>', '>>=', '>>', '>=']);
@@ -408,25 +412,49 @@ function scanSingleLineComment(scanner: AS3Scanner): Token {
  */
 function scanUntilDelimiter(scanner: AS3Scanner, start: string, delimiter: string = start): Token {
     let buffer = start;
-    let inBackslash = false;
+    let peekPos = 1;
+    let numberOfBackslashes = 0;
 
-    for (let peekPos = 1; scanner.index + peekPos < scanner.content.length; peekPos++) {
-        let currentCharacter = scanner.peekChar(peekPos);
-        if (currentCharacter === '\n') {
+    while (peekPos < scanner.content.length) {
+        let currentCharacter: string = scanner.peekChar(peekPos++);
+        if (currentCharacter === '\n' || (scanner.index + peekPos >= scanner.content.length)) {
             return null;
         }
         buffer += currentCharacter;
-        if (currentCharacter === delimiter && !inBackslash) {
-            return scanner.createToken(buffer);
+        if ((currentCharacter === delimiter  && numberOfBackslashes == 0) ) {
+            let result = new Token(buffer, scanner.index);
+            scanner.skipChars(buffer.toString().length - 1);
+            return result;
         }
-        if (currentCharacter === '\\') {
-            inBackslash = !inBackslash;
-        }
+        numberOfBackslashes = (currentCharacter === "\\")
+            ? (numberOfBackslashes + 1) % 2
+            : 0 ;
     }
+
     return null;
 
 }
 
+// function scanUntilDelimiter(scanner: AS3Scanner, start: string, delimiter: string = start): Token {
+//     let buffer = start;
+//     let inBackslash = false;
+//
+//     for (let peekPos = 1; scanner.index + peekPos < scanner.content.length; peekPos++) {
+//         let currentCharacter = scanner.peekChar(peekPos);
+//         if (currentCharacter === '\n') {
+//             return null;
+//         }
+//         buffer += currentCharacter;
+//         if (currentCharacter === delimiter && !inBackslash) {
+//             return scanner.createToken(buffer);
+//         }
+//         if (currentCharacter === '\\') {
+//             inBackslash = !inBackslash;
+//         }
+//     }
+//     return null;
+//
+// }
 
 function scanWord(scanner: AS3Scanner, startingCharacter: string): Token {
     let buffer = startingCharacter;

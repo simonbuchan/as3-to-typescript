@@ -3,7 +3,6 @@ import * as Keywords from '../syntax/keywords';
 import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
 
-
 const GLOBAL_NAMES = [
     'undefined', 'NaN', 'Infinity',
     'Array', 'Boolean', 'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'escape',
@@ -46,6 +45,7 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.USE]: emitInclude,
     [NodeKind.FUNCTION]: emitFunction,
     [NodeKind.LAMBDA]: emitFunction,
+    [NodeKind.FOREACH]: emitForEach,
     [NodeKind.INTERFACE]: emitInterface,
     [NodeKind.CLASS]: emitClass,
     [NodeKind.VECTOR]: emitVector,
@@ -227,9 +227,16 @@ export default class Emitter {
 
 function emitPackage(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
-    emitter.skip(Keywords.PACKAGE.length);
-    emitter.insert('module');
+    emitter.skip(Keywords.PACKAGE.length + node.children[0].text.length + 4);
+
     visitNodes(emitter, node.children);
+    emitter.catchup(node.end - 1);
+    emitter.skip(1);
+
+    // emitter.insert('module');
+    // emitter.catchup(node.start + Keywords.IMPORT.length + 1);
+    // emitter.insert(text);
+    // emitter.skipTo(node.end + Keywords.IMPORT.length + 1);
 }
 
 
@@ -246,12 +253,46 @@ function emitInclude(emitter: Emitter, node: Node): void {
 
 
 function emitImport(emitter: Emitter, node: Node): void {
-    emitter.catchup(node.start + Keywords.IMPORT.length + 1);
-    let split = node.text.split('.');
-    let name = split[split.length - 1];
-    emitter.insert(name + ' = ');
-    emitter.catchup(node.end);
+    // emitter.catchup(node.start + Keywords.IMPORT.length + 1);
+    // let split = node.text.split('.');
+    // let name = split[split.length - 1];
+    // emitter.insert(name + ' = ');
+    // emitter.catchup(node.end);
+    //
+    // emitter.declareInScope({name});
 
+    emitter.catchup(node.start + Keywords.IMPORT.length + 1);
+
+    let split = node.text.split('.');
+    let name = split.pop();
+
+    // Find current module name to output relative import
+    let currentModule = "";
+    let parentNode = node.parent;
+    while (parentNode) {
+        if (parentNode.kind === NodeKind.PACKAGE) {
+            currentModule = parentNode.children[0].text;
+            break;
+        }
+        parentNode = parentNode.parent;
+    }
+
+    function getRelativePath (currentPath: string[], targetPath: string[]) {
+        while (currentPath.length > 0 && targetPath[0] === currentPath[0]) {
+            currentPath.shift();
+            targetPath.shift();
+        }
+
+        let relative = (currentPath.length === 0)
+            ? "."
+            : currentPath.map(() => "..").join("/")
+
+        return `${ relative }/${ targetPath.join("/") }`;
+    }
+
+    let text = `{ ${ name } } from "${ getRelativePath(currentModule.split("."), node.text.split(".")) }"`;
+    emitter.insert(text);
+    emitter.skipTo(node.end + Keywords.IMPORT.length + 1);
     emitter.declareInScope({name});
 }
 
@@ -271,8 +312,11 @@ function emitInterface(emitter: Emitter, node: Node): void {
         contentsNode.forEach(node => {
             visitNode(emitter, node.findChild(NodeKind.META_LIST));
             emitter.catchup(node.start);
+
             if (node.kind === NodeKind.FUNCTION) {
-                emitter.skip(8);
+                emitter.skip(Keywords.FUNCTION.length);
+                visitNode(emitter, node.findChild(NodeKind.PARAMETER_LIST));
+
             } else if (node.kind === NodeKind.GET || node.kind === NodeKind.SET) {
                 let name = node.findChild(NodeKind.NAME);
                 let parameterList = node.findChild(NodeKind.PARAMETER_LIST);
@@ -280,12 +324,14 @@ function emitInterface(emitter: Emitter, node: Node): void {
                     emitter.skipTo(name.start);
                     emitter.catchup(name.end);
                     foundVariables[name.text] = true;
+
                     if (node.kind === NodeKind.GET) {
                         emitter.skipTo(parameterList.end);
                         let type = node.findChild(NodeKind.TYPE);
                         if (type) {
                             emitType(emitter, type);
                         }
+
                     } else if (node.kind === NodeKind.SET) {
                         let setParam = parameterList.findChild(NodeKind.PARAMETER).children[0];
                         emitter.skipTo(setParam.findChild(NodeKind.NAME).end);
@@ -295,9 +341,11 @@ function emitInterface(emitter: Emitter, node: Node): void {
                         }
                         emitter.skipTo(node.end);
                     }
+
                 } else {
                     emitter.commentNode(node, true);
                 }
+
             } else {
                 //include or import in interface content not supported
                 emitter.commentNode(node, true);
@@ -350,6 +398,25 @@ function emitFunction(emitter: Emitter, node: Node): void {
         let rest = node.getChildFrom(NodeKind.MOD_LIST);
         visitNodes(emitter, rest);
     });
+}
+
+
+function emitForEach(emitter: Emitter, node: Node): void {
+    let varNode = node.children[0];
+    let inNode = node.children[1];
+    let blockNode = node.children[2];
+
+    emitter.catchup(node.start + Keywords.FOR.length + 1);
+    emitter.skip(4); // "each"
+
+    visitNode(emitter, varNode);
+
+    emitter.catchup(inNode.start);
+    emitter.skip(Keywords.IN.length + 1); // replace "in " with "of "
+    emitter.insert('of ');
+
+    visitNodes(emitter, inNode.children);
+    visitNode(emitter, blockNode);
 }
 
 
@@ -471,6 +538,29 @@ function emitMethod(emitter: Emitter, node: Node): void {
         }
         emitter.insert('constructor');
         emitter.skipTo(name.end);
+
+        // // find "super" on constructor and move it to the beginning of the
+        // // block
+        // let blockNode = node.findChild(NodeKind.BLOCK);
+        // let blockSuperIndex = -1;
+        // for (var i = 0, len = blockNode.children.length; i < len; i++) {
+        //     let blockChildNode = blockNode.children[i];
+        //     if (blockChildNode.kind === NodeKind.CALL
+        //         && blockChildNode.children[0].text === "super") {
+        //         blockSuperIndex = i;
+        //         break;
+        //     }
+        // }
+        //
+        // if (childCalls.length > 0) {
+        //     console.log(childCalls)
+        //     let superIndex = -1;
+        //     childCalls.forEach((child, i) => {
+        //         if (child.children[0].text === "super") superIndex = blockNode.children.indexOf(child);
+        //     })
+        //     console.log("super index:", superIndex)
+        // }
+
     }
     emitter.withScope(getFunctionDeclarations(node), () => {
         visitNodes(emitter, node.getChildFrom(NodeKind.NAME));
@@ -531,6 +621,9 @@ function emitType(emitter: Emitter, node: Node): void {
     }
     emitter.skip(node.text.length);
     switch (node.text) {
+        case 'Class':
+            emitter.insert('Object');
+            break;
         case 'String':
             emitter.insert('string');
             break;
@@ -601,40 +694,54 @@ function emitNew(emitter: Emitter, node: Node): void {
 
 
 function emitCall(emitter: Emitter, node: Node): void {
-    emitter.catchup(node.start);
     let isNew = emitter.isNew;
     emitter.isNew = false;
     if (node.children[0].kind === NodeKind.VECTOR) {
         if (isNew) {
             let vector = node.children[0];
-            emitter.catchup(vector.start);
-            emitter.insert('Array');
-            emitter.insert('<');
-            let type = vector.findChild(NodeKind.TYPE);
-            if (type) {
-                emitter.skipTo(type.start);
-                emitType(emitter, type);
-            } else {
-                emitter.insert('any');
+            let args = node.children[1];
+
+            emitter.insert('[');
+
+            if (args.children.length > 0) {
+                console.warn("emitter.ts: emitCall() => NodeKind.VECTOR with arguments not implemented.");
             }
-            emitter.skipTo(vector.end);
-            emitter.insert('>');
+
+            emitter.insert(']');
+
+            // emitter.insert('Array');
+            // emitter.insert('<');
+            // let type = vector.findChild(NodeKind.TYPE);
+            // if (type) {
+            //     emitter.skipTo(type.start);
+            //     emitType(emitter, type);
+            // } else {
+            //     emitter.insert('any');
+            // }
+
+            emitter.skipTo(args.end);
+
+            // emitter.insert('>');
             visitNodes(emitter, node.getChildFrom(NodeKind.VECTOR));
             return;
         }
 
-        let args = node.findChild(NodeKind.ARGUMENTS);
-        //vector conversion lets just cast to array
-        if (args.children.length === 1) {
-            emitter.insert('(<');
-            emitVector(emitter, node.children[0]);
-            emitter.insert('>');
-            emitter.skipTo(args.children[0].start);
-            visitNode(emitter, args.children[0]);
-            emitter.catchup(node.end);
-            return;
-        }
+        // let args = node.findChild(NodeKind.ARGUMENTS);
+        // //vector conversion lets just cast to array
+        // if (args.children.length === 1) {
+        //     emitter.insert('(<');
+        //     emitVector(emitter, node.children[0]);
+        //     emitter.insert('>');
+        //     emitter.skipTo(args.children[0].start);
+        //     visitNode(emitter, args.children[0]);
+        //     emitter.catchup(node.end);
+        //     return;
+        // }
+
+    } else {
+        emitter.catchup(node.start);
     }
+
     visitNodes(emitter, node.children);
 }
 

@@ -2,19 +2,21 @@
 
 > A tool that helps porting as3 codebase to typescript
 
+`ranch-client` project could've been completely syntatically converted using
+this tool.
+
+Please see known issues and more detailed usage info on [REPORT.md](REPORT.md).
 
 ##Installation
 
-Install this module with npm: 
+- Clone the repository
+- Run `npm install` on it.
 
-```
-npm install -g as3-to-typescript
-```
 
 ##Usage
 
 ```
-as3-to-typescript <sourceDir> <outputDir>
+node bin/as3-to-typescript <sourceDir> <outputDir>
 ```
 
 ##Note

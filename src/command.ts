@@ -5,6 +5,8 @@ import {emit} from './emit/emitter';
 import fs = require('fs-extra');
 import path = require('path');
 
+const util = require('util');
+
 
 function readdir(dir: string, prefix = '', result: string[] = []): string[] {
     fs.readdirSync(dir).forEach(file => {
@@ -50,11 +52,12 @@ export function run(): void {
     let number = 0;
     let length = files.length;
     files.forEach(file => {
-        console.log('compiling \'' + file + '\' ' + number + '/' + length);
+        console.log('(' + number + '/' + length + ') \'' + file + '\'');
         let content = fs.readFileSync(path.resolve(sourceDir, file), 'UTF-8');
-        console.log('parsing');
+        // console.log('parsing');
         let ast = parse(path.basename(file), content);
-        console.log('emitting');
+        // console.log(util.inspect(ast, false, null));
+        // console.log('emitting');
         fs.outputFileSync(path.resolve(outputDir, file.replace(/.as$/, '.ts')), emit(ast, content));
         number ++;
     });
