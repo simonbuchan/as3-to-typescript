@@ -230,7 +230,7 @@ function emitPackage(emitter: Emitter, node: Node): void {
     if (emitter.options.useNamespaces) {
         emitter.catchup(node.start);
         emitter.skip(Keywords.PACKAGE.length);
-        emitter.insert('module');
+        emitter.insert('namespace');
         visitNodes(emitter, node.children);
 
     } else {
