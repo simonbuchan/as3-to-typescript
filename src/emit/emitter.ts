@@ -29,6 +29,7 @@ interface Declaration {
 
 export interface EmitterOptions {
     lineSeparator: string;
+    useNamespaces: boolean;
 }
 
 
@@ -102,7 +103,7 @@ export default class Emitter {
     public emitThisForNextIdent: boolean = true;
 
     private source: string;
-    private options: EmitterOptions;
+    public options: EmitterOptions;
 
     private output: string = '';
 
@@ -111,7 +112,7 @@ export default class Emitter {
 
     constructor(source: string, options?: EmitterOptions) {
         this.source = source;
-        this.options = assign({lineSeparator: '\n'}, options || {});
+        this.options = assign({lineSeparator: '\n', useNamespaces: false}, options || {});
     }
 
     emit(ast: Node): string {
@@ -226,17 +227,20 @@ export default class Emitter {
 
 
 function emitPackage(emitter: Emitter, node: Node): void {
-    emitter.catchup(node.start);
-    emitter.skip(Keywords.PACKAGE.length + node.children[0].text.length + 4);
+    if (emitter.options.useNamespaces) {
+        emitter.catchup(node.start);
+        emitter.skip(Keywords.PACKAGE.length);
+        emitter.insert('module');
+        visitNodes(emitter, node.children);
 
-    visitNodes(emitter, node.children);
-    emitter.catchup(node.end - 1);
-    emitter.skip(1);
+    } else {
+        emitter.catchup(node.start);
+        emitter.skip(Keywords.PACKAGE.length + node.children[0].text.length + 4);
 
-    // emitter.insert('module');
-    // emitter.catchup(node.start + Keywords.IMPORT.length + 1);
-    // emitter.insert(text);
-    // emitter.skipTo(node.end + Keywords.IMPORT.length + 1);
+        visitNodes(emitter, node.children);
+        emitter.catchup(node.end - 1);
+        emitter.skip(1);
+    }
 }
 
 
@@ -253,47 +257,51 @@ function emitInclude(emitter: Emitter, node: Node): void {
 
 
 function emitImport(emitter: Emitter, node: Node): void {
-    // emitter.catchup(node.start + Keywords.IMPORT.length + 1);
-    // let split = node.text.split('.');
-    // let name = split[split.length - 1];
-    // emitter.insert(name + ' = ');
-    // emitter.catchup(node.end);
-    //
-    // emitter.declareInScope({name});
+    if (emitter.options.useNamespaces) {
+        emitter.catchup(node.start + Keywords.IMPORT.length + 1);
+        let split = node.text.split('.');
+        let name = split[split.length - 1];
+        emitter.insert(name + ' = ');
+        emitter.catchup(node.end);
 
-    emitter.catchup(node.start + Keywords.IMPORT.length + 1);
+        emitter.declareInScope({name});
 
-    let split = node.text.split('.');
-    let name = split.pop();
+    } else {
 
-    // Find current module name to output relative import
-    let currentModule = "";
-    let parentNode = node.parent;
-    while (parentNode) {
-        if (parentNode.kind === NodeKind.PACKAGE) {
-            currentModule = parentNode.children[0].text;
-            break;
-        }
-        parentNode = parentNode.parent;
-    }
+        emitter.catchup(node.start + Keywords.IMPORT.length + 1);
 
-    function getRelativePath (currentPath: string[], targetPath: string[]) {
-        while (currentPath.length > 0 && targetPath[0] === currentPath[0]) {
-            currentPath.shift();
-            targetPath.shift();
+        let split = node.text.split('.');
+        let name = split.pop();
+
+        // Find current module name to output relative import
+        let currentModule = "";
+        let parentNode = node.parent;
+        while (parentNode) {
+            if (parentNode.kind === NodeKind.PACKAGE) {
+                currentModule = parentNode.children[0].text;
+                break;
+            }
+            parentNode = parentNode.parent;
         }
 
-        let relative = (currentPath.length === 0)
-            ? "."
-            : currentPath.map(() => "..").join("/")
+        function getRelativePath (currentPath: string[], targetPath: string[]) {
+            while (currentPath.length > 0 && targetPath[0] === currentPath[0]) {
+                currentPath.shift();
+                targetPath.shift();
+            }
 
-        return `${ relative }/${ targetPath.join("/") }`;
+            let relative = (currentPath.length === 0)
+                ? "."
+                : currentPath.map(() => "..").join("/")
+
+            return `${ relative }/${ targetPath.join("/") }`;
+        }
+
+        let text = `{ ${ name } } from "${ getRelativePath(currentModule.split("."), node.text.split(".")) }"`;
+        emitter.insert(text);
+        emitter.skipTo(node.end + Keywords.IMPORT.length + 1);
+        emitter.declareInScope({name});
     }
-
-    let text = `{ ${ name } } from "${ getRelativePath(currentModule.split("."), node.text.split(".")) }"`;
-    emitter.insert(text);
-    emitter.skipTo(node.end + Keywords.IMPORT.length + 1);
-    emitter.declareInScope({name});
 }
 
 

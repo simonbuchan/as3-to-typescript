@@ -1,12 +1,13 @@
 /*jshint node:true*/
+/// <reference path="../typings/index.d.ts" />
 
 import parse from './parse/index';
-import {emit} from './emit/emitter';
+import { emit, EmitterOptions } from './emit/emitter';
 import fs = require('fs-extra');
 import path = require('path');
+import parseArgs = require('minimist');
 
 const util = require('util');
-
 
 function readdir(dir: string, prefix = '', result: string[] = []): string[] {
     fs.readdirSync(dir).forEach(file => {
@@ -23,23 +24,32 @@ function readdir(dir: string, prefix = '', result: string[] = []): string[] {
 
 
 function displayHelp(): void {
-    console.log('usage: as3-to-typescript <sourceDir> <outputDir>');
+    console.log('usage: as3-to-typescript <sourceDir> <outputDir> [--use-namespaces]');
 }
 
 export function run(): void {
-    if (process.argv.length === 2) {
+    let args = parseArgs(process.argv);
+
+    let emitterOptions: EmitterOptions = {
+        lineSeparator: '\n',
+        useNamespaces: (args['use-namespaces'] === true)
+    };
+
+    if (args._.length === 2) {
         displayHelp();
         process.exit(0);
     }
-    if (process.argv.length !== 4) {
+
+    if (args._.length !== 4) {
         throw new Error('source dir and output dir are mandatory');
     }
-    let sourceDir = path.resolve(process.cwd(), process.argv[2]);
+
+    let sourceDir = path.resolve(process.cwd(), args._[2]);
     if (!fs.existsSync(sourceDir) || !fs.statSync(sourceDir).isDirectory()) {
         throw new Error('invalid source dir');
     }
 
-    let outputDir = path.resolve(process.cwd(), process.argv[3]);
+    let outputDir = path.resolve(process.cwd(), args._[3]);
     if (fs.existsSync(outputDir)) {
         if (!fs.statSync(outputDir).isDirectory()) {
             throw new Error('invalid ouput dir');
@@ -58,7 +68,7 @@ export function run(): void {
         let ast = parse(path.basename(file), content);
         // console.log(util.inspect(ast, false, null));
         // console.log('emitting');
-        fs.outputFileSync(path.resolve(outputDir, file.replace(/.as$/, '.ts')), emit(ast, content));
+        fs.outputFileSync(path.resolve(outputDir, file.replace(/.as$/, '.ts')), emit(ast, content, emitterOptions));
         number ++;
     });
 }

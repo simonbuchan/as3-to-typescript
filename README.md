@@ -10,8 +10,8 @@ Please see known issues and more detailed usage info on [REPORT.md](REPORT.md).
 ##Installation
 
 - Clone the repository
-- Run `npm install` on it.
-
+- Run `npm install`
+- Run `./node_modules/.bin/typings install`
 
 ##Usage
 
