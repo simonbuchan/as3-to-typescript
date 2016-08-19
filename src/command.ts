@@ -24,7 +24,7 @@ function readdir(dir: string, prefix = '', result: string[] = []): string[] {
 
 
 function displayHelp(): void {
-    console.log('usage: as3-to-typescript <sourceDir> <outputDir> [--use-namespaces]');
+    console.log('usage: as3-to-typescript <sourceDir> <outputDir> [--commonjs] [--bridge name]');
 }
 
 export function run(): void {
@@ -32,7 +32,8 @@ export function run(): void {
 
     let emitterOptions: EmitterOptions = {
         lineSeparator: '\n',
-        useNamespaces: (args['use-namespaces'] === true)
+        useNamespaces: (!args['commonjs']),
+        bridge: (args['bridge'] && require("./bridge/" + args['bridge']).default) || null,
     };
 
     if (args._.length === 2) {

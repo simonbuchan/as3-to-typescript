@@ -2,6 +2,7 @@ import NodeKind from '../syntax/nodeKind';
 import * as Keywords from '../syntax/keywords';
 import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
+import { Bridge } from "../bridge"
 
 const GLOBAL_NAMES = [
     'undefined', 'NaN', 'Infinity',
@@ -30,6 +31,7 @@ interface Declaration {
 export interface EmitterOptions {
     lineSeparator: string;
     useNamespaces: boolean;
+    bridge?: Bridge;
 }
 
 
@@ -262,7 +264,23 @@ function emitImport(emitter: Emitter, node: Node): void {
         let split = node.text.split('.');
         let name = split[split.length - 1];
         emitter.insert(name + ' = ');
-        emitter.catchup(node.end);
+
+        // apply "bridge" translation
+        if (emitter.options.bridge !== null) {
+            let text = node.text.concat();
+
+            emitter.options.bridge.imports.forEach((replacement, regexp) => {
+                text = text.replace(regexp, replacement);
+            });
+
+            let diff = node.text.length - text.length;
+
+            emitter.insert(text);
+            emitter.skip(text.length + diff);
+
+        } else {
+            emitter.catchup(node.end);
+        }
 
         emitter.declareInScope({name});
 
@@ -284,19 +302,6 @@ function emitImport(emitter: Emitter, node: Node): void {
             parentNode = parentNode.parent;
         }
 
-        function getRelativePath (currentPath: string[], targetPath: string[]) {
-            while (currentPath.length > 0 && targetPath[0] === currentPath[0]) {
-                currentPath.shift();
-                targetPath.shift();
-            }
-
-            let relative = (currentPath.length === 0)
-                ? "."
-                : currentPath.map(() => "..").join("/")
-
-            return `${ relative }/${ targetPath.join("/") }`;
-        }
-
         let text = `{ ${ name } } from "${ getRelativePath(currentModule.split("."), node.text.split(".")) }"`;
         emitter.insert(text);
         emitter.skipTo(node.end + Keywords.IMPORT.length + 1);
@@ -304,6 +309,18 @@ function emitImport(emitter: Emitter, node: Node): void {
     }
 }
 
+function getRelativePath (currentPath: string[], targetPath: string[]) {
+    while (currentPath.length > 0 && targetPath[0] === currentPath[0]) {
+        currentPath.shift();
+        targetPath.shift();
+    }
+
+    let relative = (currentPath.length === 0)
+        ? "."
+        : currentPath.map(() => "..").join("/")
+
+    return `${ relative }/${ targetPath.join("/") }`;
+}
 
 function emitInterface(emitter: Emitter, node: Node): void {
     emitDeclaration(emitter, node);
@@ -806,7 +823,9 @@ function emitIdent(emitter: Emitter, node: Node): void {
             emitter.currentClassName &&
             GLOBAL_NAMES.indexOf(node.text) === -1 &&
             emitter.emitThisForNextIdent &&
-            node.text !== emitter.currentClassName) {
+            node.text !== emitter.currentClassName &&
+            !node.text.match(/^[A-Z]/)
+    ) {
         emitter.insert('this.');
     }
     emitter.emitThisForNextIdent = true;
