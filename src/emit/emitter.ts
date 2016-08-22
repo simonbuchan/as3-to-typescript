@@ -32,6 +32,7 @@ export interface EmitterOptions {
     lineSeparator: string;
     useNamespaces: boolean;
     bridge?: Bridge;
+    definitionsByNamespace?: {[ns: string]: string[]};
 }
 
 
@@ -259,6 +260,17 @@ function emitInclude(emitter: Emitter, node: Node): void {
 
 
 function emitImport(emitter: Emitter, node: Node): void {
+    let text = node.text;
+    let hasBridge = (emitter.options.bridge !== null);
+
+    // apply "bridge" translation
+    if (hasBridge) {
+        text = node.text.concat();
+        emitter.options.bridge.imports.forEach((replacement, regexp) => {
+            text = text.replace(regexp, replacement);
+        });
+    }
+
     if (emitter.options.useNamespaces) {
         emitter.catchup(node.start + Keywords.IMPORT.length + 1);
         let split = node.text.split('.');
@@ -266,13 +278,7 @@ function emitImport(emitter: Emitter, node: Node): void {
         emitter.insert(name + ' = ');
 
         // apply "bridge" translation
-        if (emitter.options.bridge !== null) {
-            let text = node.text.concat();
-
-            emitter.options.bridge.imports.forEach((replacement, regexp) => {
-                text = text.replace(regexp, replacement);
-            });
-
+        if (hasBridge) {
             let diff = node.text.length - text.length;
 
             emitter.insert(text);
@@ -288,7 +294,7 @@ function emitImport(emitter: Emitter, node: Node): void {
 
         emitter.catchup(node.start + Keywords.IMPORT.length + 1);
 
-        let split = node.text.split('.');
+        let split = text.split(".");
         let name = split.pop();
 
         // Find current module name to output relative import
@@ -302,7 +308,7 @@ function emitImport(emitter: Emitter, node: Node): void {
             parentNode = parentNode.parent;
         }
 
-        let text = `{ ${ name } } from "${ getRelativePath(currentModule.split("."), node.text.split(".")) }"`;
+        text = `{ ${ name } } from "${ getRelativePath(currentModule.split("."), text.split(".")) }"`;
         emitter.insert(text);
         emitter.skipTo(node.end + Keywords.IMPORT.length + 1);
         emitter.declareInScope({name});

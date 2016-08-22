@@ -30,12 +30,6 @@ function displayHelp(): void {
 export function run(): void {
     let args = parseArgs(process.argv);
 
-    let emitterOptions: EmitterOptions = {
-        lineSeparator: '\n',
-        useNamespaces: (!args['commonjs']),
-        bridge: (args['bridge'] && require("./bridge/" + args['bridge']).default) || null,
-    };
-
     if (args._.length === 2) {
         displayHelp();
         process.exit(0);
@@ -62,13 +56,34 @@ export function run(): void {
     let files = readdir(sourceDir).filter(file => /.as$/.test(file));
     let number = 0;
     let length = files.length;
+
+    // get class definitions by namespace
+    let definitionsByNamespace: {[ns: string]: string[]} = {};
     files.forEach(file => {
-        console.log('(' + number + '/' + length + ') \'' + file + '\'');
+        let segments = file.match(/([a-zA-Z]+)/g);
+        segments.pop();
+
+        let identifier = segments.pop();
+        let ns = segments.join(".");
+
+        if (!definitionsByNamespace[ ns ]) {
+            definitionsByNamespace[ ns ] = [ ];
+        }
+
+        definitionsByNamespace[ ns ].push( identifier )
+    });
+
+    let emitterOptions: EmitterOptions = {
+        lineSeparator: '\n',
+        useNamespaces: (!args['commonjs']),
+        bridge: (args['bridge'] && require("./bridge/" + args['bridge']).default) || null,
+        definitionsByNamespace: definitionsByNamespace
+    };
+
+    files.forEach(file => {
+        console.log('(' + ( number + 1 ) + '/' + length + ') \'' + file + '\'');
         let content = fs.readFileSync(path.resolve(sourceDir, file), 'UTF-8');
-        // console.log('parsing');
         let ast = parse(path.basename(file), content);
-        // console.log(util.inspect(ast, false, null));
-        // console.log('emitting');
         fs.outputFileSync(path.resolve(outputDir, file.replace(/.as$/, '.ts')), emit(ast, content, emitterOptions));
         number ++;
     });
