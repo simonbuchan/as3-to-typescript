@@ -316,7 +316,8 @@ function emitImport(emitter: Emitter, node: Node): void {
 
     } else {
 
-        emitter.catchup(node.start + Keywords.IMPORT.length + 1);
+        emitter.catchup(node.start);
+        emitter.insert(Keywords.IMPORT + " ");
 
         let split = text.split(".");
         let name = split.pop();
