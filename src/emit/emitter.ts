@@ -4,6 +4,8 @@ import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
 import { Bridge } from "../bridge"
 
+const util = require('util');
+
 const GLOBAL_NAMES = [
     'undefined', 'NaN', 'Infinity',
     'Array', 'Boolean', 'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'escape',
@@ -260,6 +262,8 @@ function emitInclude(emitter: Emitter, node: Node): void {
 
 
 function emitImport(emitter: Emitter, node: Node): void {
+    let statement = Keywords.IMPORT + " ";
+
     // emit one import statement for each definition found in that namespace
     if (node.text.indexOf("*") !== -1) {
         let ns = node.text.substring(0, node.text.length - 2);
@@ -274,12 +278,16 @@ function emitImport(emitter: Emitter, node: Node): void {
             })
             // emitter.skipTo(node.end + node.text.length);
             let diff = node.text.length - ns.length + 3;
-            emitter.skipTo(node.end + diff);
-            return;
+            node.end += diff;
 
         } else {
-            console.warn(`emitImport: nothing found to import on namespace ${ ns }. (import ${ node.text })`)
+            let diff = node.text.length - ns.length + 5;
+            node.end += diff;
+            console.warn(`emitter.ts: emitImport() => : nothing found to import on namespace ${ ns }. (import ${ node.text })`)
         }
+
+        emitter.skipTo(node.end);
+        return;
     }
 
     let text = node.text;
@@ -295,7 +303,7 @@ function emitImport(emitter: Emitter, node: Node): void {
 
     if (emitter.options.useNamespaces) {
         emitter.catchup(node.start);
-        emitter.insert(Keywords.IMPORT + " ");
+        emitter.insert(statement);
 
         let split = node.text.split('.');
         let name = split[split.length - 1];
@@ -306,10 +314,10 @@ function emitImport(emitter: Emitter, node: Node): void {
             let diff = node.text.length - text.length;
 
             emitter.insert(text);
-            emitter.skip(text.length + diff);
+            emitter.skip(text.length + diff + statement.length);
 
         } else {
-            emitter.catchup(node.end);
+            emitter.catchup(node.end + statement.length);
         }
 
         emitter.declareInScope({name});
@@ -431,9 +439,9 @@ function getFunctionDeclarations(node: Node): Declaration[] {
             if (node.kind === NodeKind.VAR_LIST || node.kind === NodeKind.CONST_LIST ||
                     node.kind === NodeKind.VAR || node.kind === NodeKind.CONST) {
                 result = result.concat(
-                        node
-                                .findChildren(NodeKind.NAME_TYPE_INIT)
-                                .map(node => ({name: node.findChild(NodeKind.NAME).text}))
+                    node
+                        .findChildren(NodeKind.NAME_TYPE_INIT)
+                        .map(node => ({name: node.findChild(NodeKind.NAME).text}))
                 );
             }
             if (node.kind !== NodeKind.FUNCTION && node.children && node.children.length) {
@@ -805,13 +813,16 @@ function emitCall(emitter: Emitter, node: Node): void {
 function emitRelation(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     let as = node.findChild(NodeKind.AS);
+    // use (<cast>something) here
     if (as) {
         if (node.lastChild.kind === NodeKind.IDENTIFIER) {
+            // emitter.insert('(<');
             emitter.insert('<');
             emitter.insert(node.lastChild.text);
             emitter.insert('>');
             visitNodes(emitter, node.getChildUntil(NodeKind.AS));
             emitter.catchup(as.start);
+            // emitter.insert(')');
             emitter.skipTo(node.end);
         } else {
             emitter.commentNode(node, false);
@@ -835,6 +846,7 @@ function emitOp(emitter: Emitter, node: Node): void {
 
 function emitIdent(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
+
     if (node.parent && node.parent.kind === NodeKind.DOT) {
         //in case of dot just check the first
         if (node.parent.children[0] !== node) {

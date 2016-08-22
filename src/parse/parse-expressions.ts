@@ -290,7 +290,11 @@ function parseAdditiveExpression(parser:AS3Parser):Node {
         NodeKind.ADD,
         {start: parser.tok.index, end: parser.tok.end},
         parseMultiplicativeExpression(parser));
-    while (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2) || tokIs(parser, Operators.MINUS)) {
+    //
+    // Having PLUS_AS2 emits wrong AST when a method is called "add"
+    // while (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2) || tokIs(parser, Operators.MINUS)) {
+    //
+    while (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.MINUS)) {
         result.children.push(createNode(NodeKind.OP, {tok: parser.tok}));
         nextToken(parser, true);
         result.children.push(parseMultiplicativeExpression(parser));
@@ -328,7 +332,11 @@ function parseUnaryExpression(parser:AS3Parser):Node {
     } else if (tokIs(parser, Operators.MINUS)) {
         nextToken(parser);
         result = createNode(NodeKind.MINUS, {start: parser.tok.index, end: index}, parseUnaryExpression(parser));
-    } else if (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2)) {
+    //
+    // Having PLUS_AS2 emits wrong AST when a method is called "add"
+    // } else if (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2)) {
+    //
+    } else if (tokIs(parser, Operators.PLUS)) {
         nextToken(parser);
         result = createNode(NodeKind.PLUS, {start: parser.tok.index, end: index}, parseUnaryExpression(parser));
     } else {
