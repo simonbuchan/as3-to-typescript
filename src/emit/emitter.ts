@@ -816,13 +816,13 @@ function emitRelation(emitter: Emitter, node: Node): void {
     // use (<cast>something) here
     if (as) {
         if (node.lastChild.kind === NodeKind.IDENTIFIER) {
-            // emitter.insert('(<');
-            emitter.insert('<');
+            emitter.insert('(<');
             emitter.insert(node.lastChild.text);
             emitter.insert('>');
             visitNodes(emitter, node.getChildUntil(NodeKind.AS));
             emitter.catchup(as.start);
-            // emitter.insert(')');
+            // emitter.skipTo(as.start);
+            emitter.insert(')');
             emitter.skipTo(node.end);
         } else {
             emitter.commentNode(node, false);
@@ -871,6 +871,9 @@ function emitIdent(emitter: Emitter, node: Node): void {
     ) {
         emitter.insert('this.');
     }
+
+    emitter.insert(node.text);
+    emitter.skipTo(node.end);
     emitter.emitThisForNextIdent = true;
 }
 

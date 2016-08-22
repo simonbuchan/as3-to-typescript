@@ -62,6 +62,12 @@ export function parsePrimaryExpression(parser:AS3Parser):Node {
         result = createNode(NodeKind.LITERAL, {tok: parser.tok});
     } else {
         result = createNode(NodeKind.IDENTIFIER, {tok: parser.tok});
+
+        // Transpile identifier to JavaScript equivalent if it's a keyword.
+        if (result.text === Keywords.INT || result.text === Keywords.UINT) {
+            // console.log("That's a INT/UINT: ", result);
+            result.text = "Number";
+        }
     }
     nextToken(parser, true);
     return result;
@@ -427,6 +433,7 @@ function parseAccessExpression(parser:AS3Parser):Node {
 function parseFunctionCall(parser:AS3Parser, node:Node):Node {
     let result:Node = createNode(NodeKind.CALL, {start: node.start});
     result.children.push(node);
+
     while (tokIs(parser, Operators.LEFT_PARENTHESIS)) {
         result.children.push(parseArgumentList(parser));
     }

@@ -84,7 +84,7 @@ export function run(): void {
         console.log('(' + ( number + 1 ) + '/' + length + ') \'' + file + '\'');
         let content = fs.readFileSync(path.resolve(sourceDir, file), 'UTF-8');
         let ast = parse(path.basename(file), content);
-        // console.log(util.inspect(ast, false, null));
+        console.log(util.inspect(ast, false, null));
         fs.outputFileSync(path.resolve(outputDir, file.replace(/.as$/, '.ts')), emit(ast, content, emitterOptions));
         number ++;
     });
