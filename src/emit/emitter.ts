@@ -260,6 +260,28 @@ function emitInclude(emitter: Emitter, node: Node): void {
 
 
 function emitImport(emitter: Emitter, node: Node): void {
+    // emit one import statement for each definition found in that namespace
+    if (node.text.indexOf("*") !== -1) {
+        let ns = node.text.substring(0, node.text.length - 2);
+        let definitions = emitter.options.definitionsByNamespace[ ns ];
+
+        if (definitions && definitions.length > 0) {
+            definitions.forEach(definition => {
+                node.text = `${ ns }.${ definition }`;
+                let newImport = createNode(node.kind, node);
+                emitImport(emitter, newImport);
+                emitter.insert(";\n");
+            })
+            // emitter.skipTo(node.end + node.text.length);
+            let diff = node.text.length - ns.length + 3;
+            emitter.skipTo(node.end + diff);
+            return;
+
+        } else {
+            console.warn(`emitImport: nothing found to import on namespace ${ ns }. (import ${ node.text })`)
+        }
+    }
+
     let text = node.text;
     let hasBridge = (emitter.options.bridge !== null);
 
@@ -272,7 +294,9 @@ function emitImport(emitter: Emitter, node: Node): void {
     }
 
     if (emitter.options.useNamespaces) {
-        emitter.catchup(node.start + Keywords.IMPORT.length + 1);
+        emitter.catchup(node.start);
+        emitter.insert(Keywords.IMPORT + " ");
+
         let split = node.text.split('.');
         let name = split[split.length - 1];
         emitter.insert(name + ' = ');
