@@ -816,10 +816,12 @@ function emitCall(emitter: Emitter, node: Node): void {
 
 
 function emitRelation(emitter: Emitter, node: Node): void {
+    emitter.catchup(node.start);
     let as = node.findChild(NodeKind.AS);
     if (as) {
+        // TODO: implement relation with type cast to vectors
+        //       e.g. (myVector as Vector.<Boolean>)
         if (node.lastChild.kind === NodeKind.IDENTIFIER) {
-            emitter.skipTo(node.start-1);
             emitter.insert('(<');
             emitter.insert(node.lastChild.text);
             emitter.insert('>');

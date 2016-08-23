@@ -381,7 +381,7 @@ function scanNumberOrDots(scanner: AS3Scanner, characterToBeScanned: string): To
         }
     }
 
-    if (characterToBeScanned === '0' && scanner.peekChar(1) === 'x') {
+    if (characterToBeScanned === '0' && scanner.peekChar(1).match(/[xX]/)) {
         return scanHex(scanner);
     }
 

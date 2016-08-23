@@ -25,6 +25,18 @@ implementation.
 node bin/as3-to-typescript <sourceDir> <outputDir>
 ```
 
+##Known issues
+
+- `super` calls need to be moved as the first call after conversion.
+- having a comment on `extends` statement causes infinite loop parsint the `.as` file.
+- having `break` without a semicolon results in infinite loop parsing the `.as` file.
+- having a method without access level will throw `Error: invalid consume`.
+  (usually this is result of bad copy & paste without renaming the class constructor)
+- having inline multiline comment break the parser (`var i = (/*comment*/true)`)
+- type casting calls to `Vector.<any>` are not supported and produce commented
+  code.
+
+
 ##Note
 
 This tool will not magicly transform your as3 codebase into perfect typescript, the goal is to transform the sources into *syntacticly* correct typescript, and even this goal is not perfectly respected. It also won't try to provide javascript implementation for flash libraries.
