@@ -819,12 +819,12 @@ function emitRelation(emitter: Emitter, node: Node): void {
     let as = node.findChild(NodeKind.AS);
     if (as) {
         if (node.lastChild.kind === NodeKind.IDENTIFIER) {
+            emitter.skipTo(node.start-1);
             emitter.insert('(<');
             emitter.insert(node.lastChild.text);
             emitter.insert('>');
             visitNodes(emitter, node.getChildUntil(NodeKind.AS));
             emitter.catchup(as.start);
-            // emitter.skipTo(as.start);
             emitter.insert(')');
             emitter.skipTo(node.end);
         } else {

@@ -7,6 +7,12 @@ this tool.
 
 Please see known issues and more detailed usage info on [REPORT.md](REPORT.md).
 
+This project is a fork of
+[simonbuchan/as3-to-typescript](https://github.com/simonbuchan/as3-to-typescript),
+which is a fork of [the original
+as3-to-typescript](https://github.com/fdecampredon/as3-to-typescript)
+implementation.
+
 ##Installation
 
 - Clone the repository
