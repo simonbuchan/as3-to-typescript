@@ -97,7 +97,6 @@ enum NodeKind {
     SHORT_VECTOR,
     VOID,
     WHILE,
-
     XML_LITERAL,
     LITERAL,
     IDENTIFIER,

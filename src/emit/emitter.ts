@@ -64,6 +64,7 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.IDENTIFIER]: emitIdent,
     [NodeKind.XML_LITERAL]: emitXMLLiteral,
     [NodeKind.CONST_LIST]: emitConstList,
+    [NodeKind.VALUE]: emitObjectValue,
 };
 
 
@@ -78,6 +79,7 @@ function visitNode(emitter: Emitter, node: Node): void {
     if (!node) {
         return;
     }
+
     let visitor = VISITORS[node.kind] || function (emitter: Emitter, node: Node): void {
         emitter.catchup(node.start);
         visitNodes(emitter, node.children);
@@ -588,6 +590,9 @@ function emitConstList(emitter: Emitter, node: Node): void {
     visitNode(emitter, nameTypeInit);
 }
 
+function emitObjectValue(emitter: Emitter, node: Node): void {
+    visitNodes(emitter, node.children);
+}
 
 function emitMethod(emitter: Emitter, node: Node): void {
     let name = node.findChild(NodeKind.NAME);
@@ -811,9 +816,7 @@ function emitCall(emitter: Emitter, node: Node): void {
 
 
 function emitRelation(emitter: Emitter, node: Node): void {
-    emitter.catchup(node.start);
     let as = node.findChild(NodeKind.AS);
-    // use (<cast>something) here
     if (as) {
         if (node.lastChild.kind === NodeKind.IDENTIFIER) {
             emitter.insert('(<');
