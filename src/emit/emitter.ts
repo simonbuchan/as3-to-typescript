@@ -80,6 +80,11 @@ function visitNode(emitter: Emitter, node: Node): void {
         return;
     }
 
+    // use custom bridge visitor. allow custom node manipulation
+    if (emitter.hasBridge) {
+        emitter.options.bridge.visitor(node);
+    }
+
     let visitor = VISITORS[node.kind] || function (emitter: Emitter, node: Node): void {
         emitter.catchup(node.start);
         visitNodes(emitter, node.children);
@@ -160,6 +165,10 @@ export default class Emitter {
             }
         }
         return null;
+    }
+
+    get hasBridge (): boolean {
+        return this.options.bridge !== null;
     }
 
     declareInScope(declaration: Declaration): void {
@@ -293,10 +302,9 @@ function emitImport(emitter: Emitter, node: Node): void {
     }
 
     let text = node.text;
-    let hasBridge = (emitter.options.bridge !== null);
 
     // apply "bridge" translation
-    if (hasBridge) {
+    if (emitter.hasBridge) {
         text = node.text.concat();
         emitter.options.bridge.imports.forEach((replacement, regexp) => {
             text = text.replace(regexp, replacement);
@@ -312,7 +320,7 @@ function emitImport(emitter: Emitter, node: Node): void {
         emitter.insert(name + ' = ');
 
         // apply "bridge" translation
-        if (hasBridge) {
+        if (emitter.hasBridge) {
             let diff = node.text.length - text.length;
 
             emitter.insert(text);
