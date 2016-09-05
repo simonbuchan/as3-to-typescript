@@ -293,8 +293,11 @@ function emitImport(emitter: Emitter, node: Node): void {
             // let diff = node.text.length - ns.length;
             // console.log(diff)
 
-            console.log(node.text, node.text.length);
-            skipTo = node.end - definitions.length + definitions[0].length + 2;
+            // skipTo = node.end - definitions.length;
+            skipTo = node.end + Keywords.IMPORT.length + 2;
+            // // skipTo = node.nextSibling.start - 1;
+            // console.log(node.nextSibling.kind)
+
             // skipTo = node.end;
             // console.log(node.text, ns, diff);
 

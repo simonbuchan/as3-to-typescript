@@ -56,6 +56,11 @@ export default class Node {
         return null;
     }
 
+    // get nextSibling (): Node {
+    //     let thisIdx= this.parent.children.indexOf(this);
+    //     return this.parent.children[thisIdx+1];
+    // }
+
     findChildren(kind: NodeKind): Node[] {
         return this.children.filter(child => child.kind === kind);
     }
