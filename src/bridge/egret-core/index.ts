@@ -1,22 +1,33 @@
 import Node, { createNode } from "../../syntax/node";
 import NodeKind from "../../syntax/nodeKind";
+import Emitter from "../../emit/emitter";
 
 // import translations
 let imports = new Map<RegExp, string>();
 imports.set(/flash.[a-z]+\.([A-Za-z]+)/, "egret.$1");
 
-function visitor (node: Node) {
+function visitor (emitter: Emitter, node: Node) {
 
-    if (node.kind === NodeKind.CALL && node.children[0].text === "addEventListener") {
-        // let children = node.children[1].children;
-        // let lastNode = children[ children.length - 1 ]
-        // let newNode = createNode(NodeKind.IDENTIFIER, {
-        //     start: lastNode.end,
-        //     end: lastNode.end + 4,
-        //     text: ", this"
-        // });
-        //
-        // node.children[1].children.push(newNode);
+    if (node.kind === NodeKind.ARGUMENTS) {
+        if (node.parent.children[0].text === "addEventListener") {
+            let children = node.parent.children[1].children;
+            let lastNode = children[ children.length - 1 ]
+
+            // children.push(createNode(NodeKind.LITERAL, {
+            //     start: lastNode.end,
+            //     end: lastNode.end,
+            //     text: ","
+            // }));
+            // emitter.insert(",");
+
+            children.push(createNode(NodeKind.IDENTIFIER, {
+                start: lastNode.end,
+                // end: lastNode.end + 3,
+                end: lastNode.end,
+                text: "this"
+            }));
+
+        }
     }
 
 }

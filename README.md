@@ -35,6 +35,7 @@ node bin/as3-to-typescript <sourceDir> <outputDir>
 - having inline multiline comment break the parser (`var i = (/*comment*/true)`)
 - type casting calls to `Vector.<any>` are not supported and produce commented
   code.
+- namespaces can't have TypeScript keywords, such as `enum`, `class`, etc.
 
 
 ##Note

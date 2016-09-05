@@ -1,6 +1,7 @@
 import Node from "../syntax/node";
+import Emitter from "../emit/emitter";
 
 export interface Bridge {
     imports: Map<RegExp, string>;
-    visitor: (node: Node) => void;
+    visitor: (emitter: Emitter, node: Node) => void;
 }

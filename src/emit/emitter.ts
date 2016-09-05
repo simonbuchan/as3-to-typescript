@@ -82,7 +82,7 @@ function visitNode(emitter: Emitter, node: Node): void {
 
     // use custom bridge visitor. allow custom node manipulation
     if (emitter.hasBridge) {
-        emitter.options.bridge.visitor(node);
+        // emitter.options.bridge.visitor(node);
     }
 
     let visitor = VISITORS[node.kind] || function (emitter: Emitter, node: Node): void {
@@ -280,16 +280,25 @@ function emitImport(emitter: Emitter, node: Node): void {
         let ns = node.text.substring(0, node.text.length - 2);
         let definitions = emitter.options.definitionsByNamespace[ ns ];
 
+        let skipTo = node.end;
+
         if (definitions && definitions.length > 0) {
             definitions.forEach(definition => {
                 node.text = `${ ns }.${ definition }`;
-                let newImport = createNode(node.kind, node);
-                emitImport(emitter, newImport);
+                emitImport(emitter, createNode(node.kind, node));
                 emitter.insert(";\n");
             })
-            // emitter.skipTo(node.end + node.text.length);
-            let diff = node.text.length - ns.length + 3;
-            node.end += diff;
+
+            // console.log(node.text.length, ns.length);
+            // let diff = node.text.length - ns.length;
+            // console.log(diff)
+
+            console.log(node.text, node.text.length);
+            skipTo = node.end - definitions.length + definitions[0].length + 2;
+            // skipTo = node.end;
+            // console.log(node.text, ns, diff);
+
+            // node.end += diff;
 
         } else {
             let diff = node.text.length - ns.length + 5;
@@ -297,7 +306,7 @@ function emitImport(emitter: Emitter, node: Node): void {
             console.warn(`emitter.ts: emitImport() => : nothing found to import on namespace ${ ns }. (import ${ node.text })`)
         }
 
-        emitter.skipTo(node.end);
+        emitter.skipTo(skipTo);
         return;
     }
 
@@ -609,7 +618,8 @@ function emitMethod(emitter: Emitter, node: Node): void {
         emitter.consume('function', name.start);
         emitter.catchup(name.end);
     } else {
-        let mods = node.findChild(NodeKind.MOD_LIST);
+        // let mods = node.findChild(NodeKind.MOD_LIST);
+        let mods = node.findChild(NodeKind.ARGUMENTS);
         if (mods) {
             emitter.catchup(mods.start);
         }
