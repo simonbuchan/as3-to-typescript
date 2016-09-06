@@ -289,19 +289,7 @@ function emitImport(emitter: Emitter, node: Node): void {
                 emitter.insert(";\n");
             })
 
-            // console.log(node.text.length, ns.length);
-            // let diff = node.text.length - ns.length;
-            // console.log(diff)
-
-            // skipTo = node.end - definitions.length;
             skipTo = node.end + Keywords.IMPORT.length + 2;
-            // // skipTo = node.nextSibling.start - 1;
-            // console.log(node.nextSibling.kind)
-
-            // skipTo = node.end;
-            // console.log(node.text, ns, diff);
-
-            // node.end += diff;
 
         } else {
             let diff = node.text.length - ns.length + 5;
@@ -621,8 +609,7 @@ function emitMethod(emitter: Emitter, node: Node): void {
         emitter.consume('function', name.start);
         emitter.catchup(name.end);
     } else {
-        // let mods = node.findChild(NodeKind.MOD_LIST);
-        let mods = node.findChild(NodeKind.ARGUMENTS);
+        let mods = node.findChild(NodeKind.MOD_LIST);
         if (mods) {
             emitter.catchup(mods.start);
         }
@@ -705,10 +692,22 @@ function emitDeclaration(emitter: Emitter, node: Node): void {
 
 
 function emitType(emitter: Emitter, node: Node): void {
+    // Don't emit type on 'constructor' functions.
+    if (node.parent.kind === NodeKind.FUNCTION) {
+        let name = node.parent.findChild(NodeKind.NAME);
+        if (name.text === emitter.currentClassName) {
+            emitter.catchup(node.previousSibling.end);
+            emitter.skipTo(node.end);
+            return;
+        }
+    }
+
     emitter.catchup(node.start);
+
     if (!node.text) {
         return;
     }
+
     emitter.skip(node.text.length);
     switch (node.text) {
         case 'Class':

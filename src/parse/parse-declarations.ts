@@ -385,6 +385,7 @@ function parseFunction(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
         result.children.push(parser.currentMultiLineComment);
         parser.currentMultiLineComment = null;
     }
+    // console.log(name.text, modifiers)
     result.children.push(convertMeta(parser, meta));
     result.children.push(convertModifiers(parser, modifiers));
     result.children.push(name);
