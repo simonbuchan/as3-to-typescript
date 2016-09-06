@@ -385,12 +385,18 @@ function parseFunction(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
         result.children.push(parser.currentMultiLineComment);
         parser.currentMultiLineComment = null;
     }
-    // console.log(name.text, modifiers)
+
+    // Append dummy modifier to constructor
+    if (modifiers.length === 0 && /^[A-Z]/.test(name.text)) {
+        modifiers.push( new Token("public", type.start) )
+    }
+
     result.children.push(convertMeta(parser, meta));
     result.children.push(convertModifiers(parser, modifiers));
     result.children.push(name);
     result.children.push(params);
     result.children.push(returnType);
+
     if (tokIs(parser, Operators.SEMI_COLUMN)) {
         consume(parser, Operators.SEMI_COLUMN);
     } else {
