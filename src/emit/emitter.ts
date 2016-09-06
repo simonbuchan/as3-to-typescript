@@ -65,6 +65,7 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.XML_LITERAL]: emitXMLLiteral,
     [NodeKind.CONST_LIST]: emitConstList,
     [NodeKind.VALUE]: emitObjectValue,
+    [NodeKind.DOT]: emitDot,
 };
 
 
@@ -919,6 +920,27 @@ function emitIdent(emitter: Emitter, node: Node): void {
     emitter.emitThisForNextIdent = true;
 }
 
+function emitDot (emitter: Emitter, node: Node) {
+    let dotSibling = node.nextSibling;
+
+    // wrap conditional compilation into Node.js conditional for
+    // `process.env.VARIABLE`
+    //
+    // More info about Flex conditional compilation:
+    // http://help.adobe.com/en_US/flex/using/WS2db454920e96a9e51e63e3d11c0bf69084-7abd.html
+
+    if (dotSibling && dotSibling.kind === NodeKind.BLOCK) {
+        emitter.catchup(node.start);
+        emitter.insert(`if (process.env.${ node.children[1].text })`);
+        emitter.skipTo(node.end);
+        return;
+
+    } else {
+        // TODO: allow conditional compilation for function/class definitions
+
+    }
+
+}
 
 function emitXMLLiteral(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
