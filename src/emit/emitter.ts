@@ -695,7 +695,7 @@ function emitType(emitter: Emitter, node: Node): void {
     // Don't emit type on 'constructor' functions.
     if (node.parent.kind === NodeKind.FUNCTION) {
         let name = node.parent.findChild(NodeKind.NAME);
-        if (name.text === emitter.currentClassName) {
+        if (name && name.text === emitter.currentClassName) {
             emitter.catchup(node.previousSibling.end);
             emitter.skipTo(node.end);
             return;
@@ -737,15 +737,28 @@ function emitType(emitter: Emitter, node: Node): void {
 
 
 function emitVector(emitter: Emitter, node: Node): void {
-    emitter.catchup(node.start);
-    let type = node.findChild(NodeKind.TYPE);
-    if (type) {
-        emitter.skipTo(type.start);
-        emitType(emitter, type);
-        emitter.insert('[]');
-    } else {
-        emitter.insert('any[]');
+    if (!emitter.isNew) {
+        emitter.catchup(node.start);
     }
+
+    let type = node.findChild(NodeKind.TYPE);
+    if (!type) {
+        type = createNode(NodeKind.TYPE, {
+            text: 'any',
+            start: node.start,
+            end: node.end
+        });
+        type.parent = node;
+    }
+
+    emitter.skipTo(type.start);
+
+    if (!emitter.isNew) {
+        emitType(emitter, type);
+    }
+
+    emitter.insert('[]');
+
     emitter.skipTo(node.end);
 }
 
@@ -849,6 +862,10 @@ function emitRelation(emitter: Emitter, node: Node): void {
             emitter.catchup(as.start);
             emitter.insert(')');
             emitter.skipTo(node.end);
+
+        } else if (node.lastChild.kind === NodeKind.VECTOR) {
+            visitNodes(emitter, node.children);
+
         } else {
             emitter.commentNode(node, false);
         }
