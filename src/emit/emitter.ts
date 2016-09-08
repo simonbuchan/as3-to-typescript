@@ -16,6 +16,18 @@ const GLOBAL_NAMES = [
     'URIError', 'VerifyError'
 ];
 
+const TYPE_REMAP: { [id: string]: string } = {
+    'Class': 'Object',
+    'String': 'string',
+    'Boolean': 'boolean',
+    'Number': 'number',
+    'int': 'number',
+    'uint': 'number',
+    '*': 'any',
+    'Array': 'any[]',
+    'Dictionary': 'Map',
+}
+
 
 interface Scope {
     parent: Scope;
@@ -26,6 +38,7 @@ interface Scope {
 
 interface Declaration {
     name: string;
+    type?: string;
     bound?: string;
 }
 
@@ -76,14 +89,16 @@ function visitNodes(emitter: Emitter, nodes: Node[]): void {
 }
 
 
-function visitNode(emitter: Emitter, node: Node): void {
+export function visitNode(emitter: Emitter, node: Node): void {
     if (!node) {
         return;
     }
 
     // use custom bridge visitor. allow custom node manipulation
     if (emitter.hasBridge) {
-        // emitter.options.bridge.visitor(node);
+        if (emitter.options.bridge.visitor(emitter, node)) {
+            return;
+        }
     }
 
     let visitor = VISITORS[node.kind] || function (emitter: Emitter, node: Node): void {
@@ -521,10 +536,21 @@ function getClassDeclarations(className: string, contentsNode: Node[]): Declarat
         if (nameNode.text === className) {
             return;
         }
+
+        let declarationType: string = null;
+        let nameTypeInitNode = node.findChild(NodeKind.NAME_TYPE_INIT);
+        if (nameTypeInitNode) {
+            let typeNode = nameTypeInitNode.findChild(NodeKind.TYPE);
+            if (typeNode) {
+                declarationType = TYPE_REMAP[ typeNode.text ] || typeNode.text;
+            }
+        }
+
         let modList = node.findChild(NodeKind.MOD_LIST);
         let isStatic = modList && modList.children.some(mod => mod.text === 'static');
         return {
             name: nameNode.text,
+            type: declarationType,
             bound: isStatic ? className : 'this'
         };
     }).filter(el => !!el);
@@ -709,31 +735,13 @@ function emitType(emitter: Emitter, node: Node): void {
         return;
     }
 
-    emitter.skip(node.text.length);
-    switch (node.text) {
-        case 'Class':
-            emitter.insert('Object');
-            break;
-        case 'String':
-            emitter.insert('string');
-            break;
-        case 'Boolean':
-            emitter.insert('boolean');
-            break;
-        case 'Number':
-        case 'int':
-        case 'uint':
-            emitter.insert('number');
-            break;
-        case '*':
-            emitter.insert('any');
-            break;
-        case 'Array':
-            emitter.insert('any[]');
-            break;
-        default:
-            emitter.insert(node.text);
+    emitter.skipTo(node.end);
+
+    if (TYPE_REMAP[node.text]) {
+        node.text = TYPE_REMAP[node.text];
     }
+
+    emitter.insert(node.text);
 }
 
 
@@ -899,6 +907,10 @@ function emitIdent(emitter: Emitter, node: Node): void {
 
     if (Keywords.isKeyWord(node.text)) {
         return;
+    }
+
+    if (TYPE_REMAP[node.text]) {
+        node.text = TYPE_REMAP[node.text];
     }
 
     let def = emitter.findDefInScope(node.text);

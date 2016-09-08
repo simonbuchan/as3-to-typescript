@@ -86,10 +86,13 @@ export function run(): void {
         console.log('(' + ( number + 1 ) + '/' + length + ') \'' + file + '\'');
         let content = fs.readFileSync(path.resolve(sourceDir, file), 'UTF-8');
         let ast = parse(path.basename(file), content);
+
+        // console.log(util.inspect(ast, { showHidden: true, depth: null }));
+
         let contents = emit(ast, content, emitterOptions);
 
         if (bridge && bridge.postProcessing) {
-            contents = bridge.postProcessing(contents);
+            contents = bridge.postProcessing(emitterOptions, contents);
         }
 
         fs.outputFileSync(path.resolve(outputDir, file.replace(/.as$/, '.ts')), contents);

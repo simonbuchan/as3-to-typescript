@@ -1,6 +1,10 @@
 import Node, { createNode } from "../../syntax/node";
 import NodeKind from "../../syntax/nodeKind";
-import Emitter from "../../emit/emitter";
+import Emitter, { EmitterOptions, visitNode } from "../../emit/emitter";
+
+import { getMapNodes } from "./utils";
+
+const util = require('util');
 
 // import translations
 let imports = new Map<RegExp, string>();
@@ -8,32 +12,124 @@ imports.set(/^flash.[a-z]+\.([A-Za-z]+)/, "egret.$1");
 
 function visitor (emitter: Emitter, node: Node) {
 
+    //
+    // translate `new Dictionary(true)` into `new Map()`
+    //
     if (node.kind === NodeKind.ARGUMENTS) {
-        if (node.parent.children[0].text === "addEventListener") {
-            let children = node.parent.children[1].children;
-            let lastNode = children[ children.length - 1 ]
-
-            // children.push(createNode(NodeKind.LITERAL, {
-            //     start: lastNode.end,
-            //     end: lastNode.end,
-            //     text: ","
-            // }));
-            // emitter.insert(",");
-
-            children.push(createNode(NodeKind.IDENTIFIER, {
-                start: lastNode.end,
-                // end: lastNode.end + 3,
-                end: lastNode.end,
-                text: "this"
-            }));
-
+        let previousSibling = node.previousSibling;
+        if (previousSibling.kind === NodeKind.IDENTIFIER && previousSibling.text === "Map") {
+            emitter.catchup(node.start);
+            emitter.insert("()");
+            emitter.skipTo(node.end);
+            return;
         }
     }
 
+    //
+    // translate `delete map['key']` into `map.delete('key')`
+    //
+    if (node.kind === NodeKind.DELETE) {
+        let arrayAccessorNode = node.findChild(NodeKind.ARRAY_ACCESSOR);
+
+        if (arrayAccessorNode) {
+            let [ leftNode, rightNode ] = getMapNodes(emitter, arrayAccessorNode);
+
+            if (leftNode && rightNode) {
+                emitter.catchup(node.start);
+                emitter.insert(leftNode.text + ".delete(");
+                emitter.skipTo(rightNode.start);
+                visitNode(emitter, rightNode);
+                emitter.insert(")");
+                emitter.skipTo(node.end);
+
+                return true;
+            }
+        }
+    }
+
+    //
+    // translate `map['key']` into `map.get('key')`
+    //
+    if (node.kind === NodeKind.ARRAY_ACCESSOR) {
+        let [ leftNode, rightNode ] = getMapNodes(emitter, node);
+
+        if (leftNode && rightNode) {
+            emitter.catchup(node.start);
+            emitter.insert(leftNode.text + ".get(");
+            emitter.skipTo(rightNode.start);
+            visitNode(emitter, rightNode);
+            emitter.insert(")");
+            emitter.skipTo(node.end);
+
+            return true;
+        }
+    }
+
+    //
+    // translate `map['key'] = 'value'` into `map.set('key', value)`
+    //
+    if (node.kind === NodeKind.ASSIGN) {
+        let arrayAccessorNode = node.findChild(NodeKind.ARRAY_ACCESSOR);
+
+        if (arrayAccessorNode) {
+            let [ leftNode, rightNode ] = getMapNodes(emitter, arrayAccessorNode);
+
+            if (leftNode && rightNode) {
+                let valueNode = node.lastChild;
+
+                emitter.catchup(node.start);
+                emitter.insert(leftNode.text + ".set(");
+
+                emitter.skipTo(rightNode.start);
+                visitNode(emitter, rightNode);
+                emitter.insert(", ");
+
+                emitter.skipTo(valueNode.start);
+                visitNode(emitter, valueNode);
+
+                emitter.skipTo(valueNode.start);
+                emitter.insert(")");
+
+                emitter.skipTo(node.end);
+
+                return true;
+            }
+        }
+    }
+
+    // if (node.kind === NodeKind.ARGUMENTS) {
+    //     if (node.parent.children[0].text === "addEventListener") {
+    //         let children = node.parent.children[1].children;
+    //         let lastNode = children[ children.length - 1 ]
+    //
+    //         // children.push(createNode(NodeKind.LITERAL, {
+    //         //     start: lastNode.end,
+    //         //     end: lastNode.end,
+    //         //     text: ","
+    //         // }));
+    //         // emitter.insert(",");
+    //
+    //         children.push(createNode(NodeKind.IDENTIFIER, {
+    //             start: lastNode.end,
+    //             // end: lastNode.end + 3,
+    //             end: lastNode.end,
+    //             text: "this"
+    //         }));
+    //
+    //     }
+    // }
+
 }
 
-function postProcessing (contents: string): string {
-    contents = contents.replace(/import { ([a-zA-Z]+) } from ".*egret\/([a-zA-Z]+)";/gm, "const $1 = egret.$1;");
+function postProcessing (emitterOptions: EmitterOptions, contents: string): string {
+    // Remove dictionary imports
+    contents = contents.replace(/import { Dictionary } from ".*egret\/([a-zA-Z]+)";/gm, "");
+
+    // fix egret imports if using CommonJS
+    if (!emitterOptions.useNamespaces) {
+        contents = contents.replace(/import { ([a-zA-Z]+) } from ".*egret\/([a-zA-Z]+)";/gm, "const $1 = egret.$1;");
+    }
+
     return contents;
 }
 
