@@ -4,7 +4,7 @@ import Emitter from "../../emit/emitter";
 
 // import translations
 let imports = new Map<RegExp, string>();
-imports.set(/flash.[a-z]+\.([A-Za-z]+)/, "egret.$1");
+imports.set(/^flash.[a-z]+\.([A-Za-z]+)/, "egret.$1");
 
 function visitor (emitter: Emitter, node: Node) {
 
@@ -32,7 +32,13 @@ function visitor (emitter: Emitter, node: Node) {
 
 }
 
+function postProcessing (contents: string): string {
+    contents = contents.replace(/import { ([a-zA-Z]+) } from ".*egret\/([a-zA-Z]+)";/gm, "const $1 = egret.$1;");
+    return contents;
+}
+
 export default {
     imports: imports,
-    visitor: visitor
+    visitor: visitor,
+    postProcessing: postProcessing,
 }
