@@ -2,11 +2,6 @@
 
 > A tool that helps porting as3 codebase to typescript
 
-`ranch-client` project could've been completely syntatically converted using
-this tool.
-
-Please see known issues and more detailed usage info on [REPORT.md](REPORT.md).
-
 This project is a fork of
 [simonbuchan/as3-to-typescript](https://github.com/simonbuchan/as3-to-typescript),
 which is a fork of [the original
@@ -16,24 +11,27 @@ implementation.
 ## Installation
 
 - Clone the repository
-- Run `npm install`
-- Run `./node_modules/.bin/typings install`
+- Run `npm link`
+
+You should have `as3-to-ts` available globaly in your commandline.
 
 ## Usage
 
 ```
-node bin/as3-to-typescript <sourceDir> <outputDir>
+as3-to-ts <sourceDir> <outputDir> [--commonjs] [--bridge egret-core]
 ```
+
 
 ## Known issues
 
-- `super` calls need to be moved as the first call after conversion.
+- `super` calls on constructor need to be moved as the first call after conversion.
 - having a comment on `extends` statement causes infinite loop parsint the `.as` file.
 - having `break` without a semicolon results in infinite loop parsing the `.as` file.
 - having a method without access level will throw `Error: invalid consume`.
   (usually this is result of bad copy & paste without renaming the class constructor)
 - having inline multiline comment break the parser (`var i = (/*comment*/true)`)
-- namespaces can't have TypeScript keywords, such as `enum`, `class`, etc.
+- namespaces can't have TypeScript keywords, such as `enum`, `class`, etc. (not
+  an issue if transpiled using `--commonjs`)
 
 ## Note
 

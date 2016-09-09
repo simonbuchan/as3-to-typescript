@@ -1,12 +1,13 @@
 {
-  "name": "as3-to-typescript",
-  "version": "0.1.1",
+  "name": "as3-to-ts",
+  "version": "0.2.0",
   "description": "convert as3 code base to typescript",
   "main": "index.js",
   "bin": {
-    "as3-to-typescript": "./bin/as3-to-typescript"
+    "as3-to-ts": "./bin/as3-to-typescript"
   },
   "scripts": {
+    "install": "typings install",
     "pretest": "npm run -s compile",
     "test": "npm run -s generate && npm run -s compare",
     "generate": "node -r source-map-support/register test/runner generate",
