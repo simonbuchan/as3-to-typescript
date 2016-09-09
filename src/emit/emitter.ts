@@ -25,7 +25,7 @@ const TYPE_REMAP: { [id: string]: string } = {
     'uint': 'number',
     '*': 'any',
     'Array': 'any[]',
-    'Dictionary': 'Map',
+    'Dictionary': 'Map<any, any>',
 }
 
 

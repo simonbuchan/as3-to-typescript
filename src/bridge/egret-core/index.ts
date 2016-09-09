@@ -17,7 +17,7 @@ function visitor (emitter: Emitter, node: Node) {
     //
     if (node.kind === NodeKind.ARGUMENTS) {
         let previousSibling = node.previousSibling;
-        if (previousSibling.kind === NodeKind.IDENTIFIER && previousSibling.text === "Map") {
+        if (previousSibling.kind === NodeKind.IDENTIFIER && previousSibling.text === "Map<any, any>") {
             emitter.catchup(node.start);
             emitter.insert("()");
             emitter.skipTo(node.end);

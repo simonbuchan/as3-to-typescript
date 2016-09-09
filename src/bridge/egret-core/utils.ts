@@ -8,7 +8,7 @@ export function getMapNodes (emitter: Emitter, node: Node) {
     if (node.kind === NodeKind.ARRAY_ACCESSOR) {
         let definition = emitter.findDefInScope(node.children[0].text);
 
-        if (definition && definition.type === "Map") {
+        if (definition && definition.type === "Map<any, any>") {
             nodes = node.children;
         }
     }
