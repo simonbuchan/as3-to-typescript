@@ -79,6 +79,7 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.CONST_LIST]: emitConstList,
     [NodeKind.VALUE]: emitObjectValue,
     [NodeKind.DOT]: emitDot,
+    [NodeKind.LITERAL]: emitLiteral,
 };
 
 
@@ -960,6 +961,11 @@ function emitXMLLiteral(emitter: Emitter, node: Node): void {
     emitter.skipTo(node.end);
 }
 
+function emitLiteral(emitter: Emitter, node: Node): void {
+    emitter.catchup(node.start);
+    emitter.insert(node.text);
+    emitter.skipTo(node.end);
+}
 
 export function emit(ast: Node, source: string, options?: EmitterOptions): string {
     let emitter = new Emitter(source, options);
