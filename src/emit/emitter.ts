@@ -548,8 +548,6 @@ function getClassDeclarations(className: string, contentsNode: Node[]): Declarat
             }
         }
 
-        console.log("getClassDeclarations => ", nameNode.text);
-
         let modList = node.findChild(NodeKind.MOD_LIST);
         let isStatic = modList && modList.children.some(mod => mod.text === 'static');
         return {
@@ -896,7 +894,6 @@ function emitOp(emitter: Emitter, node: Node): void {
 
 
 function emitIdent(emitter: Emitter, node: Node): void {
-    console.log("emitIdent", node.text);
     emitter.catchup(node.start);
 
     if (node.parent && node.parent.kind === NodeKind.DOT) {
