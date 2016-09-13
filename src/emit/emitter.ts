@@ -910,6 +910,9 @@ function emitIdent(emitter: Emitter, node: Node): void {
     }
 
     if (TYPE_REMAP[node.text]) {
+        // leave "Boolean()" type casting as it is
+        if (node.text === "Boolean") return;
+
         node.text = TYPE_REMAP[node.text];
     }
 

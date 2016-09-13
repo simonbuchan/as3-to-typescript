@@ -85,9 +85,11 @@ function visitor (emitter: Emitter, node: Node) {
             if (subsequentNodes.length > 0) {
                 emitter.skipTo(subsequentNodes[0].start-1);
                 visitNodes(emitter, subsequentNodes);
-            }
+                emitter.skipTo(node.end-1);
+            } else {
 
-            emitter.skipTo(node.end-1);
+                emitter.skipTo(node.end);
+            }
 
             return true;
         }
@@ -100,7 +102,7 @@ function visitor (emitter: Emitter, node: Node) {
         let arrayAccessorNode = node.findChild(NodeKind.ARRAY_ACCESSOR);
 
         if (arrayAccessorNode) {
-            let [ leftNode, rightNode ] = getMapNodes(emitter, arrayAccessorNode);
+            let [ leftNode, rightNode, ...subsequentNodes ] = getMapNodes(emitter, arrayAccessorNode);
 
             if (leftNode && rightNode) {
                 let valueNode = node.lastChild;
@@ -115,7 +117,7 @@ function visitor (emitter: Emitter, node: Node) {
                 emitter.skipTo(valueNode.start);
                 visitNode(emitter, valueNode);
 
-                emitter.skipTo(valueNode.end);
+                emitter.catchup(valueNode.end);
                 emitter.insert(")");
 
                 emitter.skipTo(node.end);
