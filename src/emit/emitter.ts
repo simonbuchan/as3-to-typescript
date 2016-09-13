@@ -831,7 +831,9 @@ function emitCall(emitter: Emitter, node: Node): void {
             emitter.skipTo(args.end);
 
             // emitter.insert('>');
-            visitNodes(emitter, node.getChildFrom(NodeKind.VECTOR));
+            // let vectorNode = node.getChildFrom(NodeKind.VECTOR)
+            // visitNodes(emitter, vectorNode);
+
             return;
         }
 
@@ -971,6 +973,7 @@ function emitLiteral(emitter: Emitter, node: Node): void {
 }
 
 function emitArray(emitter: Emitter, node: Node): void {
+    emitter.catchup(node.start);
     emitter.insert('[');
     if (node.children.length > 0) {
         emitter.skipTo(node.children[0].start);
