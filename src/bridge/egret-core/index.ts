@@ -1,6 +1,6 @@
 import Node, { createNode } from "../../syntax/node";
 import NodeKind from "../../syntax/nodeKind";
-import Emitter, { EmitterOptions, visitNode } from "../../emit/emitter";
+import Emitter, { EmitterOptions, visitNode, visitNodes } from "../../emit/emitter";
 
 import { getMapNodes } from "./utils";
 
@@ -18,10 +18,32 @@ function visitor (emitter: Emitter, node: Node) {
     if (node.kind === NodeKind.ARGUMENTS) {
         let previousSibling = node.previousSibling;
         if (previousSibling.kind === NodeKind.IDENTIFIER && previousSibling.text === "Map<any, any>") {
+            // translate `new Dictionary(true)` into `new Map()`
             emitter.catchup(node.start);
             emitter.insert("()");
             emitter.skipTo(node.end);
             return;
+
+        // } else if (previousSibling.kind === NodeKind.IDENTIFIER && previousSibling.text === "addEventListener") {
+        //     // translate `addEventListener(...)` into `addEventListener(..., this)`
+        //     emitter.catchup(node.start);
+        //
+        //     node.children.forEach((child, i) => {
+        //         console.log(i, child)
+        //         emitter.catchup(child.start);
+        //         emitter.skipTo(child.start);
+        //         visitNode(emitter, child);
+        //         if (i === 1) {
+        //             emitter.skipTo(child.end);
+        //             emitter.insert(", this");
+        //         }
+        //     });
+        //
+        //     // emitter.skipTo(node.end);
+        //
+        //     // console.log(node.children.length)
+        //     // console.log(util.inspect(previousSibling, { showHidden: true, depth: null }));
+        //     return;
         }
     }
 
@@ -51,7 +73,7 @@ function visitor (emitter: Emitter, node: Node) {
     // translate `map['key']` into `map.get('key')`
     //
     if (node.kind === NodeKind.ARRAY_ACCESSOR) {
-        let [ leftNode, rightNode ] = getMapNodes(emitter, node);
+        let [ leftNode, rightNode, ...subsequentNodes ] = getMapNodes(emitter, node);
 
         if (leftNode && rightNode) {
             emitter.catchup(node.start);
@@ -59,7 +81,13 @@ function visitor (emitter: Emitter, node: Node) {
             emitter.skipTo(rightNode.start);
             visitNode(emitter, rightNode);
             emitter.insert(")");
-            emitter.skipTo(node.end);
+
+            if (subsequentNodes.length > 0) {
+                emitter.skipTo(subsequentNodes[0].start-1);
+                visitNodes(emitter, subsequentNodes);
+            }
+
+            emitter.skipTo(node.end-1);
 
             return true;
         }
@@ -87,7 +115,7 @@ function visitor (emitter: Emitter, node: Node) {
                 emitter.skipTo(valueNode.start);
                 visitNode(emitter, valueNode);
 
-                emitter.skipTo(valueNode.start);
+                emitter.skipTo(valueNode.end);
                 emitter.insert(")");
 
                 emitter.skipTo(node.end);

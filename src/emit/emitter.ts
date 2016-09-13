@@ -80,10 +80,11 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.VALUE]: emitObjectValue,
     [NodeKind.DOT]: emitDot,
     [NodeKind.LITERAL]: emitLiteral,
+    [NodeKind.ARRAY]: emitArray
 };
 
 
-function visitNodes(emitter: Emitter, nodes: Node[]): void {
+export function visitNodes(emitter: Emitter, nodes: Node[]): void {
     if (nodes) {
         nodes.forEach(node => visitNode(emitter, node));
     }
@@ -786,11 +787,7 @@ function emitShortVector(emitter: Emitter, node: Node): void {
     emitter.catchup(vector.end);
     emitter.insert('(');
     let arrayLiteral = node.findChild(NodeKind.ARRAY);
-    if (arrayLiteral.children && arrayLiteral.children.length) {
-        emitter.skipTo(arrayLiteral.children[0].start);
-        visitNodes(emitter, arrayLiteral.children);
-        emitter.catchup(arrayLiteral.lastChild.end);
-    }
+    emitArray(emitter, arrayLiteral);
     emitter.insert(')');
     emitter.skipTo(node.end);
 }
@@ -907,6 +904,8 @@ function emitIdent(emitter: Emitter, node: Node): void {
     }
 
     if (Keywords.isKeyWord(node.text)) {
+        emitter.insert(node.text);
+        emitter.skipTo(node.end);
         return;
     }
 
@@ -964,6 +963,17 @@ function emitXMLLiteral(emitter: Emitter, node: Node): void {
 function emitLiteral(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     emitter.insert(node.text);
+    emitter.skipTo(node.end);
+}
+
+function emitArray(emitter: Emitter, node: Node): void {
+    emitter.insert('[');
+    if (node.children.length > 0) {
+        emitter.skipTo(node.children[0].start);
+        visitNodes(emitter, node.children);
+        emitter.catchup(node.lastChild.end);
+    }
+    emitter.insert(']');
     emitter.skipTo(node.end);
 }
 
