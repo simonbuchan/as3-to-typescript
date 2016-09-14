@@ -1,7 +1,7 @@
 {
   "name": "as3-to-ts",
   "version": "0.2.0",
-  "description": "convert as3 code base to typescript",
+  "description": "Tool to help porting ActionScript 3.0 code to TypeScript.",
   "main": "index.js",
   "bin": {
     "as3-to-ts": "./bin/as3-to-typescript"

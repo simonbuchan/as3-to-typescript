@@ -98,7 +98,7 @@ export function visitNode(emitter: Emitter, node: Node): void {
 
     // use custom bridge visitor. allow custom node manipulation
     if (emitter.hasBridge) {
-        if (emitter.options.bridge.visitor(emitter, node)) {
+        if (emitter.options.bridge.visitor(emitter, node) === true) {
             return;
         }
     }
@@ -595,6 +595,8 @@ function emitClass(emitter: Emitter, node: Node): void {
             }
         });
     });
+
+    emitter.catchup(node.end);
 }
 
 

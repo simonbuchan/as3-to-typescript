@@ -10,7 +10,7 @@ const util = require('util');
 let imports = new Map<RegExp, string>();
 imports.set(/^flash.[a-z]+\.([A-Za-z]+)/, "egret.$1");
 
-function visitor (emitter: Emitter, node: Node) {
+function visitor (emitter: Emitter, node: Node): boolean {
 
     //
     // translate `new Dictionary(true)` into `new Map()`
@@ -80,6 +80,7 @@ function visitor (emitter: Emitter, node: Node) {
             emitter.insert(leftNode.text + ".get(");
             emitter.skipTo(rightNode.start);
             visitNode(emitter, rightNode);
+            emitter.catchup(rightNode.end);
             emitter.insert(")");
 
             if (subsequentNodes.length > 0) {
@@ -99,31 +100,35 @@ function visitor (emitter: Emitter, node: Node) {
     // translate `map['key'] = 'value'` into `map.set('key', value)`
     //
     if (node.kind === NodeKind.ASSIGN) {
-        let arrayAccessorNode = node.findChild(NodeKind.ARRAY_ACCESSOR);
+        let definition = emitter.findDefInScope(node.children[0].text);
+        if (definition && definition.type === "Map<any, any>") {
 
-        if (arrayAccessorNode) {
-            let [ leftNode, rightNode, ...subsequentNodes ] = getMapNodes(emitter, arrayAccessorNode);
+            let arrayAccessorNode = node.findChild(NodeKind.ARRAY_ACCESSOR);
+            if (arrayAccessorNode) {
+                let [ leftNode, rightNode, ...subsequentNodes ] = getMapNodes(emitter, arrayAccessorNode);
 
-            if (leftNode && rightNode) {
-                let valueNode = node.lastChild;
+                if (leftNode && rightNode) {
+                    let valueNode = node.lastChild;
 
-                emitter.catchup(node.start);
-                emitter.insert(leftNode.text + ".set(");
+                    emitter.catchup(node.start);
+                    emitter.insert(leftNode.text + ".set(");
 
-                emitter.skipTo(rightNode.start);
-                visitNode(emitter, rightNode);
-                emitter.insert(", ");
+                    emitter.skipTo(rightNode.start);
+                    visitNode(emitter, rightNode);
+                    emitter.insert(", ");
 
-                emitter.skipTo(valueNode.start);
-                visitNode(emitter, valueNode);
+                    emitter.skipTo(valueNode.start);
+                    visitNode(emitter, valueNode);
 
-                emitter.catchup(valueNode.end);
-                emitter.insert(")");
+                    emitter.catchup(valueNode.end);
+                    emitter.insert(")");
 
-                emitter.skipTo(node.end);
+                    emitter.skipTo(node.end);
 
-                return true;
+                    return true;
+                }
             }
+
         }
     }
 
@@ -149,6 +154,7 @@ function visitor (emitter: Emitter, node: Node) {
     //     }
     // }
 
+    return false;
 }
 
 function postProcessing (emitterOptions: EmitterOptions, contents: string): string {

@@ -3,6 +3,6 @@ import Emitter, { EmitterOptions } from "../emit/emitter";
 
 export interface Bridge {
     imports: Map<RegExp, string>;
-    visitor: (emitter: Emitter, node: Node) => void;
+    visitor: (emitter: Emitter, node: Node) => boolean;
     postProcessing?: (emitterOptions: EmitterOptions, data: string) => string;
 }
