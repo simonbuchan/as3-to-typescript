@@ -897,7 +897,7 @@ function emitOp(emitter: Emitter, node: Node): void {
 }
 
 
-function emitIdent(emitter: Emitter, node: Node): void {
+export function emitIdent(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
 
     if (node.parent && node.parent.kind === NodeKind.DOT) {

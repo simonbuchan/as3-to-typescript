@@ -1,6 +1,11 @@
 import Node, { createNode } from "../../syntax/node";
 import NodeKind from "../../syntax/nodeKind";
-import Emitter, { EmitterOptions, visitNode, visitNodes } from "../../emit/emitter";
+import Emitter, {
+    EmitterOptions,
+    visitNode,
+    visitNodes,
+    emitIdent
+} from "../../emit/emitter";
 
 import { getMapNodes } from "./utils";
 
@@ -58,7 +63,11 @@ function visitor (emitter: Emitter, node: Node): boolean {
 
             if (leftNode && rightNode) {
                 emitter.catchup(node.start);
-                emitter.insert(leftNode.text + ".delete(");
+
+                emitter.skipTo(leftNode.start);
+                emitIdent(emitter, leftNode);
+                emitter.insert(".delete(");
+
                 emitter.skipTo(rightNode.start);
                 visitNode(emitter, rightNode);
                 emitter.insert(")");
@@ -76,8 +85,10 @@ function visitor (emitter: Emitter, node: Node): boolean {
         let [ leftNode, rightNode, ...subsequentNodes ] = getMapNodes(emitter, node);
 
         if (leftNode && rightNode) {
+
             emitter.catchup(node.start);
-            emitter.insert(leftNode.text + ".get(");
+            emitIdent(emitter, leftNode);
+            emitter.insert(".get(");
             emitter.skipTo(rightNode.start);
             visitNode(emitter, rightNode);
             emitter.catchup(rightNode.end);
@@ -100,11 +111,16 @@ function visitor (emitter: Emitter, node: Node): boolean {
     // translate `map['key'] = 'value'` into `map.set('key', value)`
     //
     if (node.kind === NodeKind.ASSIGN) {
-        let definition = emitter.findDefInScope(node.children[0].text);
+        let identifierNode = (node.children[0].kind === NodeKind.IDENTIFIER)
+            ? node.children[0]
+            : node.children[0].findChild(NodeKind.IDENTIFIER);
+
+        let definition = emitter.findDefInScope(identifierNode.text);
         if (definition && definition.type === "Map<any, any>") {
 
             let arrayAccessorNode = node.findChild(NodeKind.ARRAY_ACCESSOR);
             if (arrayAccessorNode) {
+
                 let [ leftNode, rightNode, ...subsequentNodes ] = getMapNodes(emitter, arrayAccessorNode);
 
                 if (leftNode && rightNode) {
