@@ -115,7 +115,7 @@ function visitor (emitter: Emitter, node: Node): boolean {
             ? node.children[0]
             : node.children[0].findChild(NodeKind.IDENTIFIER);
 
-        let definition = emitter.findDefInScope(identifierNode.text);
+        let definition = identifierNode && emitter.findDefInScope(identifierNode.text);
         if (definition && definition.type === "Map<any, any>") {
 
             let arrayAccessorNode = node.findChild(NodeKind.ARRAY_ACCESSOR);
