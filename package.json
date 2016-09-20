@@ -7,7 +7,7 @@
     "as3-to-ts": "./bin/as3-to-typescript"
   },
   "scripts": {
-    "install": "typings install",
+    "install": "typings install && npm run compile",
     "pretest": "npm run -s compile",
     "test": "npm run -s generate && npm run -s compare",
     "generate": "node -r source-map-support/register test/runner generate",

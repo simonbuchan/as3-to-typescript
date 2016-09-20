@@ -10,6 +10,8 @@ implementation.
 
 ## Installation
 
+Make sure you have [Node v6+](https://nodejs.org/) installed.
+
 - Clone the repository
 - Run `npm link`
 
