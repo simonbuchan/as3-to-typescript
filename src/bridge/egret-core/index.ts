@@ -28,27 +28,6 @@ function visitor (emitter: Emitter, node: Node): boolean {
             emitter.insert("()");
             emitter.skipTo(node.end);
             return;
-
-        // } else if (previousSibling.kind === NodeKind.IDENTIFIER && previousSibling.text === "addEventListener") {
-        //     // translate `addEventListener(...)` into `addEventListener(..., this)`
-        //     emitter.catchup(node.start);
-        //
-        //     node.children.forEach((child, i) => {
-        //         console.log(i, child)
-        //         emitter.catchup(child.start);
-        //         emitter.skipTo(child.start);
-        //         visitNode(emitter, child);
-        //         if (i === 1) {
-        //             emitter.skipTo(child.end);
-        //             emitter.insert(", this");
-        //         }
-        //     });
-        //
-        //     // emitter.skipTo(node.end);
-        //
-        //     // console.log(node.children.length)
-        //     // console.log(util.inspect(previousSibling, { showHidden: true, depth: null }));
-        //     return;
         }
     }
 
@@ -127,10 +106,13 @@ function visitor (emitter: Emitter, node: Node): boolean {
                     let valueNode = node.lastChild;
 
                     emitter.catchup(node.start);
-                    emitter.insert(leftNode.text + ".set(");
+                    emitIdent(emitter, leftNode);
+                    emitter.insert(".set(");
 
                     emitter.skipTo(rightNode.start);
                     visitNode(emitter, rightNode);
+                    emitter.catchup(rightNode.end);
+
                     emitter.insert(", ");
 
                     emitter.skipTo(valueNode.start);
@@ -148,28 +130,6 @@ function visitor (emitter: Emitter, node: Node): boolean {
         }
     }
 
-    // if (node.kind === NodeKind.ARGUMENTS) {
-    //     if (node.parent.children[0].text === "addEventListener") {
-    //         let children = node.parent.children[1].children;
-    //         let lastNode = children[ children.length - 1 ]
-    //
-    //         // children.push(createNode(NodeKind.LITERAL, {
-    //         //     start: lastNode.end,
-    //         //     end: lastNode.end,
-    //         //     text: ","
-    //         // }));
-    //         // emitter.insert(",");
-    //
-    //         children.push(createNode(NodeKind.IDENTIFIER, {
-    //             start: lastNode.end,
-    //             // end: lastNode.end + 3,
-    //             end: lastNode.end,
-    //             text: "this"
-    //         }));
-    //
-    //     }
-    // }
-
     return false;
 }
 
@@ -179,7 +139,7 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
 
     // fix egret imports if using CommonJS
     if (!emitterOptions.useNamespaces) {
-        contents = contents.replace(/import { ([a-zA-Z]+) } from ".*egret\/([a-zA-Z]+)";/gm, "const $1 = egret.$1;");
+        contents = contents.replace(/import { ([a-zA-Z]+) } from ".*egret\/([a-zA-Z]+)";/gm, "import $1 = egret.$1;");
     }
 
     return contents;
