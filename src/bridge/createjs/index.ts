@@ -13,9 +13,40 @@ const util = require('util');
 
 // import translations
 let imports = new Map<RegExp, string>();
-imports.set(/^flash.[a-z]+\.([A-Za-z]+)/, "egret.$1");
+imports.set(/^flash.[a-z]+\.([A-Za-z]+)/, "createjs.$1");
 
 function visitor (emitter: Emitter, node: Node): boolean {
+
+    //
+    // translate `for..in` on Dictionaries into `for...of`
+    // Example:
+    //      Input:  for (var key:String in dictionary) {}
+    //      Output: for ([ key, _ ] of dictionary) {}
+    //
+    //
+    if (node.kind === NodeKind.FORIN) {
+        let lookInTarget = node.findChild(NodeKind.IN).findChild(NodeKind.IDENTIFIER);
+        let definition = lookInTarget && emitter.findDefInScope(lookInTarget.text);
+        if (definition && definition.type === "Map<any, any>") {
+
+            emitter.catchup(node.start);
+
+            let deepestFirstNode = node;
+            do {
+                deepestFirstNode = deepestFirstNode.children[0]
+            } while (deepestFirstNode.children.length > 0);
+
+            emitter.insert("for ([ ");
+            emitter.insert(deepestFirstNode.text);
+            emitter.insert(", _ ] of ");
+
+            emitter.skipTo(lookInTarget.end);
+            visitNodes(emitter, node.children[1].children);
+            // emitter.insert(")");
+
+            return true;
+        }
+    }
 
     //
     // translate `new Dictionary(true)` into `new Map()`
@@ -135,11 +166,11 @@ function visitor (emitter: Emitter, node: Node): boolean {
 
 function postProcessing (emitterOptions: EmitterOptions, contents: string): string {
     // Remove dictionary imports
-    contents = contents.replace(/import { Dictionary } from ".*egret\/([a-zA-Z]+)";/gm, "");
+    contents = contents.replace(/import { Dictionary } from ".*createjs\/([a-zA-Z]+)";/gm, "");
 
-    // fix egret imports if using CommonJS
+    // fix createjs imports if using CommonJS
     if (!emitterOptions.useNamespaces) {
-        contents = contents.replace(/import { ([a-zA-Z]+) } from ".*egret\/([a-zA-Z]+)";/gm, "import $1 = egret.$1;");
+        contents = contents.replace(/import { ([a-zA-Z]+) } from ".*createjs\/([a-zA-Z]+)";/gm, "import $1 = createjs.$1;");
     }
 
     return contents;
