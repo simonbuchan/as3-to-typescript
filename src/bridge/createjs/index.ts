@@ -18,6 +18,20 @@ imports.set(/^flash.[a-z]+\.([A-Za-z]+)/, "createjs.$1");
 function visitor (emitter: Emitter, node: Node): boolean {
 
     //
+    // translate `MouseEvent.EVENT_NAME` to `"eventname"`
+    //
+    if (node.kind === NodeKind.DOT) {
+        // console.log(node)
+        if (node.children[0].text === "MouseEvent") {
+            emitter.catchup(node.start);
+            emitter.insert("\"" + node.children[1].text.replace("_", "").toLowerCase() + "\"");
+            emitter.skipTo(node.end);
+
+            return true;
+        }
+    }
+
+    //
     // translate `for..in` on Dictionaries into `for...of`
     // Example:
     //      Input:  for (var key:String in dictionary) {}
