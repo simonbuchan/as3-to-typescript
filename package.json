@@ -35,6 +35,7 @@
     "fs-extra": "^0.24.0",
     "minimist": "^1.2.0",
     "object-assign": "^4.0.1",
+    "readline-sync": "^1.4.4",
     "sax": "~0.6.0"
   },
   "devDependencies": {
