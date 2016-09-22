@@ -1,10 +1,6 @@
 /*jshint node:true*/
 /// <reference path="../typings/index.d.ts" />
-
-declare module "readline-sync" {
-    var foo:any;
-    export = foo;
-};
+/// <reference path="./definitions/readline-sync.d.ts" />
 
 import parse from './parse/index';
 import { emit, EmitterOptions } from './emit/emitter';
