@@ -398,6 +398,17 @@ function getRelativePath (currentPath: string[], targetPath: string[]) {
     return `${ relative }/${ targetPath.join("/") }`;
 }
 
+function getDeclarationType (node: Node): string {
+    let declarationType = null;
+    let typeNode = node && node.findChild(NodeKind.TYPE);
+
+    if (typeNode) {
+        declarationType = TYPE_REMAP[ typeNode.text ] || typeNode.text;
+    }
+
+    return declarationType;
+}
+
 function emitInterface(emitter: Emitter, node: Node): void {
     emitDeclaration(emitter, node);
 
@@ -463,7 +474,10 @@ function getFunctionDeclarations(node: Node): Declaration[] {
         decls = params.children.map(param => {
             let nameTypeInit = param.findChild(NodeKind.NAME_TYPE_INIT);
             if (nameTypeInit) {
-                return {name: nameTypeInit.findChild(NodeKind.NAME).text};
+                return {
+                    name: nameTypeInit.findChild(NodeKind.NAME).text,
+                    type: getDeclarationType(nameTypeInit)
+                };
             }
             let rest = param.findChild(NodeKind.REST);
             return {name: rest.text};
@@ -548,20 +562,11 @@ function getClassDeclarations(className: string, contentsNode: Node[]): Declarat
             return;
         }
 
-        let declarationType: string = null;
-        let nameTypeInitNode = node.findChild(NodeKind.NAME_TYPE_INIT);
-        if (nameTypeInitNode) {
-            let typeNode = nameTypeInitNode.findChild(NodeKind.TYPE);
-            if (typeNode) {
-                declarationType = TYPE_REMAP[ typeNode.text ] || typeNode.text;
-            }
-        }
-
         let modList = node.findChild(NodeKind.MOD_LIST);
         let isStatic = modList && modList.children.some(mod => mod.text === 'static');
         return {
             name: nameNode.text,
-            type: declarationType,
+            type: getDeclarationType(node.findChild(NodeKind.NAME_TYPE_INIT)),
             bound: isStatic ? className : 'this'
         };
     }).filter(el => !!el);

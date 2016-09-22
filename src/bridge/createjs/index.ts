@@ -38,7 +38,7 @@ function visitor (emitter: Emitter, node: Node): boolean {
     //      Output: for ([ key, _ ] of dictionary) {}
     //
     //
-    if (node.kind === NodeKind.FORIN) {
+    if (node.kind === NodeKind.FORIN || node.kind === NodeKind.FOREACH) {
         let lookInTarget = node.findChild(NodeKind.IN).findChild(NodeKind.IDENTIFIER);
         let definition = lookInTarget && emitter.findDefInScope(lookInTarget.text);
         if (definition && definition.type === "Map<any, any>") {
@@ -51,8 +51,20 @@ function visitor (emitter: Emitter, node: Node): boolean {
             } while (deepestFirstNode.children.length > 0);
 
             emitter.insert("for ([ ");
-            emitter.insert(deepestFirstNode.text);
-            emitter.insert(", _ ] of ");
+
+            if (node.kind === NodeKind.FORIN) {
+                // Named argument is the KEY on FORIN statements
+                emitter.insert(deepestFirstNode.text);
+                emitter.insert(", _");
+
+            } else if (node.kind === NodeKind.FOREACH) {
+                // Named argument is the VALUE on FOREACH statements
+                emitter.insert("_, ");
+                emitter.insert(deepestFirstNode.text);
+
+            }
+
+            emitter.insert(" ] of ");
 
             emitter.skipTo(lookInTarget.end);
             visitNodes(emitter, node.children[1].children);
