@@ -305,8 +305,10 @@ function emitImport(emitter: Emitter, node: Node): void {
 
         if (definitions && definitions.length > 0) {
             definitions.forEach(definition => {
-                node.text = `${ ns }.${ definition }`;
-                emitImport(emitter, createNode(node.kind, node));
+                let importNode = createNode(node.kind, node);
+                importNode.text = `${ ns }.${ definition }`;
+                importNode.parent = node.parent;
+                emitImport(emitter, importNode);
                 emitter.insert(";\n");
             })
 
