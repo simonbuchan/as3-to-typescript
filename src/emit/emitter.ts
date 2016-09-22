@@ -28,6 +28,9 @@ const TYPE_REMAP: { [id: string]: string } = {
     'Dictionary': 'Map<any, any>',
 }
 
+const IDENTIFIER_REMAP: { [id: string]: string } = {
+    'Dictionary': 'Map<any, any>'
+}
 
 interface Scope {
     parent: Scope;
@@ -741,11 +744,13 @@ function emitType(emitter: Emitter, node: Node): void {
 
     emitter.skipTo(node.end);
 
+    let typeName = node.text;
+
     if (TYPE_REMAP[node.text]) {
-        node.text = TYPE_REMAP[node.text];
+        typeName = TYPE_REMAP[node.text];
     }
 
-    emitter.insert(node.text);
+    emitter.insert(typeName);
 }
 
 
@@ -913,11 +918,8 @@ export function emitIdent(emitter: Emitter, node: Node): void {
         return;
     }
 
-    if (TYPE_REMAP[node.text]) {
-        // leave "Boolean()" type casting as it is
-        if (node.text === "Boolean") return;
-
-        node.text = TYPE_REMAP[node.text];
+    if (IDENTIFIER_REMAP[node.text]) {
+        node.text = IDENTIFIER_REMAP[node.text];
     }
 
     let def = emitter.findDefInScope(node.text);
