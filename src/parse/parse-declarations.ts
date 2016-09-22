@@ -432,9 +432,22 @@ function parseFunctionSignature(parser:AS3Parser):Node {
 function doParseSignature(parser:AS3Parser) {
     let tok = consume(parser, Keywords.FUNCTION);
     let type:Node = createNode(NodeKind.TYPE, {tok: tok});
+
     if (tokIs(parser, Keywords.SET) || tokIs(parser, Keywords.GET)) {
-        type = createNode(NodeKind.TYPE, {start: tok.index, end: parser.tok.end, text: parser.tok.text});
+        let currentToken = parser.tok;
+        let checkpoint = parser.scn.getCheckPoint();
+
         nextToken(parser); // set or get
+        let valid: boolean = (parser.tok.text !== "(");
+
+        if (valid) {
+            type = createNode(NodeKind.TYPE, {start: tok.index, end: parser.tok.end, text: parser.tok.text});
+
+        } else {
+            parser.scn.rewind(checkpoint);
+            parser.tok = currentToken;
+        }
+
     }
     let name:Node = createNode(NodeKind.NAME, {tok: parser.tok});
     nextToken(parser); // name
