@@ -236,9 +236,13 @@ export default class Emitter {
         if (this.index >= index) {
             return;
         }
-        let text = this.source.substring(this.index, index);
+        let text = this.sourceBetween(this.index, index);
         this.index = index;
         this.insert(text);
+    }
+
+    sourceBetween (start: number, end: number) {
+        return this.source.substring(start, end);
     }
 
     skipTo(index: number): void {
@@ -945,6 +949,14 @@ export function emitIdent(emitter: Emitter, node: Node): void {
 
 function emitDot (emitter: Emitter, node: Node) {
     let dotSibling = node.nextSibling;
+    let isConditionalCompilation = (dotSibling && dotSibling.kind === NodeKind.BLOCK);
+    let template = "if ($1)";
+
+    if (!isConditionalCompilation && node.parent.kind === NodeKind.CONDITION) {
+        let separator = emitter.sourceBetween(node.children[0].end, node.children[0].end + 2);
+        isConditionalCompilation = (separator === "::");
+        template = "$1";
+    }
 
     // wrap conditional compilation into Node.js conditional for
     // `process.env.VARIABLE`
@@ -952,9 +964,9 @@ function emitDot (emitter: Emitter, node: Node) {
     // More info about Flex conditional compilation:
     // http://help.adobe.com/en_US/flex/using/WS2db454920e96a9e51e63e3d11c0bf69084-7abd.html
 
-    if (dotSibling && dotSibling.kind === NodeKind.BLOCK) {
+    if (isConditionalCompilation) {
         emitter.catchup(node.start);
-        emitter.insert(`if (process.env.${ node.children[1].text })`);
+        emitter.insert(template.replace("$1", `process.env.${ node.children[1].text.toUpperCase() }`));
         emitter.skipTo(node.end);
         return;
 
