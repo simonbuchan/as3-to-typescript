@@ -399,7 +399,7 @@ function getRelativePath (currentPath: string[], targetPath: string[]) {
 }
 
 function getDeclarationType (node: Node): string {
-    let declarationType = null;
+    let declarationType: string = null;
     let typeNode = node && node.findChild(NodeKind.TYPE);
 
     if (typeNode) {

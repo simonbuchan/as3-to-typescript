@@ -21,13 +21,32 @@ function visitor (emitter: Emitter, node: Node): boolean {
     // translate `MouseEvent.EVENT_NAME` to `"eventname"`
     //
     if (node.kind === NodeKind.DOT) {
-        // console.log(node)
         if (node.children[0].text === "MouseEvent") {
             emitter.catchup(node.start);
             emitter.insert("\"" + node.children[1].text.replace("_", "").toLowerCase() + "\"");
             emitter.skipTo(node.end);
 
             return true;
+        }
+    }
+
+    //
+    // translate `StringUtil.trim(str)` into `str.trim()`
+    //
+    if (node.kind === NodeKind.CALL) {
+        let dotNode = node.children[0];
+        if (dotNode.kind === NodeKind.DOT) {
+            let dotLeftNode = node.children[0].children[0];
+            let dotRightNode = node.children[0].children[1];
+
+            if (dotLeftNode.text === "StringUtil") {
+                emitter.catchup(node.start);
+                emitter.skipTo(node.end);
+                visitNode(emitter, node.children[1].children[0]);
+                emitter.insert(`.${ dotRightNode.text }()`);
+                emitter.skipTo(node.end);
+                return true;
+            }
         }
     }
 
@@ -193,6 +212,9 @@ function visitor (emitter: Emitter, node: Node): boolean {
 function postProcessing (emitterOptions: EmitterOptions, contents: string): string {
     // Remove dictionary imports
     contents = contents.replace(/import { Dictionary } from ".*createjs\/([a-zA-Z]+)";/gm, "");
+
+    // Remove StringUtil imports (mx.utils.StringUtil)
+    contents = contents.replace(/import { StringUtil } from ".*mx\/utils\/StringUtil";/gm, "");
 
     // fix createjs imports if using CommonJS
     if (!emitterOptions.useNamespaces) {
