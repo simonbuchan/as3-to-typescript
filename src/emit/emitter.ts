@@ -413,7 +413,10 @@ function getDeclarationType (node: Node): string {
 
 function ensureImportIdentifier (emitter: Emitter, node: Node): void {
     // Ensure this file is not declaring this class
-    if (emitter.source.indexOf(`class ${ node.text}`) === -1) {
+    if (
+        emitter.source.indexOf(`class ${ node.text}`) === -1 &&
+        !emitter.findDefInScope(node.text)
+    ) {
         emitter.headOutput += `import { ${ node.text} } from "./${ node.text }";\n`;
         emitter.declareInScope({ name: node.text });
     }
@@ -534,7 +537,16 @@ function emitForEach(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start + Keywords.FOR.length + 1);
     emitter.skip(4); // "each"
 
-    visitNode(emitter, varNode);
+    let nameTypeInitNode = varNode.findChild(NodeKind.NAME_TYPE_INIT);
+    if (nameTypeInitNode) {
+        // don't emit variable type on for..of statements
+        let nameNode = nameTypeInitNode.findChild(NodeKind.NAME);
+        emitter.catchup(varNode.start);
+        emitter.insert(`let ${ nameNode.text }`);
+        emitter.skipTo(varNode.end);
+    } else {
+        visitNode(emitter, varNode);
+    }
 
     emitter.catchup(inNode.start);
     emitter.skip(Keywords.IN.length + 1); // replace "in " with "of "
@@ -950,10 +962,6 @@ export function emitIdent(emitter: Emitter, node: Node): void {
         return;
     }
 
-    if (IDENTIFIER_REMAP[node.text]) {
-        node.text = IDENTIFIER_REMAP[node.text];
-    }
-
     let def = emitter.findDefInScope(node.text);
     if (def && def.bound) {
         emitter.insert(def.bound + '.');
@@ -962,6 +970,7 @@ export function emitIdent(emitter: Emitter, node: Node): void {
     if (!def &&
         emitter.currentClassName &&
         GLOBAL_NAMES.indexOf(node.text) === -1 &&
+        TYPE_REMAP[ node.text ] === undefined &&
         node.text !== emitter.currentClassName
     ) {
         if (node.text.match(/^[A-Z]/)) {
@@ -974,6 +983,10 @@ export function emitIdent(emitter: Emitter, node: Node): void {
             // Identifier belongs to `this.` scope.
             emitter.insert('this.');
         }
+    }
+
+    if (IDENTIFIER_REMAP[node.text]) {
+        node.text = IDENTIFIER_REMAP[node.text];
     }
 
     emitter.insert(node.text);
