@@ -135,8 +135,10 @@ export default class Emitter {
     public isNew: boolean = false;
     public emitThisForNextIdent: boolean = true;
 
-    private source: string;
+    public source: string;
     public options: EmitterOptions;
+
+    public headOutput: string = "";
 
     public output: string = '';
     public index: number = 0;
@@ -153,7 +155,7 @@ export default class Emitter {
             visitNode(this, filterAST(ast));
             this.catchup(this.source.length - 1);
         });
-        return this.output;
+        return this.headOutput + this.output;
     }
 
     enterScope(declarations: Declaration[]): Scope {
@@ -410,10 +412,11 @@ function getDeclarationType (node: Node): string {
 }
 
 function ensureImportIdentifier (emitter: Emitter, node: Node): void {
-    let importStatement = `import { ${ node.text} } from "./${ node.text }";\n`;
-    emitter.output = importStatement + emitter.output;
-    emitter.index += importStatement.length;
-    emitter.declareInScope({ name: node.text });
+    // Ensure this file is not declaring this class
+    if (emitter.source.indexOf(`class ${ node.text}`) === -1) {
+        emitter.headOutput += `import { ${ node.text} } from "./${ node.text }";\n`;
+        emitter.declareInScope({ name: node.text });
+    }
 }
 
 function emitInterface(emitter: Emitter, node: Node): void {
@@ -591,8 +594,17 @@ function emitClass(emitter: Emitter, node: Node): void {
         return;
     }
 
-    // let extendsAndImplements = emitter.sourceBetween(node.start, content.start);
-    // console.log(extendsAndImplements)
+    // ensure extends identifier is being imported
+    let extendsNode = node.findChild(NodeKind.EXTENDS);
+    if (extendsNode) {
+        ensureImportIdentifier(emitter, extendsNode);
+    }
+
+    // ensure implements identifiers are being imported
+    let implementsNode = node.findChild(NodeKind.IMPLEMENTS_LIST);
+    if (implementsNode) {
+        implementsNode.children.forEach((node) => ensureImportIdentifier(emitter, node))
+    }
 
     emitter.withScope(getClassDeclarations(name.text, contentsNode), scope => {
         scope.className = name.text;
@@ -619,18 +631,6 @@ function emitClass(emitter: Emitter, node: Node): void {
             }
         });
     });
-
-    // ensure extends identifier is being imported
-    let extendsNode = node.findChild(NodeKind.EXTENDS);
-    if (extendsNode) {
-        ensureImportIdentifier(emitter, extendsNode);
-    }
-
-    // ensure implements identifiers are being imported
-    let implementsNode = node.findChild(NodeKind.IMPLEMENTS_LIST);
-    if (implementsNode) {
-        implementsNode.children.forEach((node) => ensureImportIdentifier(emitter, node))
-    }
 
     emitter.catchup(node.end);
 }
