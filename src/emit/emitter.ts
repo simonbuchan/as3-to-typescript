@@ -138,9 +138,9 @@ export default class Emitter {
     private source: string;
     public options: EmitterOptions;
 
-    private output: string = '';
+    public output: string = '';
+    public index: number = 0;
 
-    private index: number = 0;
     private scope: Scope = null;
 
     constructor(source: string, options?: EmitterOptions) {
@@ -409,6 +409,13 @@ function getDeclarationType (node: Node): string {
     return declarationType;
 }
 
+function ensureImportIdentifier (emitter: Emitter, node: Node): void {
+    let importStatement = `import { ${ node.text} } from "./${ node.text }";\n`;
+    emitter.output = importStatement + emitter.output;
+    emitter.index += importStatement.length;
+    emitter.declareInScope({ name: node.text });
+}
+
 function emitInterface(emitter: Emitter, node: Node): void {
     emitDeclaration(emitter, node);
 
@@ -584,6 +591,9 @@ function emitClass(emitter: Emitter, node: Node): void {
         return;
     }
 
+    // let extendsAndImplements = emitter.sourceBetween(node.start, content.start);
+    // console.log(extendsAndImplements)
+
     emitter.withScope(getClassDeclarations(name.text, contentsNode), scope => {
         scope.className = name.text;
 
@@ -610,9 +620,20 @@ function emitClass(emitter: Emitter, node: Node): void {
         });
     });
 
+    // ensure extends identifier is being imported
+    let extendsNode = node.findChild(NodeKind.EXTENDS);
+    if (extendsNode) {
+        ensureImportIdentifier(emitter, extendsNode);
+    }
+
+    // ensure implements identifiers are being imported
+    let implementsNode = node.findChild(NodeKind.IMPLEMENTS_LIST);
+    if (implementsNode) {
+        implementsNode.children.forEach((node) => ensureImportIdentifier(emitter, node))
+    }
+
     emitter.catchup(node.end);
 }
-
 
 function emitSet(emitter: Emitter, node: Node): void {
     emitClassField(emitter, node);
@@ -937,14 +958,22 @@ export function emitIdent(emitter: Emitter, node: Node): void {
     if (def && def.bound) {
         emitter.insert(def.bound + '.');
     }
+
     if (!def &&
-            emitter.currentClassName &&
-            GLOBAL_NAMES.indexOf(node.text) === -1 &&
-            emitter.emitThisForNextIdent &&
-            node.text !== emitter.currentClassName &&
-            !node.text.match(/^[A-Z]/)
+        emitter.currentClassName &&
+        GLOBAL_NAMES.indexOf(node.text) === -1 &&
+        node.text !== emitter.currentClassName
     ) {
-        emitter.insert('this.');
+        if (node.text.match(/^[A-Z]/)) {
+            // Import missing identifier from this namespace
+            if (!emitter.options.useNamespaces) {
+                ensureImportIdentifier(emitter, node);
+            }
+
+        } else if (emitter.emitThisForNextIdent) {
+            // Identifier belongs to `this.` scope.
+            emitter.insert('this.');
+        }
     }
 
     emitter.insert(node.text);
