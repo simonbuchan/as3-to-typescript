@@ -13,7 +13,7 @@ const GLOBAL_NAMES = [
     'parseFloat', 'parseInt', 'String', 'trace', 'uint', 'unescape', 'Vector', 'XML', 'XMLList',
     'ArgumentError', 'arguments', 'Class', 'Date', 'DefinitionError', 'Error', 'EvalError', 'Function', 'Math',
     'Namespace', 'QName', 'RangeError', 'ReferenceError', 'RegExp', 'SecurityError', 'SyntaxError', 'TypeError',
-    'URIError', 'VerifyError'
+    'URIError', 'VerifyError', 'Error', 'JSON'
 ];
 
 const TYPE_REMAP: { [id: string]: string } = {
