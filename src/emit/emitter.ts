@@ -13,7 +13,7 @@ const GLOBAL_NAMES = [
     'parseFloat', 'parseInt', 'String', 'trace', 'uint', 'unescape', 'Vector', 'XML', 'XMLList',
     'ArgumentError', 'arguments', 'Class', 'Date', 'DefinitionError', 'Error', 'EvalError', 'Function', 'Math',
     'Namespace', 'QName', 'RangeError', 'ReferenceError', 'RegExp', 'SecurityError', 'SyntaxError', 'TypeError',
-    'URIError', 'VerifyError', 'Error', 'JSON'
+    'URIError', 'VerifyError', 'JSON'
 ];
 
 const TYPE_REMAP: { [id: string]: string } = {
@@ -415,6 +415,7 @@ function ensureImportIdentifier (emitter: Emitter, node: Node): void {
     // Ensure this file is not declaring this class
     if (
         emitter.source.indexOf(`class ${ node.text}`) === -1 &&
+        GLOBAL_NAMES.indexOf(node.text) === -1 &&
         !emitter.findDefInScope(node.text)
     ) {
         emitter.headOutput += `import { ${ node.text} } from "./${ node.text }";\n`;
