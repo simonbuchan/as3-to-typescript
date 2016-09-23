@@ -10,18 +10,34 @@ implementation.
 
 ## Installation
 
+**Option 1: via npm:**:
+
+```
+npm install -g as3-to-ts
+```
+
+**Option 2: building the source:**
+
 Make sure you have [Node v6+](https://nodejs.org/) installed.
 
 - Clone the repository
 - Run `npm link`
 
-You should have `as3-to-ts` available globaly in your commandline.
+You should have `as3-to-ts` now globaly available in your commandline.
 
 ## Usage
 
 ```
-as3-to-ts <sourceDir> <outputDir> [--commonjs] [--bridge egret-core]
+as3-to-ts <sourceDir> <outputDir> [--commonjs] [--bridge createjs] [--interactive] [--overwrite]
 ```
+
+Options:
+
+- `--commonjs`: export .ts files using CommonJS's import style.
+- `--bridge [name]`: use custom visitor. implemented under `src/bridge/[name]`
+- `--overwrite`: force overwrite of previously-converted files.
+- `--interactive`: if you've manually changed a generated `.ts` file, you'll be
+  asked if you want to overwrite it or not.
 
 
 ## Known issues
