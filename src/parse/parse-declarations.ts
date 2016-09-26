@@ -417,7 +417,7 @@ function parseFunctionSignature(parser:AS3Parser):Node {
     let {type, name, params, returnType} = doParseSignature(parser);
     skip(parser, Operators.SEMI_COLUMN);
     let result:Node = createNode(
-        findFunctionTypeFromTypeNode(type),
+        type.kind,
         {start: type.start, end: -1, text: type.text},
         name,
         params,
@@ -433,7 +433,10 @@ function doParseSignature(parser:AS3Parser) {
     let tok = consume(parser, Keywords.FUNCTION);
     let type:Node = createNode(NodeKind.TYPE, {tok: tok});
 
-    if (tokIs(parser, Keywords.SET) || tokIs(parser, Keywords.GET)) {
+    let isGet = tokIs(parser, Keywords.GET);
+    let isSet = tokIs(parser, Keywords.SET);
+
+    if (isGet || isSet) {
         let currentToken = parser.tok;
         let checkpoint = parser.scn.getCheckPoint();
 
@@ -441,7 +444,11 @@ function doParseSignature(parser:AS3Parser) {
         let valid: boolean = (parser.tok.text !== "(");
 
         if (valid) {
-            type = createNode(NodeKind.TYPE, {start: tok.index, end: parser.tok.end, text: parser.tok.text});
+            type = createNode((isGet) ? NodeKind.GET : NodeKind.SET, {
+                start: tok.index,
+                end: parser.tok.end,
+                text: parser.tok.text
+            });
 
         } else {
             parser.scn.rewind(checkpoint);
