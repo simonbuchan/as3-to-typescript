@@ -221,6 +221,9 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
         contents = contents.replace(/import { ([a-zA-Z]+) } from ".*createjs\/([a-zA-Z]+)";/gm, "import $1 = createjs.$1;");
     }
 
+    // Replace all 'var' to block-scoped 'let'
+    contents = contents.replace(/\b(var)\b/gm, "let");
+
     return contents;
 }
 
