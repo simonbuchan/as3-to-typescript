@@ -28,6 +28,12 @@ const TYPE_REMAP: { [id: string]: string } = {
     'Dictionary': 'Map<any, any>',
 }
 
+// TODO: improve me (used only on emitType())
+const TYPE_REMAP_VALUES = ['void'];
+for (var k in TYPE_REMAP) {
+    TYPE_REMAP_VALUES.push(TYPE_REMAP[k]);
+}
+
 const IDENTIFIER_REMAP: { [id: string]: string } = {
     'Dictionary': 'Map<any, any>'
 }
@@ -433,19 +439,19 @@ function getDeclarationType (emitter: Emitter, node: Node): string {
     return declarationType;
 }
 
-function ensureImportIdentifier (emitter: Emitter, node: Node): void {
+function ensureImportIdentifier (emitter: Emitter, identifier: string): void {
     // change to root scope temporarily
     let previousScope = emitter.scope;
     emitter.scope = emitter.rootScope;
 
     // Ensure this file is not declaring this class
     if (
-        emitter.source.indexOf(`class ${ node.text}`) === -1 &&
-        GLOBAL_NAMES.indexOf(node.text) === -1 &&
-        !emitter.findDefInScope(node.text)
+        emitter.source.indexOf(`class ${ identifier }`) === -1 &&
+        GLOBAL_NAMES.indexOf(identifier) === -1 &&
+        !emitter.findDefInScope(identifier)
     ) {
-        emitter.headOutput += `import { ${ node.text} } from "./${ node.text }";\n`;
-        emitter.declareInScope({ name: node.text });
+        emitter.headOutput += `import { ${ identifier } } from "./${ identifier }";\n`;
+        emitter.declareInScope({ name: identifier });
     }
 
     // change back to previous scope
@@ -471,6 +477,7 @@ function emitInterface(emitter: Emitter, node: Node): void {
             if (node.kind === NodeKind.TYPE && node.text === "function") {
                 emitter.skip(Keywords.FUNCTION.length + 1);
                 visitNode(emitter, node.findChild(NodeKind.PARAMETER_LIST));
+                visitNode(emitter, node.findChild(NodeKind.TYPE));
 
             } else if (node.kind === NodeKind.GET || node.kind === NodeKind.SET) {
                 let name = node.findChild(NodeKind.NAME);
@@ -640,13 +647,13 @@ function emitClass(emitter: Emitter, node: Node): void {
     let extendsNode = node.findChild(NodeKind.EXTENDS);
     if (extendsNode) {
         emitIdent(emitter, extendsNode);
-        ensureImportIdentifier(emitter, extendsNode);
+        ensureImportIdentifier(emitter, extendsNode.text);
     }
 
     // ensure implements identifiers are being imported
     let implementsNode = node.findChild(NodeKind.IMPLEMENTS_LIST);
     if (implementsNode) {
-        implementsNode.children.forEach((node) => ensureImportIdentifier(emitter, node))
+        implementsNode.children.forEach((node) => ensureImportIdentifier(emitter, node.text))
     }
 
     emitter.withScope(getClassDeclarations(emitter, name.text, contentsNode), scope => {
@@ -819,7 +826,17 @@ function emitType(emitter: Emitter, node: Node): void {
 
     emitter.skipTo(node.end);
 
+    // ensure type is imported
+    if (
+        GLOBAL_NAMES.indexOf(node.text) === -1 &&
+        !emitter.getTypeRemap(node.text) &&
+        TYPE_REMAP_VALUES.indexOf(node.text) === -1
+    ) {
+        ensureImportIdentifier(emitter, node.text);
+    }
+
     let typeName = emitter.getTypeRemap(node.text) || node.text;
+
     emitter.insert(typeName);
 }
 
@@ -1002,7 +1019,7 @@ export function emitIdent(emitter: Emitter, node: Node): void {
         if (node.text.match(/^[A-Z]/)) {
             // Import missing identifier from this namespace
             if (!emitter.options.useNamespaces) {
-                ensureImportIdentifier(emitter, node);
+                ensureImportIdentifier(emitter, node.text);
             }
 
         } else if (emitter.emitThisForNextIdent) {
