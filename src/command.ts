@@ -127,7 +127,7 @@ export function run(): void {
             contents = bridge.postProcessing(emitterOptions, contents);
         }
 
-        fs.outputFileSync(outputFile, contents);
+        fs.outputFileSync(outputFile, contents.replace(/\r\n/g, "\n"));
         fs.utimesSync(outputFile, nextLockTimestamp, nextLockTimestamp);
         number ++;
     });
