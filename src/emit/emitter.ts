@@ -143,6 +143,7 @@ export default class Emitter {
     public output: string = '';
     public index: number = 0;
 
+    public rootScope: Scope = null;
     private scope: Scope = null;
 
     constructor(source: string, options?: EmitterOptions) {
@@ -151,7 +152,8 @@ export default class Emitter {
     }
 
     emit(ast: Node): string {
-        this.withScope([], () => {
+        this.withScope([], (rootScope) => {
+            this.rootScope = rootScope;
             visitNode(this, filterAST(ast));
             this.catchup(this.source.length - 1);
         });
@@ -266,6 +268,26 @@ export default class Emitter {
         }
         this.index = index;
     }
+
+    /**
+     * Utilities
+     */
+    getTypeRemap(text: string): string {
+        return (
+            this.options.bridge &&
+            this.options.bridge.typeMap &&
+            this.options.bridge.typeMap[ text ]
+        ) || TYPE_REMAP[ text ];
+    }
+
+    getIdentifierRemap(text: string): string {
+        return (
+            this.options.bridge &&
+            this.options.bridge.identifierMap &&
+            this.options.bridge.identifierMap[ text ]
+        ) || IDENTIFIER_REMAP[text];;
+    }
+
 }
 
 
@@ -400,18 +422,22 @@ function getRelativePath (currentPath: string[], targetPath: string[]) {
     return `${ relative }/${ targetPath.join("/") }`;
 }
 
-function getDeclarationType (node: Node): string {
+function getDeclarationType (emitter: Emitter, node: Node): string {
     let declarationType: string = null;
     let typeNode = node && node.findChild(NodeKind.TYPE);
 
     if (typeNode) {
-        declarationType = TYPE_REMAP[ typeNode.text ] || typeNode.text;
+        declarationType = emitter.getTypeRemap(typeNode.text) || typeNode.text;
     }
 
     return declarationType;
 }
 
 function ensureImportIdentifier (emitter: Emitter, node: Node): void {
+    // change to root scope temporarily
+    let previousScope = emitter.scope;
+    emitter.scope = emitter.rootScope;
+
     // Ensure this file is not declaring this class
     if (
         emitter.source.indexOf(`class ${ node.text}`) === -1 &&
@@ -421,6 +447,9 @@ function ensureImportIdentifier (emitter: Emitter, node: Node): void {
         emitter.headOutput += `import { ${ node.text} } from "./${ node.text }";\n`;
         emitter.declareInScope({ name: node.text });
     }
+
+    // change back to previous scope
+    emitter.scope = previousScope;
 }
 
 function emitInterface(emitter: Emitter, node: Node): void {
@@ -481,7 +510,7 @@ function emitInterface(emitter: Emitter, node: Node): void {
 }
 
 
-function getFunctionDeclarations(node: Node): Declaration[] {
+function getFunctionDeclarations(emitter: Emitter, node: Node): Declaration[] {
     let decls: Declaration[] = [];
     let params = node.findChild(NodeKind.PARAMETER_LIST);
     if (params && params.children.length) {
@@ -490,7 +519,7 @@ function getFunctionDeclarations(node: Node): Declaration[] {
             if (nameTypeInit) {
                 return {
                     name: nameTypeInit.findChild(NodeKind.NAME).text,
-                    type: getDeclarationType(nameTypeInit)
+                    type: getDeclarationType(emitter, nameTypeInit)
                 };
             }
             let rest = param.findChild(NodeKind.REST);
@@ -523,7 +552,7 @@ function getFunctionDeclarations(node: Node): Declaration[] {
 
 function emitFunction(emitter: Emitter, node: Node): void {
     emitDeclaration(emitter, node);
-    emitter.withScope(getFunctionDeclarations(node), () => {
+    emitter.withScope(getFunctionDeclarations(emitter, node), () => {
         let rest = node.getChildFrom(NodeKind.MOD_LIST);
         visitNodes(emitter, rest);
     });
@@ -558,7 +587,7 @@ function emitForEach(emitter: Emitter, node: Node): void {
 }
 
 
-function getClassDeclarations(className: string, contentsNode: Node[]): Declaration[] {
+function getClassDeclarations(emitter: Emitter, className: string, contentsNode: Node[]): Declaration[] {
     let found: { [name: string]: boolean } = {};
 
     return contentsNode.map(node => {
@@ -589,7 +618,7 @@ function getClassDeclarations(className: string, contentsNode: Node[]): Declarat
         let isStatic = modList && modList.children.some(mod => mod.text === 'static');
         return {
             name: nameNode.text,
-            type: getDeclarationType(node.findChild(NodeKind.NAME_TYPE_INIT)),
+            type: getDeclarationType(emitter, node.findChild(NodeKind.NAME_TYPE_INIT)),
             bound: isStatic ? className : 'this'
         };
     }).filter(el => !!el);
@@ -610,6 +639,7 @@ function emitClass(emitter: Emitter, node: Node): void {
     // ensure extends identifier is being imported
     let extendsNode = node.findChild(NodeKind.EXTENDS);
     if (extendsNode) {
+        emitIdent(emitter, extendsNode);
         ensureImportIdentifier(emitter, extendsNode);
     }
 
@@ -619,7 +649,7 @@ function emitClass(emitter: Emitter, node: Node): void {
         implementsNode.children.forEach((node) => ensureImportIdentifier(emitter, node))
     }
 
-    emitter.withScope(getClassDeclarations(name.text, contentsNode), scope => {
+    emitter.withScope(getClassDeclarations(emitter, name.text, contentsNode), scope => {
         scope.className = name.text;
 
         contentsNode.forEach(node => {
@@ -663,7 +693,7 @@ function emitSet(emitter: Emitter, node: Node): void {
         emitter.skipTo(type.end);
     }
 
-    emitter.withScope(getFunctionDeclarations(node), () => {
+    emitter.withScope(getFunctionDeclarations(emitter, node), () => {
         visitNodes(emitter, node.getChildFrom(NodeKind.TYPE));
     });
 }
@@ -718,7 +748,7 @@ function emitMethod(emitter: Emitter, node: Node): void {
         // }
 
     }
-    emitter.withScope(getFunctionDeclarations(node), () => {
+    emitter.withScope(getFunctionDeclarations(emitter, node), () => {
         visitNodes(emitter, node.getChildFrom(NodeKind.NAME));
     });
 }
@@ -789,12 +819,7 @@ function emitType(emitter: Emitter, node: Node): void {
 
     emitter.skipTo(node.end);
 
-    let typeName = node.text;
-
-    if (TYPE_REMAP[node.text]) {
-        typeName = TYPE_REMAP[node.text];
-    }
-
+    let typeName = emitter.getTypeRemap(node.text) || node.text;
     emitter.insert(typeName);
 }
 
@@ -986,9 +1011,7 @@ export function emitIdent(emitter: Emitter, node: Node): void {
         }
     }
 
-    if (IDENTIFIER_REMAP[node.text]) {
-        node.text = IDENTIFIER_REMAP[node.text];
-    }
+    node.text = emitter.getIdentifierRemap(node.text) || node.text;
 
     emitter.insert(node.text);
     emitter.skipTo(node.end);

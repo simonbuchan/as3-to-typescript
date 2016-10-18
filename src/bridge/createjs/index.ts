@@ -224,8 +224,18 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
     return contents;
 }
 
+const typeMap: { [id: string]: string } = {
+    'Sprite': 'Container'
+}
+
+const identifierMap: { [id: string]: string } = {
+    'Sprite': 'Container'
+}
+
 export default {
     imports: imports,
     visitor: visitor,
     postProcessing: postProcessing,
+    typeMap: typeMap,
+    identifierMap: identifierMap,
 }
