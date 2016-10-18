@@ -144,7 +144,7 @@ export default class Emitter {
     public index: number = 0;
 
     public rootScope: Scope = null;
-    private scope: Scope = null;
+    public scope: Scope = null;
 
     constructor(source: string, options?: EmitterOptions) {
         this.source = source;
