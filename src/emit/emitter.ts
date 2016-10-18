@@ -439,8 +439,8 @@ function emitInterface(emitter: Emitter, node: Node): void {
             visitNode(emitter, node.findChild(NodeKind.META_LIST));
             emitter.catchup(node.start);
 
-            if (node.kind === NodeKind.FUNCTION) {
-                emitter.skip(Keywords.FUNCTION.length);
+            if (node.kind === NodeKind.TYPE && node.text === "function") {
+                emitter.skip(Keywords.FUNCTION.length + 1);
                 visitNode(emitter, node.findChild(NodeKind.PARAMETER_LIST));
 
             } else if (node.kind === NodeKind.GET || node.kind === NodeKind.SET) {
