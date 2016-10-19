@@ -11,9 +11,10 @@ const GLOBAL_NAMES = [
     'Array', 'Boolean', 'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'escape',
     'int', 'isFinite', 'isNaN', 'isXMLName', 'Number', 'Object',
     'parseFloat', 'parseInt', 'String', 'trace', 'uint', 'unescape', 'Vector', 'XML', 'XMLList',
-    'ArgumentError', 'arguments', 'Class', 'Date', 'DefinitionError', 'Error', 'EvalError', 'Function', 'Math',
-    'Namespace', 'QName', 'RangeError', 'ReferenceError', 'RegExp', 'SecurityError', 'SyntaxError', 'TypeError',
-    'URIError', 'VerifyError', 'JSON'
+    'arguments', 'Class', 'Date', 'Function', 'Math',
+    'Namespace', 'QName', 'RegExp', 'JSON'
+    'Error', 'EvalError', 'RangeError', 'ReferenceError',
+    'SyntaxError', 'TypeError', 'URIError',
 ];
 
 const TYPE_REMAP: { [id: string]: string } = {
@@ -26,6 +27,12 @@ const TYPE_REMAP: { [id: string]: string } = {
     '*': 'any',
     'Array': 'any[]',
     'Dictionary': 'Map<any, any>',
+
+    // Inexistent errors
+    'ArgumentError': 'Error',
+    'DefinitionError': 'Error',
+    'SecurityError': 'Error',
+    'VerifyError': 'Error'
 }
 
 // TODO: improve me (used only on emitType())
@@ -36,6 +43,12 @@ for (var k in TYPE_REMAP) {
 
 const IDENTIFIER_REMAP: { [id: string]: string } = {
     'Dictionary': 'Map<any, any>'
+
+    // Inexistent errors
+    'ArgumentError': 'Error',
+    'DefinitionError': 'Error',
+    'SecurityError': 'Error',
+    'VerifyError': 'Error'
 }
 
 interface Scope {
