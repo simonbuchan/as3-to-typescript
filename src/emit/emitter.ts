@@ -96,6 +96,7 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.NEW]: emitNew,
     [NodeKind.RELATION]: emitRelation,
     [NodeKind.OP]: emitOp,
+    [NodeKind.OR]: emitOr,
     [NodeKind.IDENTIFIER]: emitIdent,
     [NodeKind.XML_LITERAL]: emitXMLLiteral,
     [NodeKind.CONST_LIST]: emitConstList,
@@ -1000,6 +1001,17 @@ function emitOp(emitter: Emitter, node: Node): void {
         return;
     }
     emitter.catchup(node.end);
+}
+
+function emitOr(emitter: Emitter, node: Node): void {
+    // // TODO: support for `value ||= 10` expressions;
+    // if (node.children.length === 3 && node.children[2].text === "=")
+    // {
+    //     node.children[2].text = node.children[0].text + " =";
+    // }
+
+    emitter.catchup(node.start);
+    visitNodes(emitter, node.children);
 }
 
 
