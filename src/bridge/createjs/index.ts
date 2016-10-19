@@ -226,8 +226,8 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
 
     // 1. Replace all listeners callbacks into arrow functions (to keep class scope)
     contents = contents.replace(
-        /(public|private|protected)[^\w]+(\w+).*\(([^:]+.*Event.*)\).*(void)/g,
-        "$1 $2 = ($3) : $4 =>"
+        /(public|private|protected)( static)?[^\w]+(\w+).*\(([^:]+.*Event.*)\).*(void)/g,
+        "$1$2 $3 = ($4) =>"
     );
 
     // 2. Replace all `super.on{CallbackName}` calls.
