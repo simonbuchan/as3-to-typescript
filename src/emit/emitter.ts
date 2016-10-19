@@ -480,6 +480,12 @@ function emitInterface(emitter: Emitter, node: Node): void {
         name: node.findChild(NodeKind.NAME).text
     });
 
+    // ensure extends identifier is being imported
+    let extendsNode = node.findChild(NodeKind.EXTENDS);
+    if (extendsNode) {
+        ensureImportIdentifier(emitter, extendsNode.text);
+    }
+
     let content = node.findChild(NodeKind.CONTENT);
     let contentsNode = content && content.children;
     let foundVariables: { [name: string]: boolean } = {};
