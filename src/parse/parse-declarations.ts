@@ -417,7 +417,7 @@ function parseFunctionSignature(parser:AS3Parser):Node {
     let {type, name, params, returnType} = doParseSignature(parser);
     skip(parser, Operators.SEMI_COLUMN);
     let result:Node = createNode(
-        findFunctionTypeFromTypeNode(type),
+        type.kind,
         {start: type.start, end: -1, text: type.text},
         name,
         params,
