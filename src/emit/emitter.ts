@@ -12,7 +12,7 @@ const GLOBAL_NAMES = [
     'int', 'isFinite', 'isNaN', 'isXMLName', 'Number', 'Object',
     'parseFloat', 'parseInt', 'String', 'trace', 'uint', 'unescape', 'Vector', 'XML', 'XMLList',
     'arguments', 'Class', 'Date', 'Function', 'Math',
-    'Namespace', 'QName', 'RegExp', 'JSON'
+    'Namespace', 'QName', 'RegExp', 'JSON',
     'Error', 'EvalError', 'RangeError', 'ReferenceError',
     'SyntaxError', 'TypeError', 'URIError',
 ];
@@ -42,7 +42,7 @@ for (var k in TYPE_REMAP) {
 }
 
 const IDENTIFIER_REMAP: { [id: string]: string } = {
-    'Dictionary': 'Map<any, any>'
+    'Dictionary': 'Map<any, any>',
 
     // Inexistent errors
     'ArgumentError': 'Error',
@@ -699,6 +699,7 @@ function emitClass(emitter: Emitter, node: Node): void {
 }
 
 function emitSet(emitter: Emitter, node: Node): void {
+    console.log('emit set!');
     emitClassField(emitter, node);
 
     let name = node.findChild(NodeKind.NAME);
