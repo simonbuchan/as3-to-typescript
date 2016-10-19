@@ -675,6 +675,7 @@ function emitClass(emitter: Emitter, node: Node): void {
         contentsNode.forEach(node => {
             visitNode(emitter, node.findChild(NodeKind.META_LIST));
             emitter.catchup(node.start);
+            // console.log(node)
             switch (node.kind) {
                 case NodeKind.SET:
                     emitSet(emitter, node);
@@ -699,7 +700,6 @@ function emitClass(emitter: Emitter, node: Node): void {
 }
 
 function emitSet(emitter: Emitter, node: Node): void {
-    console.log('emit set!');
     emitClassField(emitter, node);
 
     let name = node.findChild(NodeKind.NAME);
