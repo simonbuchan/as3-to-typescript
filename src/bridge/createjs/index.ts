@@ -224,6 +224,26 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
     // Replace all 'var' to block-scoped 'let'
     contents = contents.replace(/\b(var)\b/gm, "let");
 
+    // 1. Replace all listeners callbacks into arrow functions (to keep class scope)
+    contents = contents.replace(
+        /(public|private|protected)[^\w]+(\w+).*\(([^:]+.*Event.*)\).*(void)/g,
+        "$1 $2 = ($3) : $4 =>"
+    );
+
+    // 2. Replace all `super.on{CallbackName}` calls.
+    let overridesRegExp = /^(.*)\/\*override\*\/.*(public|private|protected)[^\w]+(\w+).*\([^:]+.*Event.*\)/gm;
+    let callbackOverrides = contents.match(overridesRegExp);
+    if (callbackOverrides && callbackOverrides.length > 0) {
+        for (let i = 0, len = callbackOverrides.length; i < len; i++) {
+            let matches = overridesRegExp.exec(callbackOverrides[i]);
+            if (matches) {
+                contents = contents.replace(matches.input, `${matches[1]}protected super_${matches[3]} = this.${matches[3]};\n${matches.input}`);
+                // 3. Replace occurrences of super calls on callbacks
+                contents = contents.replace(`super.${ matches[3] }`, `this.super_${ matches[3] }`);
+            }
+        }
+    }
+
     return contents;
 }
 
