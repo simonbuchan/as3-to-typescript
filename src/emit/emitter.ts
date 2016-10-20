@@ -495,11 +495,12 @@ function emitInterface(emitter: Emitter, node: Node): void {
         contentsNode.forEach(node => {
             visitNode(emitter, node.findChild(NodeKind.META_LIST));
             emitter.catchup(node.start);
+            let type = node.findChild(NodeKind.TYPE) || node.children[2];
 
             if (node.kind === NodeKind.TYPE && node.text === "function") {
                 emitter.skip(Keywords.FUNCTION.length + 1);
                 visitNode(emitter, node.findChild(NodeKind.PARAMETER_LIST));
-                visitNode(emitter, node.findChild(NodeKind.TYPE));
+                visitNode(emitter, type);
 
             } else if (node.kind === NodeKind.GET || node.kind === NodeKind.SET) {
                 let name = node.findChild(NodeKind.NAME);
@@ -511,8 +512,6 @@ function emitInterface(emitter: Emitter, node: Node): void {
 
                     if (node.kind === NodeKind.GET) {
                         emitter.skipTo(parameterList.end);
-
-                        let type = node.findChild(NodeKind.TYPE) || node.children[2];
                         if (type) {
                             emitType(emitter, type);
                         }
@@ -520,7 +519,6 @@ function emitInterface(emitter: Emitter, node: Node): void {
                     } else if (node.kind === NodeKind.SET) {
                         let setParam = parameterList.findChild(NodeKind.PARAMETER).children[0];
                         emitter.skipTo(setParam.findChild(NodeKind.NAME).end);
-                        let type = setParam.findChild(NodeKind.TYPE);
                         if (type) {
                             emitType(emitter, type);
                         }
@@ -734,7 +732,7 @@ function emitConstList(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
     let nameTypeInit = node.findChild(NodeKind.NAME_TYPE_INIT);
     emitter.skipTo(nameTypeInit.start);
-    emitter.insert('var ');
+    emitter.insert('const ');
     visitNode(emitter, nameTypeInit);
 }
 
@@ -1016,11 +1014,11 @@ function emitOp(emitter: Emitter, node: Node): void {
 }
 
 function emitOr(emitter: Emitter, node: Node): void {
-    // TODO: support for `value ||= 10` expressions;
-    if (node.children.length === 3 && node.children[2].text === "=")
-    {
-        node.children[2].text = node.children[0].text + " =";
-    }
+    // // TODO: support for `value ||= 10` expressions;
+    // if (node.children.length === 3 && node.children[2].text === "=")
+    // {
+    //     node.children[2].text = node.children[0].text + " =";
+    // }
 
     emitter.catchup(node.start);
     visitNodes(emitter, node.children);
