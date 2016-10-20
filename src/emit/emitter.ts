@@ -511,7 +511,8 @@ function emitInterface(emitter: Emitter, node: Node): void {
 
                     if (node.kind === NodeKind.GET) {
                         emitter.skipTo(parameterList.end);
-                        let type = node.findChild(NodeKind.TYPE);
+
+                        let type = node.findChild(NodeKind.TYPE) || node.children[2];
                         if (type) {
                             emitType(emitter, type);
                         }
@@ -844,6 +845,9 @@ function emitType(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
 
     if (!node.text) {
+        if (node.kind === NodeKind.VECTOR) {
+            emitVector(emitter, node);
+        }
         return;
     }
 
@@ -1012,11 +1016,11 @@ function emitOp(emitter: Emitter, node: Node): void {
 }
 
 function emitOr(emitter: Emitter, node: Node): void {
-    // // TODO: support for `value ||= 10` expressions;
-    // if (node.children.length === 3 && node.children[2].text === "=")
-    // {
-    //     node.children[2].text = node.children[0].text + " =";
-    // }
+    // TODO: support for `value ||= 10` expressions;
+    if (node.children.length === 3 && node.children[2].text === "=")
+    {
+        node.children[2].text = node.children[0].text + " =";
+    }
 
     emitter.catchup(node.start);
     visitNodes(emitter, node.children);
