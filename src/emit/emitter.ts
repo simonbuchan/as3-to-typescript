@@ -517,8 +517,10 @@ function emitInterface(emitter: Emitter, node: Node): void {
                         }
 
                     } else if (node.kind === NodeKind.SET) {
-                        let setParam = parameterList.findChild(NodeKind.PARAMETER).children[0];
-                        emitter.skipTo(setParam.findChild(NodeKind.NAME).end);
+                        let parameterNode = parameterList.findChild(NodeKind.PARAMETER);
+                        let nameTypeInit = parameterNode.findChild(NodeKind.NAME_TYPE_INIT);
+                        emitter.skipTo(nameTypeInit.findChild(NodeKind.NAME).end);
+                        type = nameTypeInit.findChild(NodeKind.TYPE);
                         if (type) {
                             emitType(emitter, type);
                         }
