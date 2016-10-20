@@ -1,6 +1,9 @@
-# as3-to-typescript
+# as3-to-ts
 
 > A tool that helps porting as3 codebase to typescript
+
+This fork has major improvements parsing and emitting code. It has also a
+"bridge" feature that allows implementing custom node visitors.
 
 This project is a fork of
 [simonbuchan/as3-to-typescript](https://github.com/simonbuchan/as3-to-typescript),

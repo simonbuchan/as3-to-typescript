@@ -1,6 +1,6 @@
 {
   "name": "as3-to-ts",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Tool to help porting ActionScript 3.0 code to TypeScript.",
   "main": "index.js",
   "bin": {
@@ -22,14 +22,22 @@
     "typescript",
     "compiler"
   ],
+  "publishConfig":{
+    "registry": "https://registry.npmjs.org/"
+  },
   "repository": {
     "type": "git",
-    "url": "git://github.com/fdecampredon/as3-to-typescript.git"
+    "url": "git://github.com/GoodgameStudios/as3-to-ts.git"
   },
   "bugs": {
-    "url": "https://github.com/fdecampredon/as3-to-typescript/issues"
+    "url": "https://github.com/GoodgameStudios/as3-to-ts/issues"
   },
   "author": "François de Campredon <francois.de.campredon@gmail.com>",
+  "contributors": [{
+    "name": "Endel Dreyer"
+  }, {
+    "name": "Simon Buchan"
+  }],
   "license": "Apache-2.0",
   "dependencies": {
     "fs-extra": "^0.24.0",
