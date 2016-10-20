@@ -57,7 +57,7 @@ function visitor (emitter: Emitter, node: Node): boolean {
     // translate `for..in` on Dictionaries into `for...of`
     // Example:
     //      Input:  for (var key:String in dictionary) {}
-    //      Output: for ([ key, _ ] of dictionary) {}
+    //      Output: for (let [ key, _ ] of dictionary) {}
     //
     //
     if (node.kind === NodeKind.FORIN || node.kind === NodeKind.FOREACH) {
@@ -72,7 +72,7 @@ function visitor (emitter: Emitter, node: Node): boolean {
                 deepestFirstNode = deepestFirstNode.children[0]
             } while (deepestFirstNode.children.length > 0);
 
-            emitter.insert("for ([ ");
+            emitter.insert("for (let [ ");
 
             if (node.kind === NodeKind.FORIN) {
                 // Named argument is the KEY on FORIN statements
@@ -89,8 +89,12 @@ function visitor (emitter: Emitter, node: Node): boolean {
             emitter.insert(" ] of ");
 
             emitter.skipTo(lookInTarget.end);
+
+            // visit loop target
             visitNodes(emitter, node.children[1].children);
-            // emitter.insert(")");
+
+            // visit block
+            visitNode(emitter, node.findChild(NodeKind.BLOCK));
 
             return true;
         }
