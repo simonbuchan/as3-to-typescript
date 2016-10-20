@@ -363,8 +363,10 @@ function emitImport(emitter: Emitter, node: Node): void {
             skipTo = node.end + Keywords.IMPORT.length + 2;
 
         } else {
-            let diff = node.text.length - ns.length + 5;
-            node.end += diff;
+            emitter.catchup(node.start);
+            node.end += node.text.length - ns.length + 6;
+            emitter.commentNode(node, true);
+            skipTo = node.end;
             console.warn(`emitter.ts: emitImport() => : nothing found to import on namespace ${ ns }. (import ${ node.text })`)
         }
 
