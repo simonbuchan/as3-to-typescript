@@ -103,7 +103,7 @@ function visitor (emitter: Emitter, node: Node): boolean {
             emitter.catchup(node.start);
             emitter.insert("()");
             emitter.skipTo(node.end);
-            return;
+            return true;
         }
     }
 
