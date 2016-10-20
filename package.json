@@ -1,6 +1,6 @@
 {
   "name": "as3-to-ts",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Tool to help porting ActionScript 3.0 code to TypeScript.",
   "main": "index.js",
   "bin": {

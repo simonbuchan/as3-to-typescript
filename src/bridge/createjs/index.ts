@@ -40,9 +40,12 @@ function visitor (emitter: Emitter, node: Node): boolean {
             let dotRightNode = node.children[0].children[1];
 
             if (dotLeftNode.text === "StringUtil") {
+                let contentNode = node.children[1].children[0];
+
                 emitter.catchup(node.start);
                 emitter.skipTo(node.end);
-                visitNode(emitter, node.children[1].children[0]);
+                visitNode(emitter, contentNode);
+                emitter.catchup(contentNode.end);
                 emitter.insert(`.${ dotRightNode.text }()`);
                 emitter.skipTo(node.end);
                 return true;
