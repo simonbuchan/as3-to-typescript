@@ -132,6 +132,7 @@ function visitor (emitter: Emitter, node: Node): boolean {
 
                 emitter.skipTo(rightNode.start);
                 visitNode(emitter, rightNode);
+                emitter.catchup(rightNode.end);
                 emitter.insert(")");
                 emitter.skipTo(node.end);
 
@@ -157,9 +158,15 @@ function visitor (emitter: Emitter, node: Node): boolean {
             emitter.insert(")");
 
             if (subsequentNodes.length > 0) {
-                emitter.skipTo(subsequentNodes[0].start-1);
+                // emitter.skipTo(subsequentNodes[0].start-1);
+                // visitNodes(emitter, subsequentNodes);
+                // emitter.skipTo(node.end-1);
+
+                emitter.skipTo(subsequentNodes[0].start);
+                emitter.insert("[ ");
                 visitNodes(emitter, subsequentNodes);
-                emitter.skipTo(node.end-1);
+                // emitter.skipTo(subsequentNodes[subsequentNodes.length-1].end);
+
             } else {
 
                 emitter.skipTo(node.end);
