@@ -53,6 +53,7 @@ Options:
 - having inline multiline comment break the parser (`var i = (/*comment*/true)`)
 - namespaces can't have TypeScript keywords, such as `enum`, `class`, etc. (not
   an issue if transpiled using `--commonjs`)
+- multiple property definitions generate invalid syntax (`public var velocityX:Number, velocityY:Number;`)
 
 ## Note
 

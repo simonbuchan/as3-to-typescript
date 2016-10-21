@@ -787,9 +787,13 @@ function emitMethod(emitter: Emitter, node: Node): void {
 
 function emitPropertyDecl(emitter: Emitter, node: Node, isConst = false): void {
     emitClassField(emitter, node);
-    let name = node.findChild(NodeKind.NAME_TYPE_INIT);
-    emitter.consume(isConst ? Keywords.CONST : Keywords.VAR, name.start);
-    visitNode(emitter, name);
+    let names = node.findChildren(NodeKind.NAME_TYPE_INIT)
+    names.forEach((name, i) => {
+        if (i===0) {
+            emitter.consume(isConst ? Keywords.CONST : Keywords.VAR, name.start);
+        }
+        visitNode(emitter, name);
+    })
 }
 
 
