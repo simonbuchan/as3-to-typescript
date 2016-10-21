@@ -213,7 +213,7 @@ export default class Emitter {
     }
 
     get hasBridge (): boolean {
-        return this.options.bridge !== null;
+        return this.options.bridge !== undefined;
     }
 
     declareInScope(declaration: Declaration): void {

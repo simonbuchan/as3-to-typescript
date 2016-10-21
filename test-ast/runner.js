@@ -40,7 +40,7 @@ function generate() {
     var source = readNormalizedSync(fixture.source);
     var ast = parse(fixture.source, source);
     fs.outputFileSync(fixture.generatedAst, JSON.stringify(ast, null, 2));
-    var output = emit(ast, source);
+    var output = emit(ast, source, {});
     fs.outputFileSync(fixture.generatedTs, output.replace(/\r\n?/g, '\n'));
   });
 }

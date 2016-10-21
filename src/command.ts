@@ -62,7 +62,7 @@ export function run(): void {
         fs.mkdirSync(outputDir);
     }
 
-    let bridge = (args['bridge'] && require("./bridge/" + args['bridge']).default) || null;
+    let bridge = (args['bridge'] && require("./bridge/" + args['bridge']).default);
     let overwrite = !!args['overwrite'];
     let commonjs = args['commonjs'];
     let interactive = args['interactive'];

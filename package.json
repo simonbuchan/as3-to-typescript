@@ -10,9 +10,9 @@
     "install": "typings install && npm run compile",
     "pretest": "npm run -s compile",
     "test": "npm run -s generate && npm run -s compare",
-    "generate": "node -r source-map-support/register test/runner generate",
-    "accept": "node -r source-map-support/register test/runner accept",
-    "compare": "node -r source-map-support/register test/runner compare || echo Comparison failed",
+    "generate": "node -r source-map-support/register test-ast/runner generate",
+    "accept": "node -r source-map-support/register test-ast/runner accept",
+    "compare": "node -r source-map-support/register test-ast/runner compare || echo Comparison failed",
     "compile": "tsc --project src",
     "watch": "tsc --project src --watch"
   },
