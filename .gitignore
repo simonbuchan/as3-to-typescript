@@ -13,4 +13,5 @@ npm-debug.log
 
 # Tests
 /test/fixtures/generated
+/test/generated
 /test/single
