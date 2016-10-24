@@ -100,6 +100,7 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.IDENTIFIER]: emitIdent,
     [NodeKind.XML_LITERAL]: emitXMLLiteral,
     [NodeKind.CONST_LIST]: emitConstList,
+    [NodeKind.NAME_TYPE_INIT]: emitNameTypeInit,
     [NodeKind.VALUE]: emitObjectValue,
     [NodeKind.DOT]: emitDot,
     [NodeKind.LITERAL]: emitLiteral,
@@ -131,6 +132,7 @@ export function visitNode(emitter: Emitter, node: Node): void {
         emitter.catchup(node.start);
         visitNodes(emitter, node.children);
     };
+
     visitor(emitter, node);
 }
 
@@ -218,7 +220,19 @@ export default class Emitter {
     }
 
     declareInScope(declaration: Declaration): void {
-        this.scope.declarations.push(declaration);
+        let previousDeclaration: Declaration = null;
+        for (var i = 0, len = this.scope.declarations.length; i < len; i++) {
+            if (this.scope.declarations[i].name === declaration.name) {
+                previousDeclaration = this.scope.declarations[i];
+            }
+        }
+
+        if (previousDeclaration) {
+            if (declaration.type !== undefined) previousDeclaration.type = declaration.type;
+            if (declaration.bound !== undefined) previousDeclaration.bound = declaration.bound;
+        } else {
+            this.scope.declarations.push(declaration);
+        }
     }
 
     findDefInScope(text: string): Declaration {
@@ -759,6 +773,15 @@ function emitObjectValue(emitter: Emitter, node: Node): void {
     visitNodes(emitter, node.children);
 }
 
+function emitNameTypeInit(emitter: Emitter, node: Node): void {
+    emitter.declareInScope({
+        name: node.findChild(NodeKind.NAME).text,
+        type: getDeclarationType(emitter, node)
+    });
+    emitter.catchup(node.start);
+    visitNodes(emitter, node.children);
+}
+
 function emitMethod(emitter: Emitter, node: Node): void {
     let name = node.findChild(NodeKind.NAME);
     if (node.kind !== NodeKind.FUNCTION || name.text !== emitter.currentClassName) {
@@ -1007,7 +1030,7 @@ function emitRelation(emitter: Emitter, node: Node): void {
         //       e.g. (myVector as Vector.<Boolean>)
         if (node.lastChild.kind === NodeKind.IDENTIFIER) {
             emitter.insert('(<');
-            emitter.insert(node.lastChild.text);
+            emitter.insert(emitter.getTypeRemap(node.lastChild.text) || node.lastChild.text);
             emitter.insert('>');
             visitNodes(emitter, node.getChildUntil(NodeKind.AS));
             emitter.catchup(as.start);
