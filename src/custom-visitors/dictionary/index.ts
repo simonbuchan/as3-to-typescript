@@ -1,3 +1,7 @@
+/**
+ * Replace `Dictionary` to `Map<any, any>`
+ */
+
 import Node, { createNode } from "../../syntax/node";
 import NodeKind from "../../syntax/nodeKind";
 import Emitter, {
@@ -7,51 +11,7 @@ import Emitter, {
     emitIdent
 } from "../../emit/emitter";
 
-import { getMapNodes } from "./utils";
-
-const util = require('util');
-
-// import translations
-let imports = new Map<RegExp, string>();
-imports.set(/^flash.[a-z]+\.([A-Za-z]+)/, "createjs.$1");
-
-function visitor (emitter: Emitter, node: Node): boolean {
-
-    //
-    // translate `MouseEvent.EVENT_NAME` to `"eventname"`
-    //
-    if (node.kind === NodeKind.DOT) {
-        if (node.children[0].text === "MouseEvent") {
-            emitter.catchup(node.start);
-            emitter.insert("\"" + node.children[1].text.replace("_", "").toLowerCase() + "\"");
-            emitter.skipTo(node.end);
-
-            return true;
-        }
-    }
-
-    //
-    // translate `StringUtil.trim(str)` into `str.trim()`
-    //
-    if (node.kind === NodeKind.CALL) {
-        let dotNode = node.children[0];
-        if (dotNode.kind === NodeKind.DOT) {
-            let dotLeftNode = node.children[0].children[0];
-            let dotRightNode = node.children[0].children[1];
-
-            if (dotLeftNode.text === "StringUtil") {
-                let contentNode = node.children[1].children[0];
-
-                emitter.catchup(node.start);
-                emitter.skipTo(node.end);
-                visitNode(emitter, contentNode);
-                emitter.catchup(contentNode.end);
-                emitter.insert(`.${ dotRightNode.text }()`);
-                emitter.skipTo(node.end);
-                return true;
-            }
-        }
-    }
+function visit (emitter: Emitter, node: Node): boolean {
 
     //
     // translate `for..in` on Dictionaries into `for...of`
@@ -223,57 +183,28 @@ function visitor (emitter: Emitter, node: Node): boolean {
     return false;
 }
 
-function postProcessing (emitterOptions: EmitterOptions, contents: string): string {
-    // Remove dictionary imports
-    contents = contents.replace(/import { Dictionary } from ".*createjs\/([a-zA-Z]+)";/gm, "");
+function getMapNodes (emitter: Emitter, node: Node) {
+    let nodes: Node[] = [];
 
-    // Remove StringUtil imports (mx.utils.StringUtil)
-    contents = contents.replace(/import { StringUtil } from ".*mx\/utils\/StringUtil";/gm, "");
+    if (node.kind === NodeKind.ARRAY_ACCESSOR) {
+        let definition = emitter.findDefInScope(node.children[0].text);
 
-    // fix createjs imports if using CommonJS
-    if (!emitterOptions.useNamespaces) {
-        contents = contents.replace(/import { ([a-zA-Z]+) } from ".*createjs\/([a-zA-Z]+)";/gm, "import $1 = createjs.$1;");
-    }
-
-    // Replace all 'var' to block-scoped 'let'
-    contents = contents.replace(/\b(var)\b/gm, "let");
-
-
-    // 1. Replace all listeners callbacks into arrow functions (to keep class scope)
-    contents = contents.replace(
-        /(public|private|protected)( static)?[^\w]+(\w+)([a-zA-Z\ ]+)?\(([^:]+.*Event.*)\).*(void)/g,
-        "$1$2 $3 = ($5) =>"
-    );
-
-    // 2. Replace all `super.on{CallbackName}` calls.
-    let overridesRegExp = /^(.*)\/\*override\*\/.*(public|private|protected)[^\w]+(\w+)[a-zA-Z\ ]+\([^:]+.*Event.*\)/gm;
-    let callbackOverrides = contents.match(overridesRegExp);
-    if (callbackOverrides && callbackOverrides.length > 0) {
-        for (let i = 0, len = callbackOverrides.length; i < len; i++) {
-            let matches = overridesRegExp.exec(callbackOverrides[i]);
-            if (matches) {
-                contents = contents.replace(matches.input, `${matches[1]}protected super_${matches[3]} = this.${matches[3]};\n${matches.input}`);
-                // 3. Replace occurrences of super calls on callbacks
-                contents = contents.replace(`super.${ matches[3] }`, `this.super_${ matches[3] }`);
-            }
+        if (definition && definition.type === "Map<any, any>") {
+            nodes = node.children;
         }
     }
+
+    return nodes;
+}
+
+function postProcessing (emitterOptions: EmitterOptions, contents: string): string {
+    // Remove dictionary imports
+    contents = contents.replace(/import { Dictionary } from "[^"]+";/gm, "");
 
     return contents;
 }
 
-const typeMap: { [id: string]: string } = {
-    'Sprite': 'Container'
-}
-
-const identifierMap: { [id: string]: string } = {
-    'Sprite': 'Container'
-}
-
 export default {
-    imports: imports,
-    visitor: visitor,
-    postProcessing: postProcessing,
-    typeMap: typeMap,
-    identifierMap: identifierMap,
+    visit: visit,
+    postProcessing: postProcessing
 }

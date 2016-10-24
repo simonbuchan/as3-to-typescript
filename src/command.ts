@@ -8,6 +8,7 @@ import fs = require('fs-extra');
 import path = require('path');
 import parseArgs = require('minimist');
 import readlineSync = require('readline-sync');
+import { CustomVisitor } from "./custom-visitors";
 
 import { getLockTimestamp, updateLockTimestamp } from "./tool/lock";
 
@@ -30,14 +31,14 @@ function displayHelp(): void {
     console.log('');
     console.log('   Available options:');
     console.log('       --commonjs: ignore AS3 packages on TypeScript output.');
-    console.log('       --bridge: use custom a output visitor. (--bridge createjs)');
+    console.log('       --visitors: use custom a output visitor. (--visitors dictionary,createjs)');
     console.log('       --interactive: ask to write the output in case it was manually modified');
     console.log('       --overwrite: overwrite output files');
     console.log('');
 }
 
 export function run(): void {
-    let args = parseArgs(process.argv);
+    let args = parseArgs(process.argv, { '--': true });
 
     if (args._.length === 2) {
         displayHelp();
@@ -62,7 +63,9 @@ export function run(): void {
         fs.mkdirSync(outputDir);
     }
 
-    let bridge = (args['bridge'] && require("./bridge/" + args['bridge']).default);
+    let visitors = (args['visitors'])
+        ? args['visitors'].split(",").map((name: string) => require(`./custom-visitors/${name}`).default)
+        : []
     let overwrite = !!args['overwrite'];
     let commonjs = args['commonjs'];
     let interactive = args['interactive'];
@@ -99,7 +102,7 @@ export function run(): void {
     let emitterOptions: EmitterOptions = {
         lineSeparator: '\n',
         useNamespaces: !commonjs,
-        bridge: bridge,
+        customVisitors: visitors,
         definitionsByNamespace: definitionsByNamespace
     };
 
@@ -123,9 +126,11 @@ export function run(): void {
         let ast = parse(path.basename(file), content);
         let contents = emit(ast, content, emitterOptions);
 
-        if (bridge && bridge.postProcessing) {
-            contents = bridge.postProcessing(emitterOptions, contents);
-        }
+        visitors.forEach((visitor: CustomVisitor) => {
+            if (visitor.postProcessing) {
+                contents = visitor.postProcessing(emitterOptions, contents);
+            }
+        })
 
         fs.outputFileSync(outputFile, contents.replace(/\r\n/g, "\n"));
         fs.utimesSync(outputFile, nextLockTimestamp, nextLockTimestamp);

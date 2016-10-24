@@ -2,7 +2,7 @@ import NodeKind from '../syntax/nodeKind';
 import * as Keywords from '../syntax/keywords';
 import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
-import { Bridge } from "../bridge"
+import { CustomVisitor } from "../custom-visitors"
 
 const util = require('util');
 
@@ -68,7 +68,7 @@ interface Declaration {
 export interface EmitterOptions {
     lineSeparator: string;
     useNamespaces: boolean;
-    bridge?: Bridge;
+    customVisitors: CustomVisitor[];
     definitionsByNamespace?: {[ns: string]: string[]};
 }
 
@@ -119,9 +119,10 @@ export function visitNode(emitter: Emitter, node: Node): void {
         return;
     }
 
-    // use custom bridge visitor. allow custom node manipulation
-    if (emitter.hasBridge) {
-        if (emitter.options.bridge.visitor(emitter, node) === true) {
+    // use custom visitor. allow custom node manipulation
+    for (let i=0, l = emitter.options.customVisitors.length; i < l; i++) {
+        let customVisitor = emitter.options.customVisitors[i];
+        if (customVisitor.visit(emitter, node) === true) {
             return;
         }
     }
@@ -168,7 +169,11 @@ export default class Emitter {
 
     constructor(source: string, options?: EmitterOptions) {
         this.source = source;
-        this.options = assign({lineSeparator: '\n', useNamespaces: false}, options || {});
+        this.options = assign({
+            lineSeparator: '\n',
+            useNamespaces: false,
+            customVisitors: []
+        }, options || {});
     }
 
     emit(ast: Node): string {
@@ -210,10 +215,6 @@ export default class Emitter {
             }
         }
         return null;
-    }
-
-    get hasBridge (): boolean {
-        return this.options.bridge !== undefined;
     }
 
     declareInScope(declaration: Declaration): void {
@@ -293,19 +294,23 @@ export default class Emitter {
      * Utilities
      */
     getTypeRemap(text: string): string {
-        return (
-            this.options.bridge &&
-            this.options.bridge.typeMap &&
-            this.options.bridge.typeMap[ text ]
-        ) || TYPE_REMAP[ text ];
+        for (let i=0, l=this.options.customVisitors.length; i < l; i++) {
+            let customVisitor = this.options.customVisitors[i];
+            if (customVisitor.typeMap && customVisitor.typeMap[ text ]) {
+                return customVisitor.typeMap[ text ];
+            }
+        }
+        return TYPE_REMAP[text];
     }
 
     getIdentifierRemap(text: string): string {
-        return (
-            this.options.bridge &&
-            this.options.bridge.identifierMap &&
-            this.options.bridge.identifierMap[ text ]
-        ) || IDENTIFIER_REMAP[text];;
+        for (let i=0, l=this.options.customVisitors.length; i < l; i++) {
+            let customVisitor = this.options.customVisitors[i];
+            if (customVisitor.identifierMap && customVisitor.identifierMap[ text ]) {
+                return customVisitor.identifierMap[ text ];
+            }
+        }
+        return IDENTIFIER_REMAP[text];
     }
 
 }
@@ -374,15 +379,27 @@ function emitImport(emitter: Emitter, node: Node): void {
         return;
     }
 
-    let text = node.text;
+    let text = node.text.concat();
+    let hasCustomVisitor = false;
 
-    // apply "bridge" translation
-    if (emitter.hasBridge) {
-        text = node.text.concat();
-        emitter.options.bridge.imports.forEach((replacement, regexp) => {
-            text = text.replace(regexp, replacement);
-        });
+    // apply custom visitor import maps
+    for (let i=0, l = emitter.options.customVisitors.length; i < l; i++) {
+        let customVisitor = emitter.options.customVisitors[i];
+        if (customVisitor.imports) {
+            hasCustomVisitor = true;
+            customVisitor.imports.forEach((replacement, regexp) => {
+                text = text.replace(regexp, replacement);
+            });
+        }
     }
+
+    // // apply "bridge" translation
+    // if (emitter.hasBridge && emitter.options.bridge.imports) {
+    //     text = node.text.concat();
+    //     emitter.options.bridge.imports.forEach((replacement, regexp) => {
+    //         text = text.replace(regexp, replacement);
+    //     });
+    // }
 
     if (emitter.options.useNamespaces) {
         emitter.catchup(node.start);
@@ -392,8 +409,8 @@ function emitImport(emitter: Emitter, node: Node): void {
         let name = split[split.length - 1];
         emitter.insert(name + ' = ');
 
-        // apply "bridge" translation
-        if (emitter.hasBridge) {
+        // apply custom visitor translation
+        if (hasCustomVisitor) {
             let diff = node.text.length - text.length;
 
             emitter.insert(text);

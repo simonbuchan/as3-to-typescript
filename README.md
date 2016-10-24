@@ -2,8 +2,8 @@
 
 > A tool that helps porting as3 codebase to typescript
 
-This fork has major improvements parsing and emitting code. It has also a
-"bridge" feature that allows implementing custom node visitors.
+This fork has major improvements parsing and emitting code. It has also a custom
+node visitor that allows extending the default behaviour.
 
 This project is a fork of
 [simonbuchan/as3-to-typescript](https://github.com/simonbuchan/as3-to-typescript),
@@ -31,13 +31,15 @@ You should have `as3-to-ts` now globaly available in your commandline.
 ## Usage
 
 ```
-as3-to-ts <sourceDir> <outputDir> [--commonjs] [--bridge createjs] [--interactive] [--overwrite]
+as3-to-ts <sourceDir> <outputDir> [--commonjs] [--visitors dictionary,stringutil,createjs] [--interactive] [--overwrite]
 ```
 
 Options:
 
 - `--commonjs`: export .ts files using CommonJS's import style.
-- `--bridge [name]`: use custom visitor. implemented under `src/bridge/[name]`
+- `--visitors [name]`: use custom visitors, separated by comma. implemented
+  under `src/custom-visitor/[name]` (currently available: `dictionary`,
+  `stringutil`, `createjs`)
 - `--overwrite`: force overwrite of previously-converted files.
 - `--interactive`: if you've manually changed a generated `.ts` file, you'll be
   asked if you want to overwrite it or not.

@@ -1,4 +1,5 @@
-import { Dictionary } from "../flash/utils/Dictionary";
+import { Btn_InfoDialog_DCEvnt } from "./Btn_InfoDialog_DCEvnt";
+
 
 	export class DictionaryTest
 	{
@@ -6,10 +7,11 @@ import { Dictionary } from "../flash/utils/Dictionary";
 
 		public methodName(variable: any): void
 		{
-			delete this.dict[ variable[0] ];
-			delete this.dict[ variable[ this.otherCall() ][ this.anotherCall() ] ];
-			this.dict[ variable[0] ] = 4;
-			this.dict[ variable[ this.otherCall() ][ this.anotherCall() ] ] = this.something[ 6 ];
+			let something: Library.DonateCashEvent.Btn_InfoDialog_DCEvnt = new Library.DonateCashEvent.Btn_InfoDialog_DCEvnt();
+			this.dict.delete(variable[0]);
+			this.dict.delete(variable[ this.otherCall() ][ this.anotherCall() ]);
+			this.dict.set(variable[0], 4);
+			this.dict.set(variable[ this.otherCall() ][ this.anotherCall() ], something[ 6 ]);
 		}
 
 	}
