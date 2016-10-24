@@ -23,7 +23,7 @@ function visit (emitter: Emitter, node: Node): boolean {
 
                 emitter.catchup(node.start);
                 emitter.skipTo(node.end);
-                visit(emitter, contentNode);
+                visitNode(emitter, contentNode);
                 emitter.catchup(contentNode.end);
                 emitter.insert(`.${ dotRightNode.text }()`);
                 emitter.skipTo(node.end);
