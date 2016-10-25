@@ -9,6 +9,7 @@ import Emitter, {
 
 // import translations
 let imports = new Map<RegExp, string>();
+imports.set(/^flash.display.DisplayObjectContainer/, "createjs.Container");
 imports.set(/^flash.[a-z]+\.([A-Za-z]+)/, "createjs.$1");
 
 function visit (emitter: Emitter, node: Node): boolean {
@@ -62,10 +63,12 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
 }
 
 const typeMap: { [id: string]: string } = {
+    'DisplayObjectContainer': 'Container',
     'Sprite': 'Container'
 }
 
 const identifierMap: { [id: string]: string } = {
+    'DisplayObjectContainer': 'Container',
     'Sprite': 'Container'
 }
 
