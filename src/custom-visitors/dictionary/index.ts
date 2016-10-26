@@ -49,8 +49,8 @@ function visit (emitter: Emitter, node: Node): boolean {
             }
             emitter.insert(`)`);
 
-            // // visit block
-            // visitNode(emitter, node.findChild(NodeKind.BLOCK));
+            // visit block
+            visitNode(emitter, node.findChild(NodeKind.BLOCK));
 
             return true;
         }
