@@ -19,6 +19,7 @@ const GLOBAL_NAMES = [
 
 const TYPE_REMAP: { [id: string]: string } = {
     'Class': 'Object',
+    'Object': 'any',
     'String': 'string',
     'Boolean': 'boolean',
     'Number': 'number',
