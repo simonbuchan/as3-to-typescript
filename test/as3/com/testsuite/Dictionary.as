@@ -1,18 +1,43 @@
-package
+package com.goodgamestudios.utils
 {
+
 	import flash.utils.Dictionary;
 
-	public class DictionaryTest
+	public class DictionaryUtil
 	{
-		private var dict:Dictionary = new Dictionary();
 
-		public function methodName(variable: *): void
+		public static function clone( original:Dictionary ):Dictionary
 		{
-			var something: Btn_InfoDialog_DCEvnt = new Btn_InfoDialog_DCEvnt();
-			delete dict[ variable[0] ];
-			delete dict[ variable[ otherCall() ][ anotherCall() ] ];
-			dict[ variable[0] ] = 4;
-			dict[ variable[ otherCall() ][ anotherCall() ] ] = something[ 6 ];
+			BasicVersions.itemXMLVersion = StringUtil.trim( version.substr( version.indexOf( "=" ) + 1 ) );
+
+			var cloned:Dictionary = new Dictionary();
+			for (var key:Object in original)
+			{
+				cloned[key] = original[key];
+			}
+			return cloned;
+		}
+
+		/**
+		 * Concatenates any number of dictionaries
+		 *
+		 * @param dictionaries comma separated list of dictionaries
+		 * @return concatenated dictionary
+		 *
+		 */
+		public static function concatDictionaries( ...dictionaries ):Dictionary
+		{
+			var concatenatedDictionary:Dictionary = dictionaries[0] as Dictionary;
+			var dictionary:Dictionary;
+			for (var i:int = 1; i < dictionaries.length; i++)
+			{
+				dictionary = dictionaries[i];
+				for (var key:Object in dictionary)
+				{
+					concatenatedDictionary[key] = dictionary[key];
+				}
+			}
+			return concatenatedDictionary;
 		}
 
 	}

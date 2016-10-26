@@ -24,7 +24,6 @@ function visit (emitter: Emitter, node: Node): boolean {
         let lookInTarget = node.findChild(NodeKind.IN).findChild(NodeKind.IDENTIFIER);
         let definition = lookInTarget && emitter.findDefInScope(lookInTarget.text);
         if (definition && definition.type === "Map<any, any>") {
-
             emitter.catchup(node.start);
 
             let deepestFirstNode = node;
@@ -32,29 +31,26 @@ function visit (emitter: Emitter, node: Node): boolean {
                 deepestFirstNode = deepestFirstNode.children[0]
             } while (deepestFirstNode.children.length > 0);
 
-            emitter.insert("for (let [ ");
+            emitter.insert(`for (let ${ deepestFirstNode.text } of `);
+            emitter.insert(`Array.from(`);
 
-            if (node.kind === NodeKind.FORIN) {
-                // Named argument is the KEY on FORIN statements
-                emitter.insert(deepestFirstNode.text);
-                emitter.insert(", _");
-
-            } else if (node.kind === NodeKind.FOREACH) {
-                // Named argument is the VALUE on FOREACH statements
-                emitter.insert("_, ");
-                emitter.insert(deepestFirstNode.text);
-
-            }
-
-            emitter.insert(" ] of ");
-
-            emitter.skipTo(lookInTarget.end);
+            emitter.skipTo(lookInTarget.start);
+            emitIdent(emitter, lookInTarget);
 
             // visit loop target
-            visitNodes(emitter, node.children[1].children);
+            // visitNodes(emitter, node.children[1].children);
+            emitter.skipTo(lookInTarget.end);
 
-            // visit block
-            visitNode(emitter, node.findChild(NodeKind.BLOCK));
+            if (node.kind === NodeKind.FORIN) {
+                emitter.insert('.keys()');
+
+            } else if (node.kind === NodeKind.FOREACH) {
+                emitter.insert('.values()');
+            }
+            emitter.insert(`)`);
+
+            // // visit block
+            // visitNode(emitter, node.findChild(NodeKind.BLOCK));
 
             return true;
         }
