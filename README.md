@@ -11,6 +11,11 @@ which is a fork of [the original
 as3-to-typescript](https://github.com/fdecampredon/as3-to-typescript)
 implementation.
 
+## Projects ported using `as3-to-ts`
+
+- [RobotlegsJS](https://github.com/GoodgameStudios/RobotlegsJS)
+- [SignalsJS](https://github.com/GoodgameStudios/SignalJS)
+
 ## Installation
 
 **Option 1: via npm:**:
