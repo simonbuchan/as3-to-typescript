@@ -94,6 +94,7 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.SHORT_VECTOR]: emitShortVector,
     [NodeKind.TYPE]: emitType,
     [NodeKind.CALL]: emitCall,
+    [NodeKind.CATCH]: emitCatch,
     [NodeKind.NEW]: emitNew,
     [NodeKind.RELATION]: emitRelation,
     [NodeKind.OP]: emitOp,
@@ -1023,6 +1024,13 @@ function emitCall(emitter: Emitter, node: Node): void {
         emitter.catchup(node.start);
     }
 
+    visitNodes(emitter, node.children);
+}
+
+
+function emitCatch(emitter: Emitter, node: Node): void {
+    emitter.declareInScope({ name: node.children[0].text })
+    emitter.catchup(node.start);
     visitNodes(emitter, node.children);
 }
 
