@@ -44,11 +44,6 @@ function visit (emitter: Emitter, node: Node): boolean {
     return false;
 }
 
-const typeMap: { [id: string]: string } = {
-    'XMLList': 'XML'
-};
-
 export default {
-    visit: visit,
-    typeMap: typeMap,
+    visit: visit
 }
