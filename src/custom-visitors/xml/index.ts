@@ -2,9 +2,7 @@ import Node, { createNode } from "../../syntax/node";
 import NodeKind from "../../syntax/nodeKind";
 import Emitter, {
     EmitterOptions,
-    visitNode,
-    visitNodes,
-    emitIdent
+    visitNode
 } from "../../emit/emitter";
 
 function visit (emitter: Emitter, node: Node): boolean {
@@ -23,7 +21,7 @@ function visit (emitter: Emitter, node: Node): boolean {
         let leftLiteral = node.children[0].findChild(NodeKind.LITERAL);
         let rightNode = node.children[1];
 
-        if (leftLiteral.text.indexOf('@') === 0) {
+        if (leftLiteral && leftLiteral.text.indexOf('@') === 0) {
             leftLiteral.text = "attribute"
             visitNode(emitter, leftLiteral);
             emitter.skipTo(node.children[0].end+1);
