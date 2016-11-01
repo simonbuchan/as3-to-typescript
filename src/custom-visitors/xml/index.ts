@@ -11,7 +11,7 @@ function visit (emitter: Emitter, node: Node): boolean {
         node.kind === NodeKind.TYPE &&
         (node.text === "XML" || node.text === "XMLList")
     ) {
-        emitter.ensureImportIdentifier("XML", "xml-e4x", false);
+        emitter.ensureImportIdentifier("XML, XMLList", "xml-e4x", false);
     }
 
     // Converts
