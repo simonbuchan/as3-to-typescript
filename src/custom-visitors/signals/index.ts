@@ -45,7 +45,7 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
     if (signalAddCalls.length > 0)
     {
         let regex = new RegExp("(public|private|protected)( static)?[\ ]+("+ signalAddCalls.join("|") +")\(([^\)]+)?\)[^\n]+(void)", "gm");
-        contents = contents.replace(regex, "$1$2 $3 = $5) =>");
+        contents = contents.replace(regex, "$1$2 $3 = $5): void =>");
     }
 
     return contents;

@@ -42,15 +42,17 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
     // 1. Replace all listeners callbacks into arrow functions (to keep class scope)
     contents = contents.replace(
         /(public|private|protected)( static)?[^\w]+(\w+)([a-zA-Z\ ]+)?\(([^:]+.*Event.*)\).*(void)/g,
-        "$1$2 $3 = ($5) =>"
+        "$1$2 $3 = ($5): void =>"
     );
 
     // 2. Replace all `super.on{CallbackName}` calls.
-    let overridesRegExp = /^(.*)\/\*override\*\/.*(public|private|protected)[^\w]+(\w+)[a-zA-Z\ ]+\([^:]+.*Event.*\)/gm;
+    let overridesRegExp = /^(.*)\/\*override\*\/.*(public|private|protected)[^\w]+(\w+)[a-zA-Z\ =]+\([^:]+.*Event.*\)/gm;
     let callbackOverrides = contents.match(overridesRegExp);
+    console.log(callbackOverrides);
     if (callbackOverrides && callbackOverrides.length > 0) {
         for (let i = 0, len = callbackOverrides.length; i < len; i++) {
             let matches = overridesRegExp.exec(callbackOverrides[i]);
+            console.log(matches);
             if (matches) {
                 contents = contents.replace(matches.input, `${matches[1]}protected super_${matches[3]} = this.${matches[3]};\n${matches.input}`);
                 // 3. Replace occurrences of super calls on callbacks
