@@ -41,14 +41,13 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
 
     // 1. Replace all listeners callbacks into arrow functions (to keep class scope)
     contents = contents.replace(
-        /(public|private|protected)( static)?[^\w]+(\w+)([a-zA-Z\ ]+)?\(([^:]+.*Event.*)\).*(void)/g,
+        /(public|private|protected)( static)?[\ ]+(\w+)([a-zA-Z\ ]+)?\(([^:]+.*Event.*)\).*(void)/g,
         "$1$2 $3 = ($5): void =>"
     );
 
     // 2. Replace all `super.on{CallbackName}` calls.
     let overridesRegExp = /^(.*)\/\*override\*\/.*(public|private|protected)[^\w]+(\w+)[a-zA-Z\ =]+\([^:]+.*Event.*\)/gm;
     let callbackOverrides = contents.match(overridesRegExp);
-    console.log(callbackOverrides);
     if (callbackOverrides && callbackOverrides.length > 0) {
         for (let i = 0, len = callbackOverrides.length; i < len; i++) {
             let matches = overridesRegExp.exec(callbackOverrides[i]);
