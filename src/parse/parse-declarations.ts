@@ -6,10 +6,9 @@ import * as Operators from '../syntax/operators';
 import {startsWith} from '../string';
 import AS3Parser, {nextToken, nextTokenIgnoringDocumentation, consume, skip, tokIs} from './parser';
 import {parseQualifiedName, parseBlock, parseParameterList, parseNameTypeInit} from './parse-common';
-import {ASDOC_COMMENT, MULTIPLE_LINES_COMMENT} from './parser';
+import {VERBOSE, ASDOC_COMMENT, MULTIPLE_LINES_COMMENT} from './parser';
 import {parseExpression} from './parse-expressions';
 import {parseOptionalType} from './parse-types';
-
 
 /**
  * tok is empty, since nextToken has not been called before
@@ -46,6 +45,11 @@ function parsePackage(parser:AS3Parser):Node {
 
 
 function parsePackageContent(parser:AS3Parser):Node {
+
+    if(VERBOSE >= 1) {
+        console.log("        parsePackageContent() - token: " + parser.tok.text);
+    }
+
     let result:Node = createNode(NodeKind.CONTENT, {start: parser.tok.index});
     let modifiers:Token[] = [];
     let meta:Node[] = [];
@@ -96,10 +100,14 @@ function parsePackageContent(parser:AS3Parser):Node {
 
 
 function parseImport(parser:AS3Parser):Node {
+
     let tok = consume(parser, Keywords.IMPORT);
     let name = parseImportName(parser);
     let result:Node = createNode(NodeKind.IMPORT, {start: tok.index, text: name});
     skip(parser, Operators.SEMI_COLUMN);
+    if(VERBOSE >= 2) {
+        console.log("          parseImport() - name: " + name);
+    }
     return result;
 }
 
@@ -241,11 +249,19 @@ function parseImplementsList(parser:AS3Parser):Node {
 
 
 function parseClassContent(parser:AS3Parser):Node {
+
+    if(VERBOSE >= 1) {
+        console.log("        parseClassContent() - token: " + parser.tok.text);
+    }
+
     let result:Node = createNode(NodeKind.CONTENT, {start: parser.tok.index});
     let modifiers:Token[] = [];
     let meta:Node[] = [];
 
     while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
+        if(VERBOSE >= 2) {
+            console.log("          keyword: " + parser.tok.text + ", index: " + parser.tok.index);
+        }
         if (tokIs(parser, Operators.LEFT_CURLY_BRACKET)) {
             result.children.push(parseBlock(parser));
         }
@@ -367,6 +383,7 @@ function parseInterfaceContent(parser:AS3Parser):Node {
 
 
 function parseClassFunctions(parser:AS3Parser, result:Node, modifiers:Token[], meta:Node[]):void {
+
     result.children.push(parseFunction(parser, meta, modifiers));
     meta.length = 0;
     modifiers.length = 0;
@@ -374,8 +391,13 @@ function parseClassFunctions(parser:AS3Parser, result:Node, modifiers:Token[], m
 
 
 function parseFunction(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
+
     let {type, name, params, returnType} = doParseSignature(parser);
     let result:Node = createNode(findFunctionTypeFromTypeNode(type), {start: type.start, end: -1, text: type.text});
+
+    if(VERBOSE >= 2) {
+        console.log("        --> FUNCTION: " + name.text + "()");
+    }
 
     if (parser.currentAsDoc) {
         result.children.push(parser.currentAsDoc);
@@ -430,6 +452,9 @@ function parseFunctionSignature(parser:AS3Parser):Node {
 
 
 function doParseSignature(parser:AS3Parser) {
+
+    // console.log("        parse-declarations.ts - doParseSignature()");
+
     let tok = consume(parser, Keywords.FUNCTION);
     let type:Node = createNode(NodeKind.TYPE, {tok: tok});
 

@@ -30,7 +30,7 @@
  */
 
 
-
+import {VERBOSE, WARNINGS} from './parser';
 import Token from './token';
 import * as Keywords from '../syntax/keywords';
 import {startsWith, endsWith} from '../string';
@@ -52,11 +52,16 @@ export interface CheckPoint {
  * @author xagnetti
  */
 export default class AS3Scanner {
+
     inVector: boolean;
     index: number;
     content: string = '';
+    previousCharacter = '';
+    currentLine = 0;
+    token:Token;
 
     setContent(content: string = ''): void {
+        this.currentLine = 0;
         this.content = content;
         this.index = -1;
     }
@@ -142,11 +147,38 @@ export default class AS3Scanner {
 
 
 function nextToken(scanner: AS3Scanner): Token {
+
+    if(VERBOSE >= 3) {
+        console.log("            scanner - index: " + scanner.index);
+    }
+
     if (scanner.index >= scanner.content.length) {
+        if(VERBOSE >= 3) {
+            console.log("            scanner - EOF");
+        }
         return scanner.createToken(Keywords.EOF, { skip: false });
     }
 
     let currentCharacter = scanner.nextNonWhitespaceCharacter();
+    if(VERBOSE >= 3) {
+        console.log("            scanner - char: " + currentCharacter);
+    }
+
+    // Count lines.
+    if(currentCharacter === "\n") {
+        scanner.currentLine++;
+    }
+
+    // Check for missing semicolons in break or continue statements.
+    if(WARNINGS >= 2) {
+        if(currentCharacter === "\n" && scanner.previousCharacter !== ";") {
+            if( scanner.token && (scanner.token.text === Keywords.BREAK || scanner.token.text === Keywords.CONTINUE) ) {
+                console.log("*** WARNING *** Dangerous missing semicolon near line: " + scanner.currentLine + " after '" + scanner.token.text + "' statement.");
+            }
+        }
+    }
+    scanner.previousCharacter = currentCharacter;
+
     switch (currentCharacter) {
         case '\n':
             return scanner.createToken(currentCharacter);
@@ -201,10 +233,18 @@ function nextToken(scanner: AS3Scanner): Token {
             break;
     }
 
-    let token = scanWord(scanner, currentCharacter);
-    return token.text.length === 0 ? scanner.nextToken() : token;
-}
+    scanner.token = scanWord(scanner, currentCharacter);
+    if(VERBOSE >= 3) {
+        console.log("            scanner - current: " + scanner.token.text);
+    }
 
+    let nextTok = scanner.token.text.length === 0 ? scanner.nextToken() : scanner.token;
+    if(VERBOSE >= 2) {
+        console.log("            scanner - next: " + nextTok.text);
+    }
+
+    return nextTok;
+}
 
 function scanCharacterSequence(scanner: AS3Scanner, currentCharacter: string, possibleMatches: string[]): Token {
     let buffer = currentCharacter;
@@ -359,6 +399,9 @@ function scanMultiLineComment(scanner: AS3Scanner): Token {
         previousCharacter = currentCharacter;
         currentCharacter = scanner.nextChar();
         buffer += currentCharacter;
+        if(currentCharacter === "\n") {
+            scanner.currentLine++;
+        }
     }
     while (currentCharacter && (previousCharacter !== '*' || currentCharacter !== '/'));
 
@@ -399,6 +442,9 @@ function scanSingleLineComment(scanner: AS3Scanner): Token {
     do {
         char = scanner.nextChar();
         buffer += char;
+        if(char === "\n") {
+            scanner.currentLine++;
+        }
     }
     while (char !== '\n');
 
