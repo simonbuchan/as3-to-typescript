@@ -106,6 +106,8 @@ export default class AS3Scanner {
     getNumLineBreaksBeforeIndex():number {
         var sub:string = this.content.substr(0, this.index);
         var dump:string[] = sub.split("\n");
+        if(dump.length == 0) { dump = sub.split("\r"); }
+        if(dump.length == 0) { dump = sub.split("\r\n"); }
         return dump.length;
     }
 
@@ -133,7 +135,7 @@ export default class AS3Scanner {
             console.log("scanner - char: " + currentChar + ", index: " + this.index + ", inVector: " + this.inVector);
         }
 
-        if(currentChar === "\n") {
+        if(isNewLineChar(currentChar)) {
 
             var currentLine:number = this.getNumLineBreaksBeforeIndex();
 
@@ -180,6 +182,9 @@ export default class AS3Scanner {
     }
 }
 
+function isNewLineChar(char:string):bool {
+    return char === "\n" || char === "\r" || char === "\r\n";
+}
 
 function nextToken(scanner: AS3Scanner): Token {
 
@@ -194,6 +199,8 @@ function nextToken(scanner: AS3Scanner): Token {
 
     switch (currentCharacter) {
         case '\n':
+        case '\r':
+        case '\r\n':
             return scanner.createToken(currentCharacter);
         case '/':
             return scanCommentRegExpOrOperator(scanner);
@@ -446,7 +453,7 @@ function scanSingleLineComment(scanner: AS3Scanner): Token {
         char = scanner.nextChar();
         buffer += char;
     }
-    while (char !== '\n');
+    while (!isNewLineChar(char));
 
     return scanner.createToken(buffer, {skip: false});
 }
@@ -463,7 +470,7 @@ function scanUntilDelimiter(scanner: AS3Scanner, start: string, delimiter: strin
 
     while (peekPos < scanner.content.length) {
         let currentCharacter: string = scanner.peekChar(peekPos++);
-        if (currentCharacter === '\n' || (scanner.index + peekPos >= scanner.content.length)) {
+        if (isNewLineChar(currentCharacter) || (scanner.index + peekPos >= scanner.content.length)) {
             return null;
         }
         buffer += currentCharacter;
@@ -537,7 +544,7 @@ function scanXML(scanner: AS3Scanner): Token {
             buffer += currentToken.text;
             if (startsWith(currentToken.text, '<?')) {
                 currentCharacter = scanner.nextChar();
-                if (currentCharacter === '\n') {
+                if (isNewLineChar(currentCharacter)) {
                     buffer += '\n';
                     scanner.nextChar();
                 }
