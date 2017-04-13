@@ -182,7 +182,7 @@ export default class AS3Scanner {
     }
 }
 
-function isNewLineChar(char:string):bool {
+function isNewLineChar(char:string):boolean {
     return char === "\n" || char === "\r" || char === "\r\n";
 }
 
