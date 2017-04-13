@@ -60,7 +60,6 @@ export default class AS3Scanner {
 
     setContent(content: string = ''): void {
         this.inVector = false;
-        this.currentLine = 1;
         this.content = content;
         this.index = -1;
     }
@@ -106,7 +105,7 @@ export default class AS3Scanner {
 
     getNumLineBreaksBeforeIndex():number {
         var sub:string = this.content.substr(0, this.index);
-        var dump:[string] = sub.split("\n");
+        var dump:string[] = sub.split("\n");
         return dump.length;
     }
 
