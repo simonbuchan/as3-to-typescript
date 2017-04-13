@@ -30,7 +30,7 @@ export function parseQualifiedName(parser:AS3Parser, skipPackage:boolean):string
 
 export function parseBlock(parser:AS3Parser, result?:Node):Node {
 
-    if(VERBOSE >= 1) {
+    if(VERBOSE >= 2) {
         console.log("parseBlock()");
     }
 

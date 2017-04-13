@@ -53,13 +53,13 @@ export interface CheckPoint {
  */
 export default class AS3Scanner {
 
-    inVector: boolean;
+    inVector: boolean = false;
     index: number;
     content: string = '';
-    currentLine = 1;
     lastTokenText:String = "";
 
     setContent(content: string = ''): void {
+        this.inVector = false;
         this.currentLine = 1;
         this.content = content;
         this.index = -1;
@@ -94,11 +94,20 @@ export default class AS3Scanner {
         if (options.skip && text.length > 1) {
             this.skipChars(text.length - 1);
         }
-        this.lastTokenText = text;
+
         if(VERBOSE >= 2) {
-            console.log("scanner - token: " + text);
+            console.log("scanner - token: " + text + ", line: " + this.getNumLineBreaksBeforeIndex());
         }
+
+        this.lastTokenText = text;
+
         return new Token(text, options.index, options.isNumeric, options.isXML);
+    }
+
+    getNumLineBreaksBeforeIndex():number {
+        var sub:string = this.content.substr(0, this.index);
+        var dump:[string] = sub.split("\n");
+        return dump.length;
     }
 
     getPreviousCharacter(): string {
@@ -121,26 +130,26 @@ export default class AS3Scanner {
             currentChar = this.content.charAt(this.index);
         }
 
+        if(VERBOSE >= 3) {
+            console.log("scanner - char: " + currentChar + ", index: " + this.index + ", inVector: " + this.inVector);
+        }
+
         if(currentChar === "\n") {
 
+            var currentLine:number = this.getNumLineBreaksBeforeIndex();
+
             if(VERBOSE >= 3) {
-                console.log("scanner - line: " + this.currentLine);
+                console.log("scanner - NEW LINE: " + currentLine);
             }
 
             // Check for missing semicolons in 'break' or 'continue' statements.
             if(WARNINGS >= 2) {
                 if(this.getPreviousCharacter() !== ";") {
                     if( this.lastTokenText && (this.lastTokenText === Keywords.BREAK || this.lastTokenText === Keywords.CONTINUE) ) {
-                        console.log("*** WARNING *** Dangerous missing semicolon in line: " + this.currentLine + " after '" + this.lastTokenText + "' statement.");
+                        console.log("*** WARNING *** Dangerous missing semicolon in line: " + currentLine + " after '" + this.lastTokenText + "' statement.");
                     }
                 }
             }
-
-            this.currentLine++;
-        }
-
-        if(VERBOSE >= 3) {
-            console.log("scanner - char: " + currentChar + ", index: " + this.index);
         }
 
         return currentChar;
@@ -190,7 +199,7 @@ function nextToken(scanner: AS3Scanner): Token {
         case '/':
             return scanCommentRegExpOrOperator(scanner);
         case '"': case '\'':
-        return scanUntilDelimiter(scanner, currentCharacter);
+            return scanUntilDelimiter(scanner, currentCharacter);
         case '<':
             return scanXMLOrOperator(scanner, currentCharacter);
         case '0': case '1': case '2': case '3': case '4':
@@ -224,7 +233,7 @@ function nextToken(scanner: AS3Scanner): Token {
             if (scanner.inVector) {
                 // Support deep vectors (such as `Vector.<Vector.<Vector.<Class>>>`)
                 let checkpoint = scanner.getCheckPoint();
-                let nextToken = scanner.nextToken()
+                let nextToken = scanner.nextToken();
                 scanner.rewind(checkpoint);
                 if (nextToken.text !== ">") scanner.inVector = false;
                 break;
