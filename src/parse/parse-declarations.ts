@@ -47,7 +47,7 @@ function parsePackage(parser:AS3Parser):Node {
 function parsePackageContent(parser:AS3Parser):Node {
 
     if(VERBOSE >= 1) {
-        console.log("        parsePackageContent() - token: " + parser.tok.text);
+        console.log("parsePackageContent() - token: " + parser.tok.text);
     }
 
     let result:Node = createNode(NodeKind.CONTENT, {start: parser.tok.index});
@@ -106,7 +106,7 @@ function parseImport(parser:AS3Parser):Node {
     let result:Node = createNode(NodeKind.IMPORT, {start: tok.index, text: name});
     skip(parser, Operators.SEMI_COLUMN);
     if(VERBOSE >= 2) {
-        console.log("          parseImport() - name: " + name);
+        console.log("parseImport() - name: " + name);
     }
     return result;
 }
@@ -251,7 +251,7 @@ function parseImplementsList(parser:AS3Parser):Node {
 function parseClassContent(parser:AS3Parser):Node {
 
     if(VERBOSE >= 1) {
-        console.log("        parseClassContent() - token: " + parser.tok.text);
+        console.log("parseClassContent() - token: " + parser.tok.text);
     }
 
     let result:Node = createNode(NodeKind.CONTENT, {start: parser.tok.index});
@@ -260,7 +260,7 @@ function parseClassContent(parser:AS3Parser):Node {
 
     while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
         if(VERBOSE >= 2) {
-            console.log("          keyword: " + parser.tok.text + ", index: " + parser.tok.index);
+            console.log("keyword: " + parser.tok.text + ", index: " + parser.tok.index);
         }
         if (tokIs(parser, Operators.LEFT_CURLY_BRACKET)) {
             result.children.push(parseBlock(parser));
@@ -396,7 +396,7 @@ function parseFunction(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
     let result:Node = createNode(findFunctionTypeFromTypeNode(type), {start: type.start, end: -1, text: type.text});
 
     if(VERBOSE >= 2) {
-        console.log("        --> FUNCTION: " + name.text + "()");
+        console.log("FUNCTION: " + name.text + "()");
     }
 
     if (parser.currentAsDoc) {
@@ -453,7 +453,7 @@ function parseFunctionSignature(parser:AS3Parser):Node {
 
 function doParseSignature(parser:AS3Parser) {
 
-    // console.log("        parse-declarations.ts - doParseSignature()");
+    // console.logparse-declarations.ts - doParseSignature()");
 
     let tok = consume(parser, Keywords.FUNCTION);
     let type:Node = createNode(NodeKind.TYPE, {tok: tok});

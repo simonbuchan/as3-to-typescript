@@ -35,7 +35,6 @@ import Token from './token';
 import Node from '../syntax/node';
 import {startsWith} from '../string';
 
-
 export const ASDOC_COMMENT = '/**';
 export const MULTIPLE_LINES_COMMENT = '/*';
 export const NEW_LINE = '\n';
@@ -43,14 +42,13 @@ const SINGLE_LINE_COMMENT = '//';
 export const VECTOR = 'Vector';
 
 export const VERBOSE = 1; // 0 none, 1 some, 2 a lot, 3 everything
-export const WARNINGS = 2; // 0 none, 1 some, 2 a lot, 3 everything
+export const WARNINGS = 3; // 0 none, 1 some, 2 a lot, 3 everything
 
 /**
  * @author xagnetti
  */
 export default class AS3Parser {
     sourceFile:SourceFile;
-
     currentAsDoc:Node;
     currentFunctionNode:Node;
     currentMultiLineComment:Node;
