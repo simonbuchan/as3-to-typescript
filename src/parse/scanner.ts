@@ -57,11 +57,13 @@ export default class AS3Scanner {
     index: number;
     content: string = '';
     lastTokenText:String = "";
+    lastLineScanned:number = 0;
 
     setContent(content: string = ''): void {
         this.inVector = false;
         this.content = content;
         this.index = -1;
+        this.lastLineScanned = 0;
     }
 
     nextToken(): Token {
@@ -137,18 +139,16 @@ export default class AS3Scanner {
 
         if(isNewLineChar(currentChar)) {
 
-            var currentLine:number = this.getNumLineBreaksBeforeIndex();
-
-            if(VERBOSE >= 3) {
-                console.log("scanner - NEW LINE: " + currentLine);
-            }
+            this.lastLineScanned = this.getNumLineBreaksBeforeIndex();
 
             // Check for missing semicolons in 'break' or 'continue' statements.
-            if(WARNINGS >= 2) {
-                if(this.getPreviousCharacter() !== ";") {
-                    if( this.lastTokenText && (this.lastTokenText === Keywords.BREAK || this.lastTokenText === Keywords.CONTINUE) ) {
-                        console.log("*** WARNING *** Dangerous missing semicolon in line: " + currentLine + " after '" + this.lastTokenText + "' statement.");
-                    }
+            if(this.getPreviousCharacter() !== ";") {
+                if(WARNINGS >= 1 && this.lastTokenText && (this.lastTokenText === Keywords.BREAK || this.lastTokenText === Keywords.CONTINUE)) {
+                    console.warn("scanner.ts: *** IMPORTANT WARNING *** Dangerous missing semicolon in line: " + this.lastLineScanned + " after '" + this.lastTokenText + "' statement.\n" +
+                        "Missing semicolons around such statements can cause the transpiler to fail by entering and infinite loop.");
+                }
+                else if(WARNINGS >= 3) {
+                    console.log("scanner.ts: *** WARNING *** Missing semicolon in line: " + this.lastLineScanned);
                 }
             }
         }

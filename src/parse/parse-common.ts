@@ -31,7 +31,7 @@ export function parseQualifiedName(parser:AS3Parser, skipPackage:boolean):string
 export function parseBlock(parser:AS3Parser, result?:Node):Node {
 
     if(VERBOSE >= 2) {
-        console.log("parseBlock()");
+        console.log("parseBlock()" + ", line: " + parser.scn.lastLineScanned);
     }
 
     let tok = consume(parser, Operators.LEFT_CURLY_BRACKET);
@@ -41,7 +41,7 @@ export function parseBlock(parser:AS3Parser, result?:Node):Node {
         result.start = tok.index;
     }
     if(VERBOSE >= 2) {
-        console.log("token: " + parser.tok.text + ", index: " + parser.tok.index);
+        console.log("token: " + parser.tok.text + ", index: " + parser.tok.index + ", line: " + parser.scn.lastLineScanned);
     }
     while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
         if(VERBOSE >= 3) {

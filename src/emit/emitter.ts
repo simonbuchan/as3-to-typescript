@@ -3,6 +3,7 @@ import * as Keywords from '../syntax/keywords';
 import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
 import { CustomVisitor } from "../custom-visitors"
+import {VERBOSE, WARNINGS} from '../parse/parser';
 
 const util = require('util');
 
@@ -118,8 +119,13 @@ export function visitNodes(emitter: Emitter, nodes: Node[]): void {
 
 
 export function visitNode(emitter: Emitter, node: Node): void {
+
     if (!node) {
         return;
+    }
+
+    if(VERBOSE >= 2) {
+        console.log("visitNode() - kind: " + nodeKindName(node.kind) + ", text: " + node.text);
     }
 
     // use custom visitor. allow custom node manipulation
@@ -181,6 +187,11 @@ export default class Emitter {
     }
 
     emit(ast: Node): string {
+
+        if(VERBOSE >= 1) {
+            console.log("emit() ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑");
+        }
+
         this.withScope([], (rootScope) => {
             this.rootScope = rootScope;
             visitNode(this, filterAST(ast));
@@ -411,7 +422,9 @@ function emitImport(emitter: Emitter, node: Node): void {
             node.end += node.text.length - ns.length + 6;
             emitter.commentNode(node, true);
             skipTo = node.end;
-            console.warn(`emitter.ts: emitImport() => : nothing found to import on namespace ${ ns }. (import ${ node.text })`)
+            if(WARNINGS >= 2) {
+                console.log(`emitter.ts: *** MINOR WARNING *** emitImport() => : nothing found to import on namespace ${ ns }. (import ${ node.text })`)
+            }
         }
 
         emitter.skipTo(skipTo);
@@ -972,6 +985,9 @@ function emitNew(emitter: Emitter, node: Node): void {
     emitter.isNew = false;
 }
 
+function nodeKindName(nodeKind:NodeKind):string {
+    return NodeKind[nodeKind];
+}
 
 function emitCall(emitter: Emitter, node: Node): void {
     let isNew = emitter.isNew;
@@ -983,8 +999,8 @@ function emitCall(emitter: Emitter, node: Node): void {
 
             emitter.insert('[');
 
-            if (args.children.length > 0) {
-                console.warn("emitter.ts: emitCall() => NodeKind.VECTOR with arguments not implemented.");
+            if (WARNINGS >= 2 && args.children.length > 0) {
+                console.log("emitter.ts: *** MINOR WARNING *** emitCall() => NodeKind.VECTOR with arguments not implemented.");
             }
 
             emitter.insert(']');
