@@ -30,7 +30,7 @@
  */
 
 
-import {VERBOSE, WARNINGS} from './parser';
+import {VERBOSE, WARNINGS} from '../config';
 import Token from './token';
 import * as Keywords from '../syntax/keywords';
 import {startsWith, endsWith} from '../string';

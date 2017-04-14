@@ -3,7 +3,7 @@ import * as Keywords from '../syntax/keywords';
 import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
 import { CustomVisitor } from "../custom-visitors"
-import {VERBOSE, WARNINGS} from '../parse/parser';
+import {VERBOSE, WARNINGS} from '../config';
 
 const util = require('util');
 
