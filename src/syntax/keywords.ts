@@ -50,6 +50,7 @@ export let USE = 'use';
 export let VAR = 'var';
 export let VOID = 'void';
 export let WHILE = 'while';
+export let EMBED = 'EMBED';
 
 export let TRUE = 'true';
 export let FALSE = 'false';

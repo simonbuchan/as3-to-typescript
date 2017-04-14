@@ -85,7 +85,8 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.META]: emitMeta,
     [NodeKind.IMPORT]: emitImport,
     [NodeKind.INCLUDE]: emitInclude,
-    [NodeKind.USE]: emitInclude,
+    [NodeKind.EMBED]: emitEmbed,
+    [NodeKind.USE]: emitUse,
     [NodeKind.FUNCTION]: emitFunction,
     [NodeKind.LAMBDA]: emitFunction,
     [NodeKind.FOREACH]: emitForEach,
@@ -390,9 +391,25 @@ function emitMeta(emitter: Emitter, node: Node): void {
 }
 
 
-function emitInclude(emitter: Emitter, node: Node): void {
+function emitUse(emitter: Emitter, node: Node): void  {
     emitter.catchup(node.start);
-    emitter.commentNode(node, true);
+    emitter.commentNode(node, false);
+}
+
+function emitEmbed(emitter: Emitter, node: Node): void  {
+    emitter.catchup(node.start);
+    emitter.commentNode(node, false);
+}
+
+
+function emitInclude(emitter: Emitter, node: Node): void {
+    let path = node.children[0].text;
+    let statement = Keywords.IMPORT + " * from " + path;
+    // need to declare in scope file name?
+    emitter.catchup(node.start);
+    emitter.insert(statement);
+    emitter.insert(";\n");
+    emitter.skip(statement.length);
 }
 
 
