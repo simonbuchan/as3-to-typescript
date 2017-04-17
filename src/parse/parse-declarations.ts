@@ -513,7 +513,7 @@ function parseFunctionBlock(parser:AS3Parser):Node {
 
 
 export function parseVarList(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
-    if(modifiers.length === 0) {
+    if(modifiers && modifiers.length === 0) {
         var line:number = parser.scn.getNumLineBreaksBeforeIndex();
         throw new Error("*** ERROR *** Class member modifier (public, private, internal) is required at line: " + line);
     }
