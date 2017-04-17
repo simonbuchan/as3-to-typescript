@@ -1,8 +1,9 @@
 import Node, {createNode} from '../syntax/node';
 import NodeKind from '../syntax/nodeKind';
 import * as Operators from '../syntax/operators';
+import {VERBOSE} from '../config';
 import {startsWith} from '../string';
-import AS3Parser, {VERBOSE, nextToken, consume, tokIs} from './parser';
+import AS3Parser, {nextToken, consume, tokIs} from './parser';
 import {MULTIPLE_LINES_COMMENT} from './parser';
 import {parseStatement} from './parse-statements';
 import {parseExpression} from './parse-expressions';

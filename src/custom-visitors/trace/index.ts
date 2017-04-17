@@ -6,8 +6,8 @@
  * Replace trace() for console.log()
  */
 
-import Node, { createNode } from "as3-to-ts/src/syntax/node";
-import Emitter, { EmitterOptions } from "as3-to-ts/src/emit/emitter";
+import Node, { createNode } from "../../syntax/node";
+import Emitter, { EmitterOptions } from "../../emit/emitter";
 
 function visit (emitter: Emitter, node: Node): boolean {
     return false;

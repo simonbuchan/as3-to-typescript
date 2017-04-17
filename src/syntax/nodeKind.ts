@@ -100,6 +100,7 @@ enum NodeKind {
     XML_LITERAL,
     LITERAL,
     IDENTIFIER,
+    EMBED
 }
 
 // Can't do 'export default enum Foo {...}' for some reason?

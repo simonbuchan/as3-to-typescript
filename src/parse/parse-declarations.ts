@@ -6,7 +6,8 @@ import * as Operators from '../syntax/operators';
 import {startsWith} from '../string';
 import AS3Parser, {nextToken, nextTokenIgnoringDocumentation, consume, skip, tokIs} from './parser';
 import {parseQualifiedName, parseBlock, parseParameterList, parseNameTypeInit} from './parse-common';
-import {VERBOSE, ASDOC_COMMENT, MULTIPLE_LINES_COMMENT} from './parser';
+import {ASDOC_COMMENT, MULTIPLE_LINES_COMMENT} from './parser';
+import {VERBOSE} from '../config';
 import {parseExpression} from './parse-expressions';
 import {parseOptionalType} from './parse-types';
 
