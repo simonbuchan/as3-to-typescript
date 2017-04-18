@@ -51,7 +51,6 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
     if (callbackOverrides && callbackOverrides.length > 0) {
         for (let i = 0, len = callbackOverrides.length; i < len; i++) {
             let matches = overridesRegExp.exec(callbackOverrides[i]);
-            console.log(matches);
             if (matches) {
                 contents = contents.replace(matches.input, `${matches[1]}protected super_${matches[3]} = this.${matches[3]};\n${matches.input}`);
                 // 3. Replace occurrences of super calls on callbacks
