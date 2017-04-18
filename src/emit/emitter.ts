@@ -1,4 +1,4 @@
-import NodeKind from '../syntax/nodeKind';
+import NodeKind, {nodeKindName} from '../syntax/nodeKind';
 import * as Keywords from '../syntax/keywords';
 import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
@@ -126,7 +126,7 @@ export function visitNode(emitter: Emitter, node: Node): void {
     }
 
     if(VERBOSE >= 2) {
-        console.log("visitNode() - kind: " + nodeKindName(node.kind) + ", text: " + node.text);
+        console.log("emitter.ts - visitNode() - kind: " + nodeKindName(node.kind) + ", text: " + node.text);
     }
 
     // use custom visitor. allow custom node manipulation
@@ -1000,10 +1000,6 @@ function emitNew(emitter: Emitter, node: Node): void {
     emitter.emitThisForNextIdent = false;
     visitNodes(emitter, node.children);
     emitter.isNew = false;
-}
-
-function nodeKindName(nodeKind:NodeKind):string {
-    return NodeKind[nodeKind];
 }
 
 function emitCall(emitter: Emitter, node: Node): void {

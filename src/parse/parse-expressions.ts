@@ -6,7 +6,7 @@ import AS3Parser, {nextToken, tryParse, skip, consume, tokIs, VECTOR} from './pa
 import {parseParameterList, parseBlock} from './parse-common';
 import {parseOptionalType, parseVector} from './parse-types';
 import {parseArrayLiteral, parseObjectLiteral, parseShortVector} from './parse-literals';
-
+import {VERBOSE} from '../config';
 
 export function parseExpressionList(parser:AS3Parser):Node {
     let result:Node = createNode(NodeKind.EXPR_LIST, {start: parser.tok.index}, parseAssignmentExpression(parser));
@@ -28,6 +28,10 @@ export function parseExpression(parser:AS3Parser):Node {
 
 export function parsePrimaryExpression(parser:AS3Parser):Node {
     let result:Node;
+
+    if(VERBOSE >= 2) {
+        console.log("parse-expressions.ts - parsePrimaryExpression() - token: " + parser.tok.text);
+    }
 
     if (tokIs(parser, Operators.LEFT_SQUARE_BRACKET)) {
         return parseArrayLiteral(parser);
@@ -75,6 +79,11 @@ export function parsePrimaryExpression(parser:AS3Parser):Node {
 
 
 function parseLambdaExpression(parser:AS3Parser):Node {
+
+    if(VERBOSE >= 2) {
+        console.log("parse-expressions.ts - parseLambdaExpression() - token: " + parser.tok.text);
+    }
+
     let tok = consume(parser, Keywords.FUNCTION);
     let result:Node;
 
@@ -115,6 +124,11 @@ function parseNewExpression(parser:AS3Parser):Node {
 
 
 function parseEncapsulatedExpression(parser:AS3Parser):Node {
+
+    if(VERBOSE >= 2) {
+        console.log("parse-expressions.ts - parseEncapsulatedExpression()");
+    }
+
     let tok = consume(parser, Operators.LEFT_PARENTHESIS);
     let result:Node = createNode(NodeKind.ENCAPSULATED, {start: tok.index});
     result.children.push(parseExpressionList(parser));
@@ -431,6 +445,7 @@ function parseAccessExpression(parser:AS3Parser):Node {
 
 
 function parseFunctionCall(parser:AS3Parser, node:Node):Node {
+
     let result:Node = createNode(NodeKind.CALL, {start: node.start});
     result.children.push(node);
 

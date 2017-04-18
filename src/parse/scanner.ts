@@ -97,7 +97,7 @@ export default class AS3Scanner {
         }
 
         if(VERBOSE >= 2) {
-            console.log("scanner - token: " + text + ", line: " + this.getNumLineBreaksBeforeIndex());
+            console.log("  scanner - token: " + text + ", line: " + this.getNumLineBreaksBeforeIndex());
         }
 
         this.lastTokenText = text;
@@ -134,7 +134,7 @@ export default class AS3Scanner {
         }
 
         if(VERBOSE >= 3) {
-            console.log("scanner - char: " + currentChar + ", index: " + this.index + ", inVector: " + this.inVector);
+            console.log("  scanner - char: " + currentChar + ", index: " + this.index + ", inVector: " + this.inVector);
         }
 
         if(isNewLineChar(currentChar)) {
@@ -190,7 +190,7 @@ function nextToken(scanner: AS3Scanner): Token {
 
     if (scanner.index >= scanner.content.length) {
         if(VERBOSE >= 3) {
-            console.log("scanner - EOF");
+            console.log("  scanner - EOF");
         }
         return scanner.createToken(Keywords.EOF, { skip: false });
     }

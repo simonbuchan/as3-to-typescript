@@ -106,3 +106,6 @@ enum NodeKind {
 // Can't do 'export default enum Foo {...}' for some reason?
 export default NodeKind;
 
+export function nodeKindName(nodeKind:NodeKind):string {
+    return NodeKind[nodeKind];
+}
