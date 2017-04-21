@@ -30,7 +30,7 @@
  */
 
 
-import {VERBOSE, WARNINGS} from '../config';
+import {VERBOSE, WARNINGS, AUTO_INSERT_SEMICOLONS} from '../config';
 import Token from './token';
 import * as Keywords from '../syntax/keywords';
 import {startsWith, endsWith} from '../string';
@@ -38,7 +38,7 @@ import {startsWith, endsWith} from '../string';
 import sax = require('sax');
 import objectAssign = require('object-assign');
 
-
+¬
 export interface CheckPoint {
     index: number;
     inVector: boolean;
@@ -58,9 +58,13 @@ export default class AS3Scanner {
     content: string = '';
     lastTokenText:String = "";
     lastLineScanned:number = 0;
+    missedSemi: false;
+    queuedToken:Token = null;
 
     setContent(content: string = ''): void {
         this.inVector = false;
+        this.missedSemi = false;
+        this.queuedToken = null;
         this.content = content;
         this.index = -1;
         this.lastLineScanned = 0;
@@ -143,12 +147,15 @@ export default class AS3Scanner {
 
             // Check for missing semicolons in 'break' or 'continue' statements.
             if(this.getPreviousCharacter() !== ";") {
-                if(WARNINGS >= 1 && this.lastTokenText && (this.lastTokenText === Keywords.BREAK || this.lastTokenText === Keywords.CONTINUE)) {
+                var isCriticalToken = this.lastTokenText === Keywords.BREAK || this.lastTokenText === Keywords.CONTINUE;
+                var isValidToken = this.lastTokenText === "{" || this.lastTokenText === "}" || this.lastTokenText === "\n" || this.lastTokenText === ";";
+                this.missedSemi = this.lastTokenText && !isValidToken;
+                if(WARNINGS >= 1 && this.lastTokenText && isCriticalToken) {
                     console.warn("scanner.ts: *** IMPORTANT WARNING *** Dangerous missing semicolon in line: " + this.lastLineScanned + " after '" + this.lastTokenText + "' statement.\n" +
                         "Missing semicolons around such statements can cause the transpiler to fail by entering and infinite loop.");
                 }
-                else if(WARNINGS >= 3) {
-                    console.log("scanner.ts: *** WARNING *** Missing semicolon in line: " + this.lastLineScanned);
+                else if(WARNINGS >= 3 && this.missedSemi) {
+                    console.log("scanner.ts: *** WARNING *** Missing semicolon in line: " + this.lastLineScanned + ", last: >" + this.lastTokenText + "<");
                 }
             }
         }
@@ -188,6 +195,12 @@ function isNewLineChar(char:string):boolean {
 
 function nextToken(scanner: AS3Scanner): Token {
 
+    if(scanner.queuedToken) {
+        var tok:Token = scanner.queuedToken;
+        scanner.queuedToken = null;
+        return tok;
+    }
+
     if (scanner.index >= scanner.content.length) {
         if(VERBOSE >= 3) {
             console.log("  scanner - EOF");
@@ -196,6 +209,12 @@ function nextToken(scanner: AS3Scanner): Token {
     }
 
     let currentCharacter = scanner.nextNonWhitespaceCharacter();
+    if(AUTO_INSERT_SEMICOLONS && scanner.missedSemi) {
+        // insert semicolon
+        // TODO: this is successfully detected, but the insertion doesn not work
+        // console.log(">>> [INSERT SEMICOLON] <<<");
+        // scanner.queuedToken = scanner.createToken(";\n", {skip: true});
+    }
 
     switch (currentCharacter) {
         case '\n':
