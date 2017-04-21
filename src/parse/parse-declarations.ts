@@ -393,6 +393,11 @@ function parseClassFunctions(parser:AS3Parser, result:Node, modifiers:Token[], m
 
 function parseFunction(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
 
+    if(modifiers && modifiers.length === 0) {
+        var line:number = parser.scn.getNumLineBreaksBeforeIndex();
+        throw new Error("*** ERROR *** Class member modifier (public, private, internal) is required at line: " + line);
+    }
+
     let {type, name, params, returnType} = doParseSignature(parser);
     let result:Node = createNode(findFunctionTypeFromTypeNode(type), {start: type.start, end: -1, text: type.text});
 
