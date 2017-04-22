@@ -38,7 +38,7 @@ import {startsWith, endsWith} from '../string';
 import sax = require('sax');
 import objectAssign = require('object-assign');
 
-¬
+
 export interface CheckPoint {
     index: number;
     inVector: boolean;
@@ -58,7 +58,7 @@ export default class AS3Scanner {
     content: string = '';
     lastTokenText:String = "";
     lastLineScanned:number = 0;
-    missedSemi: false;
+    missedSemi:Boolean = false;
     queuedToken:Token = null;
 
     setContent(content: string = ''): void {
