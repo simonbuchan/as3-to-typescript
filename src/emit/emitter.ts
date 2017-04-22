@@ -84,7 +84,6 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.PACKAGE]: emitPackage,
     [NodeKind.META]: emitMeta,
     [NodeKind.IMPORT]: emitImport,
-    [NodeKind.INCLUDE]: emitInclude,
     [NodeKind.EMBED]: emitEmbed,
     [NodeKind.USE]: emitUse,
     [NodeKind.FUNCTION]: emitFunction,
@@ -147,6 +146,7 @@ export function visitNode(emitter: Emitter, node: Node): void {
 
 
 function filterAST(node: Node): Node {
+
     function isInteresting(child: Node): boolean {
         // we don't care about comment
         return !!child && child.kind !== NodeKind.AS_DOC && child.kind !== NodeKind.MULTI_LINE_COMMENT;
@@ -400,18 +400,6 @@ function emitEmbed(emitter: Emitter, node: Node): void  {
     emitter.catchup(node.start);
     emitter.commentNode(node, false);
 }
-
-
-function emitInclude(emitter: Emitter, node: Node): void {
-    let path = node.children[0].text;
-    let statement = Keywords.IMPORT + " * from " + path;
-    // need to declare in scope file name?
-    emitter.catchup(node.start);
-    emitter.insert(statement);
-    emitter.insert(";\n");
-    emitter.skip(statement.length);
-}
-
 
 function emitImport(emitter: Emitter, node: Node): void {
     let statement = Keywords.IMPORT + " ";
