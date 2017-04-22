@@ -68,6 +68,7 @@ interface Declaration {
 
 
 export interface EmitterOptions {
+    includePath: string;
     lineSeparator: string;
     useNamespaces: boolean;
     customVisitors: CustomVisitor[];
@@ -181,6 +182,7 @@ export default class Emitter {
     constructor(source: string, options?: EmitterOptions) {
         this.source = source;
         this.options = assign({
+            includePath: "",
             lineSeparator: '\n',
             useNamespaces: false,
             customVisitors: []

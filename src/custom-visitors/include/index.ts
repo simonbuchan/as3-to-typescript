@@ -19,10 +19,10 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
     const fs = require('fs-extra');
     const path = require('path');
 
-    const regex:string = /include ([^\n])*/gm;
+    const regex:RegExp = /include ([^\n])*/gm;
 
     // Identify the snippets to import.
-    const snippets:Array = contents.match(regex);
+    const snippets:string[] = contents.match(regex);
     if(!snippets || snippets.length == 0) {
         return contents;
     }
@@ -40,8 +40,8 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
 
         // Load the contents of the snippet.
         let snippetContent:string = "<<< INCLUDE CONTENT NOT FOUND: '" + tsPath + "' >>>";
-        const finalPath = path.resolve(emitterOptions.includePath, tsPath);
         try {
+            const finalPath = path.resolve(emitterOptions.includePath, tsPath);
             const cont = fs.readFileSync(finalPath);
             snippetContent = cont;
         }
