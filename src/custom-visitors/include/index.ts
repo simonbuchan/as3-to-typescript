@@ -45,13 +45,14 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
         console.log("    snp path: " + snpPath);
         const tsPath = snpPath.replace(/.snp$/, '.ts');
         console.log("    ts path: " + tsPath);
-        const tsPathNonRelative = tsPath.replace("../", '').replace("./", '');
+        const tsPathNonRelative = tsPath.replace(/^(?:\.\.\/)+/, '');
         console.log("    tsPathNonRelative: " + tsPathNonRelative);
 
         // Load the contents of the snippet.
         let snippetContent:string = "<<< INCLUDE CONTENT NOT FOUND: '" + tsPathNonRelative + "' >>>";
         try {
             console.log("    (emitterOptions) include path: " + emitterOptions.includePath);
+            console.log("    (emitterOptions) file path: " + emitterOptions.filePath);
             console.log("    pwd: " + __dirname);
             const finalPath = path.resolve(emitterOptions.includePath, tsPathNonRelative);
             console.log("    final path: " + finalPath);
