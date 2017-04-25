@@ -68,8 +68,6 @@ interface Declaration {
 
 
 export interface EmitterOptions {
-    filePath: string;
-    includePath: string;
     lineSeparator: string;
     useNamespaces: boolean;
     customVisitors: CustomVisitor[];

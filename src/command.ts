@@ -100,7 +100,6 @@ export function run(): void {
     });
 
     let emitterOptions: EmitterOptions = {
-        includePath: "",
         lineSeparator: '\n',
         useNamespaces: !commonjs,
         customVisitors: visitors,
