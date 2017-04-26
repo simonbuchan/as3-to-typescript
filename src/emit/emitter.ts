@@ -352,6 +352,12 @@ export default class Emitter {
      * Utilities
      */
     ensureImportIdentifier (identifier: string, from = `./${identifier}`, checkGlobals: boolean = true): void {
+
+        // warning if this is a as3-path, not a plain name (like shared.Node should error)
+        if(WARNINGS>=1 && identifier.split(".").length>1){
+            console.log(`emitter.ts: *** MAJOR WARNING *** ensureImportIdentifier() => : invalid object name identifier: ${ identifier })`)
+        }
+
         let isGloballyAvailable = checkGlobals
             ? GLOBAL_NAMES.indexOf(identifier) >= 0
             : false;
@@ -362,7 +368,7 @@ export default class Emitter {
 
         // Ensure this file is not declaring this class
         if (
-            this.source.indexOf(`class ${ identifier }`) === -1 &&
+            this.source.indexOf(`class ${ identifier } `) === -1 &&
             !isGloballyAvailable &&
             !this.findDefInScope(identifier)
         ) {
