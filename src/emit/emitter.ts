@@ -165,7 +165,21 @@ function filterAST(node: Node): Node {
 
 export default class Emitter {
     public isNew: boolean = false;
-    public emitThisForNextIdent: boolean = true;
+
+    private _emitThisForNextIdent: boolean = true;
+    get emitThisForNextIdent():boolean {
+        return this._emitThisForNextIdent;
+    }
+    set emitThisForNextIdent(val:boolean) {
+
+        // Debugging only.
+        // console.log("emitThisForNextIdent set to: " + val);
+        // if(this.scope.parent && this.scope.parent.className === "ResourceElement" && val == false) {
+        //     let a = 1;
+        // }
+
+        this._emitThisForNextIdent = val;
+    }
 
     public source: string;
     public options: EmitterOptions;
@@ -309,6 +323,21 @@ export default class Emitter {
 
     insert(string: string): void {
         this.output += string;
+
+        // Debug util (comment out on production).
+        // let split = this.output.split(" ");
+        // let lastWord = split[split.length - 1];
+        // console.log("    emitter.ts - output += " + lastWord);
+
+        // Debug util (comment out on production).
+        // if(this.output.includes("protected fClear():void {")) {
+        //     const fs = require('fs-extra');
+        //     const path = require('path');
+        //     const file = path.resolve(__dirname, "emitterlog.txt");
+        //     console.log("<<< MATCH >>> Writting log to: " + file);
+        //     fs.outputFileSync(file, this.output);
+        //     let a = 1; // insert breakpoint here
+        // }
     }
 
     consume(string: string, limit: number): void {
@@ -996,6 +1025,7 @@ function emitNew(emitter: Emitter, node: Node): void {
     emitter.emitThisForNextIdent = false;
     visitNodes(emitter, node.children);
     emitter.isNew = false;
+    emitter.emitThisForNextIdent = true;
 }
 
 function emitCall(emitter: Emitter, node: Node): void {
