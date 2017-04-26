@@ -328,7 +328,7 @@ export default class Emitter {
         if(WARNINGS>=1 && identifier.split(".").length>1){
             console.log(`emitter.ts: *** MAJOR WARNING *** ensureImportIdentifier() => : invalid object name identifier: ${ identifier })`)
         }
-        
+
         let isGloballyAvailable = checkGlobals
             ? GLOBAL_NAMES.indexOf(identifier) >= 0
             : false;
@@ -339,7 +339,7 @@ export default class Emitter {
 
         // Ensure this file is not declaring this class
         if (
-            this.source.indexOf(`class ${ identifier }`) === -1 &&
+            this.source.indexOf(`class ${ identifier } `) === -1 &&
             !isGloballyAvailable &&
             !this.findDefInScope(identifier)
         ) {
