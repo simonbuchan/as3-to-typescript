@@ -657,8 +657,10 @@ function emitForEach(emitter: Emitter, node: Node): void {
     if (nameTypeInitNode) {
         // don't emit variable type on for..of statements
         let nameNode = nameTypeInitNode.findChild(NodeKind.NAME);
+        let typeNode = nameTypeInitNode.findChild(NodeKind.TYPE);
+        let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
         emitter.catchup(varNode.start);
-        emitter.insert(`let ${ nameNode.text }`);
+        emitter.insert(`let ${ nameNode.text }:${ typeRemapped }`);
         emitter.skipTo(varNode.end);
     } else {
         visitNode(emitter, varNode);
