@@ -19,7 +19,7 @@ const GLOBAL_NAMES = [
 ];
 
 const TYPE_REMAP: { [id: string]: string } = {
-    'Class': 'Object',
+    'Class': 'any', // 80pro: was mapped to 'Object' before
     'Object': 'any',
     'String': 'string',
     'Boolean': 'boolean',
@@ -28,7 +28,7 @@ const TYPE_REMAP: { [id: string]: string } = {
     'uint': 'number',
     '*': 'any',
     'Array': 'any[]',
-    'Dictionary': 'Map<any, any>',
+    'Dictionary': 'Object',// 80pro: was mapped to 'Map<any, any>' before
 
     // Inexistent errors
     'ArgumentError': 'Error',
@@ -466,7 +466,7 @@ function emitImport(emitter: Emitter, node: Node): void {
             node.end += node.text.length - ns.length + 6;
             emitter.commentNode(node, true);
             skipTo = node.end;
-            if(WARNINGS >= 2) {
+            if(WARNINGS >= 1) {
                 console.log(`emitter.ts: *** MINOR WARNING *** emitImport() => : nothing found to import on namespace ${ ns }. (import ${ node.text })`)
             }
         }
