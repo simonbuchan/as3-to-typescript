@@ -329,8 +329,8 @@ export default class Emitter {
         // let lastWord = split[split.length - 1];
         // console.log("    emitter.ts - output += " + lastWord);
         // process.stdout.write(" " + lastWord);
-        // console.log("output (all): " + this.output);
-        // let a = 1; // insert breakpoint here
+        console.log("output (all): " + this.output);
+        let a = 1; // insert breakpoint here
 
         // Debug util (comment out on production).
         // if(this.output.includes("protected fClear():void {")) {
@@ -1038,8 +1038,10 @@ function emitNew(emitter: Emitter, node: Node): void {
 }
 
 function emitCall(emitter: Emitter, node: Node): void {
+
     let isNew = emitter.isNew;
     emitter.isNew = false;
+
     if (node.children[0].kind === NodeKind.VECTOR) {
         if (isNew) {
             let vector = node.children[0];
@@ -1085,10 +1087,43 @@ function emitCall(emitter: Emitter, node: Node): void {
         // }
 
     } else {
-        emitter.catchup(node.start);
+        if(isCast(emitter, node)) {
+            const type:Node = node.findChild(NodeKind.IDENTIFIER);
+            const args:Node = node.findChild(NodeKind.ARGUMENTS);
+            const castee:Node = args.findChild(NodeKind.IDENTIFIER);
+            emitter.insert('<');
+            emitter.insert(emitter.getTypeRemap(type.text) || type.text);
+            emitter.insert('>');
+            emitter.insert(castee.text);
+            emitter.skipTo(node.end);
+            return;
+        }
+        else {
+            emitter.catchup(node.start);
+        }
     }
 
     visitNodes(emitter, node.children);
+}
+
+function isCast(emitter: Emitter, node: Node):boolean {
+
+    const type:Node = node.findChild(NodeKind.IDENTIFIER);
+    const declaration = emitter.findDefInScope(type.text);
+
+    if (declaration) {
+        return false;
+    }
+
+    // If the declaration is not found in scope, AND
+    // starts with an uppercase, consider it a cast.
+    // (this is quite vague, but its a start)
+    const firstLetter = type.text.substring(0, 1);
+    if(firstLetter === firstLetter.toLowerCase()) {
+        return false;
+    }
+
+    return true;
 }
 
 
