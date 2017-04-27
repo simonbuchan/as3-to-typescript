@@ -328,6 +328,9 @@ export default class Emitter {
         // let split = this.output.split(" ");
         // let lastWord = split[split.length - 1];
         // console.log("    emitter.ts - output += " + lastWord);
+        // process.stdout.write(" " + lastWord);
+        // console.log("output (all): " + this.output);
+        // let a = 1; // insert breakpoint here
 
         // Debug util (comment out on production).
         // if(this.output.includes("protected fClear():void {")) {
