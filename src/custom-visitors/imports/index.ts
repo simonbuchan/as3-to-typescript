@@ -19,13 +19,13 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
     contents = contents.replace(/import {([ 0-9a-zA-Z]+)} from "[.\/]+flash[^"]+";?/gm, "import {$1} from \"@as3web/flash\"");
 
     //fix import statements for away3d package:
-    contents = contents.replace(/import {([ 0-9a-zA-Z]+)} from "[.\/]+away3d[^"]+";?/gm, "import {$1} from \"@as3web/flash\"");//temporary located in flash-package
+    contents = contents.replace(/import {([ 0-9a-zA-Z]+)} from "[.\/]+away3d[^"]+";?/gm, "import {$1} from \"@as3web/away3d\"");
 
     //fix import statements for starling package:
-    contents = contents.replace(/import {([ 0-9a-zA-Z]+)} from "[.\/]+starling[^"]+";?/gm, "import {$1} from \"@as3web/flash\"");//temporary located in flash-package
+    contents = contents.replace(/import {([ 0-9a-zA-Z]+)} from "[.\/]+starling[^"]+";?/gm, "import {$1} from \"@as3web/flash\"//starling");
 
     //fix import statements for com.greensock package:
-    contents = contents.replace(/import {([ 0-9a-zA-Z]+)} from "[.\/]+com\/greensock[^"]+";?/gm, "import {$1} from \"@as3web/flash\"");//temporary located in flash-package
+    contents = contents.replace(/import {([ 0-9a-zA-Z]+)} from "[.\/]+com\/greensock[^"]+";?/gm, "import {$1} from \"@as3web/flash\"//com.greensock");
 
     //return here if you want to prevent import cleanup
     //return contents;
