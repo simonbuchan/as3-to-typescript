@@ -15,12 +15,10 @@ function visit (emitter: Emitter, node: Node): boolean {
 
 const identifierMap: { [id: string]: string } = {
     'Date': 'MyDate',
-    'Node': 'MyNode',
 };
 
 const typeMap: { [id: string]: string } = {
     'Date': 'MyDate',
-    'Node': 'MyNode',
 };
 
 export default {
