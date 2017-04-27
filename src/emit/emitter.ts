@@ -463,7 +463,7 @@ function emitImport(emitter: Emitter, node: Node): void {
             node.end += node.text.length - ns.length + 6;
             emitter.commentNode(node, true);
             skipTo = node.end;
-            if(WARNINGS >= 2) {
+            if(WARNINGS >= 1) {
                 console.log(`emitter.ts: *** MINOR WARNING *** emitImport() => : nothing found to import on namespace ${ ns }. (import ${ node.text })`)
             }
         }
