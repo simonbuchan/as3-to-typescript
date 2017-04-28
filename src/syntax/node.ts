@@ -53,6 +53,18 @@ export default class Node {
     public children: Node[];
     public parent: Node; // only during emit
 
+    toString():string {
+        let str:string = nodeKindName(this.kind);
+        if(this.text) {
+            str += ", '" + this.text + "'";
+        }
+        for(let i:number = 0; i < this.children.length; i++) {
+            const child:Node = this.children[i];
+            str += "/" + child.toString();
+        }
+        return str;
+    }
+
     findChild(kind: NodeKind): Node {
         for (var i = 0; i < this.children.length; i++) {
             if (this.children[i].kind === kind) {

@@ -329,8 +329,8 @@ export default class Emitter {
         // let lastWord = split[split.length - 1];
         // console.log("    emitter.ts - output += " + lastWord);
         // process.stdout.write(" " + lastWord);
-        console.log("output (all): " + this.output);
-        let a = 1; // insert breakpoint here
+        // console.log("output (all): " + this.output);
+        // let a = 1; // insert breakpoint here
 
         // Debug util (comment out on production).
         // if(this.output.includes("protected fClear():void {")) {
@@ -1087,15 +1087,14 @@ function emitCall(emitter: Emitter, node: Node): void {
         // }
 
     } else {
-        if(isCast(emitter, node)) {
+        if(!isNew && isCast(emitter, node)) {
             const type:Node = node.findChild(NodeKind.IDENTIFIER);
             const args:Node = node.findChild(NodeKind.ARGUMENTS);
-            const castee:Node = args.findChild(NodeKind.IDENTIFIER);
             emitter.insert('<');
             emitter.insert(emitter.getTypeRemap(type.text) || type.text);
             emitter.insert('>');
-            emitter.insert(castee.text);
-            emitter.skipTo(node.end);
+            emitter.skipTo(args.start);
+            visitNodes(emitter, [args]);
             return;
         }
         else {
