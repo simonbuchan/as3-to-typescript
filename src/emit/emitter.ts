@@ -1109,6 +1109,10 @@ function emitCall(emitter: Emitter, node: Node): void {
 function isCast(emitter: Emitter, node: Node):boolean {
 
     const type:Node = node.findChild(NodeKind.IDENTIFIER);
+    if(!type || !type.text) {
+        return false;
+    }
+
     const declaration = emitter.findDefInScope(type.text);
 
     if (declaration) {
