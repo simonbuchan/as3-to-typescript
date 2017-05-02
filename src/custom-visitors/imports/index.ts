@@ -27,6 +27,8 @@ function postProcessing (emitterOptions: EmitterOptions, contents: string): stri
     //fix import statements for com.greensock package:
     contents = contents.replace(/import {([ 0-9a-zA-Z]+)} from "[.\/]+com\/greensock[^"]+";?/gm, "import {$1} from \"@as3web/flash\"//com.greensock");
 
+    // hack-fix to correct import for XMLDocumentAway
+    contents = contents.replace('import { XMLDocumentAway } from "./XMLDocumentAway";','import { XMLDocumentAway } from "@as3web/flash";');
     //return here if you want to prevent import cleanup
     //return contents;
 
