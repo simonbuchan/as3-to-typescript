@@ -124,10 +124,6 @@ export function visitNode(emitter: Emitter, node: Node): void {
         return;
     }
 
-    if(VERBOSE >= 2) {
-        console.log("emitter.ts - visitNode() - kind: " + nodeKindName(node.kind) + ", text: " + node.text);
-    }
-
     // use custom visitor. allow custom node manipulation
     for (let i=0, l = emitter.options.customVisitors.length; i < l; i++) {
         let customVisitor = emitter.options.customVisitors[i];
@@ -141,6 +137,10 @@ export function visitNode(emitter: Emitter, node: Node): void {
         visitNodes(emitter, node.children);
     };
 
+    if(VERBOSE >= 2 && VISITORS[node.kind]) {
+        console.log("--------> visit:" + VISITORS[node.kind].name + "()");
+        console.log("node: " + node.toString());
+    }
     visitor(emitter, node);
 }
 
@@ -329,18 +329,10 @@ export default class Emitter {
         // let lastWord = split[split.length - 1];
         // console.log("    emitter.ts - output += " + lastWord);
         // process.stdout.write(" " + lastWord);
-        // console.log("output (all): " + this.output);
-        // let a = 1; // insert breakpoint here
-
-        // Debug util (comment out on production).
-        // if(this.output.includes("protected fClear():void {")) {
-        //     const fs = require('fs-extra');
-        //     const path = require('path');
-        //     const file = path.resolve(__dirname, "emitterlog.txt");
-        //     console.log("<<< MATCH >>> Writting log to: " + file);
-        //     fs.outputFileSync(file, this.output);
-        //     let a = 1; // insert breakpoint here
-        // }
+        if(VERBOSE >= 2 ) {
+            console.log("output (all): " + this.output);
+            // let a = 1; // insert breakpoint here
+        }
     }
 
     consume(string: string, limit: number): void {
@@ -1085,11 +1077,12 @@ function emitCall(emitter: Emitter, node: Node): void {
         //     emitter.catchup(node.end);
         //     return;
         // }
-
-    } else {
+    }
+    else {
         if(!isNew && isCast(emitter, node)) {
             const type:Node = node.findChild(NodeKind.IDENTIFIER);
             const args:Node = node.findChild(NodeKind.ARGUMENTS);
+            emitter.catchup(node.start);
             emitter.insert('<');
             emitter.insert(emitter.getTypeRemap(type.text) || type.text);
             emitter.insert('>');

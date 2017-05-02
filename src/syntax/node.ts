@@ -53,14 +53,15 @@ export default class Node {
     public children: Node[];
     public parent: Node; // only during emit
 
-    toString():string {
-        let str:string = nodeKindName(this.kind);
+    toString(offset:string = ""):string {
+        let str:string = (offset === "" ? "" : offset + "↳") + nodeKindName(this.kind);
         if(this.text) {
-            str += ", '" + this.text + "'";
+            str += ", text: '" + this.text + "'";
         }
+        str += "\n";
         for(let i:number = 0; i < this.children.length; i++) {
             const child:Node = this.children[i];
-            str += "/" + child.toString();
+            str += child.toString(offset + "  ");
         }
         return str;
     }
