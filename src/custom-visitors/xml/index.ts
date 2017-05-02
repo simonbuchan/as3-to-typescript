@@ -6,12 +6,13 @@ import Emitter, {
 } from "../../emit/emitter";
 
 function visit (emitter: Emitter, node: Node): boolean {
-    // Auto-import XML package.
+    // Auto-import XML package. //80pro: added check for IDENTIFIER
     if (
-        node.kind === NodeKind.TYPE &&
+        (node.kind === NodeKind.TYPE || node.kind === NodeKind.IDENTIFIER) &&
         (node.text === "XML" || node.text === "XMLList")
     ) {
-        emitter.ensureImportIdentifier("XML, XMLList", "xml-e4x", false);
+        emitter.ensureImportIdentifier("XML, XMLList", "@as3web/flash", false);
+        //80pro emitter.ensureImportIdentifier("XML, XMLList", "xml-e4x", false);
     }
 
     // Converts
