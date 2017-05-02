@@ -13,7 +13,7 @@ function visit (emitter: Emitter, node: Node): boolean {
 
 function postProcessing (emitterOptions: EmitterOptions, contents: string): string {
     // Remove error imports
-    contents = contents.replace(/import { getTimer } from "[^"]+getTimer";/gm, "");
+    contents = contents.replace(/import \{ getTimer \} from "[.\/@0-9a-zA-Z]+";?/gm, "");
 
     return contents;
 }
