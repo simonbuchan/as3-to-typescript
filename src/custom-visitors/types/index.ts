@@ -28,12 +28,12 @@ function visit (emitter: Emitter, node: Node): boolean {
 }
 
 const identifierMap: { [id: string]: string } = {
-    'Date': 'MyDate',
+    'Date': 'AwayDate',
     'XMLDocument': 'XMLDocumentAway',
 };
 
 const typeMap: { [id: string]: string } = {
-    'Date': 'MyDate',
+    'Date': 'AwayDate',
     'XMLDocument': 'XMLDocumentAway',
 };
 
