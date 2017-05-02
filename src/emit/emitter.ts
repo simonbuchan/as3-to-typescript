@@ -1035,48 +1035,30 @@ function emitCall(emitter: Emitter, node: Node): void {
     emitter.isNew = false;
 
     if (node.children[0].kind === NodeKind.VECTOR) {
-        if (isNew) {
+        if(isNew) {
             let vector = node.children[0];
             let args = node.children[1];
-
             emitter.insert('[');
-
             if (WARNINGS >= 2 && args.children.length > 0) {
                 console.log("emitter.ts: *** MINOR WARNING *** emitCall() => NodeKind.VECTOR with arguments not implemented.");
             }
-
             emitter.insert(']');
-
-            // emitter.insert('Array');
-            // emitter.insert('<');
-            // let type = vector.findChild(NodeKind.TYPE);
-            // if (type) {
-            //     emitter.skipTo(type.start);
-            //     emitType(emitter, type);
-            // } else {
-            //     emitter.insert('any');
-            // }
-
             emitter.skipTo(args.end);
-
-            // emitter.insert('>');
-            // let vectorNode = node.getChildFrom(NodeKind.VECTOR)
-            // visitNodes(emitter, vectorNode);
-
             return;
         }
-
-        // let args = node.findChild(NodeKind.ARGUMENTS);
-        // //vector conversion lets just cast to array
-        // if (args.children.length === 1) {
-        //     emitter.insert('(<');
-        //     emitVector(emitter, node.children[0]);
-        //     emitter.insert('>');
-        //     emitter.skipTo(args.children[0].start);
-        //     visitNode(emitter, args.children[0]);
-        //     emitter.catchup(node.end);
-        //     return;
-        // }
+        else {
+            if(isCast(emitter, node)) {
+                emitter.catchup(node.start);
+                emitter.insert('<');
+                const vec:Node = node.findChild(NodeKind.VECTOR);
+                visitNodes(emitter, [vec]);
+                emitter.insert('>');
+                const args:Node = node.findChild(NodeKind.ARGUMENTS);
+                emitter.skipTo(args.start);
+                visitNodes(emitter, [args]);
+                return;
+            }
+        }
     }
     else {
         if(!isNew && isCast(emitter, node)) {
@@ -1095,10 +1077,20 @@ function emitCall(emitter: Emitter, node: Node): void {
         }
     }
 
+
     visitNodes(emitter, node.children);
 }
 
 function isCast(emitter: Emitter, node: Node):boolean {
+
+    if(node.children.length == 0) {
+        return false;
+    }
+
+    const isVector = node.children[0].kind === NodeKind.VECTOR;
+    if( isVector && !emitter.isNew ) {
+        return true;
+    }
 
     const type:Node = node.findChild(NodeKind.IDENTIFIER);
     if(!type || !type.text) {
