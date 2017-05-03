@@ -1063,13 +1063,19 @@ function emitCall(emitter: Emitter, node: Node): void {
         if(!isNew && isCast(emitter, node)) {
             const type:Node = node.findChild(NodeKind.IDENTIFIER);
             const args:Node = node.findChild(NodeKind.ARGUMENTS);
+            const rtype:string = emitter.getTypeRemap(type.text) || type.text;
             emitter.catchup(node.start);
-            emitter.insert('<');
-            emitter.insert(emitter.getTypeRemap(type.text) || type.text);
-            emitter.insert('>');
-            emitter.skipTo(args.start);
-            visitNodes(emitter, [args]);
-            return;
+            if(rtype === "string" || rtype === "number") {
+                emitter.catchup(node.start);
+            }
+            else {
+                emitter.insert('<');
+                emitter.insert(rtype);
+                emitter.insert('>');
+                emitter.skipTo(args.start);
+                visitNodes(emitter, [args]);
+                return;
+            }
         }
         else {
             emitter.catchup(node.start);
