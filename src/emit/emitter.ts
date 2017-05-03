@@ -679,25 +679,24 @@ function emitForEach(emitter: Emitter, node: Node): void {
     let varNode = node.children[0];
     let inNode = node.children[1];
     let blockNode = node.children[2];
-
-    emitter.catchup(node.start + Keywords.FOR.length + 1);
-    emitter.skip(4); // "each"
-
     let nameTypeInitNode = varNode.findChild(NodeKind.NAME_TYPE_INIT);
     if (nameTypeInitNode) {
-        // don't emit variable type on for..of statements
+        // emit variable type on for..of statements, but outside of the loop header.
         let nameNode = nameTypeInitNode.findChild(NodeKind.NAME);
         let typeNode = nameTypeInitNode.findChild(NodeKind.TYPE);
-        emitter.catchup(varNode.start);
         if(typeNode) {
+            emitter.catchup(node.start);
             let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
-            emitter.insert(`let ${ nameNode.text }:${ typeRemapped }`);
+            emitter.insert(`let ${ nameNode.text }:${ typeRemapped };\n`);
         }
-        else {
-            emitter.insert(`let ${ nameNode.text }`);
-        }
+        emitter.catchup(node.start + Keywords.FOR.length + 1);
+        emitter.skip(4); // "each"
+        emitter.catchup(varNode.start);
+        emitter.insert(`${ nameNode.text }`);
         emitter.skipTo(varNode.end);
     } else {
+        emitter.catchup(node.start + Keywords.FOR.length + 1);
+        emitter.skip(4); // "each"
         visitNode(emitter, varNode);
     }
 
