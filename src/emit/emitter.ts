@@ -89,6 +89,7 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.FUNCTION]: emitFunction,
     [NodeKind.LAMBDA]: emitFunction,
     [NodeKind.FOREACH]: emitForEach,
+    [NodeKind.FORIN]: emitForIn,
     [NodeKind.INTERFACE]: emitInterface,
     [NodeKind.CLASS]: emitClass,
     [NodeKind.VECTOR]: emitVector,
@@ -138,12 +139,11 @@ export function visitNode(emitter: Emitter, node: Node): void {
     };
 
     if(VERBOSE >= 2 && VISITORS[node.kind]) {
-        console.log("--------> visit:" + VISITORS[node.kind].name + "()");
+        console.log("visit:" + VISITORS[node.kind].name + "() <=====================================");
         console.log("node: " + node.toString());
     }
     visitor(emitter, node);
 }
-
 
 function filterAST(node: Node): Node {
 
@@ -171,13 +171,6 @@ export default class Emitter {
         return this._emitThisForNextIdent;
     }
     set emitThisForNextIdent(val:boolean) {
-
-        // Debugging only.
-        // console.log("emitThisForNextIdent set to: " + val);
-        // if(this.scope.parent && this.scope.parent.className === "ResourceElement" && val == false) {
-        //     let a = 1;
-        // }
-
         this._emitThisForNextIdent = val;
     }
 
@@ -321,14 +314,15 @@ export default class Emitter {
         this.index += number;
     }
 
-    insert(string: string): void {
-        this.output += string;
+    insert(str: string): void {
+        this.output += str;
 
         // Debug util (comment out on production).
         // let split = this.output.split(" ");
         // let lastWord = split[split.length - 1];
         // console.log("    emitter.ts - output += " + lastWord);
         // process.stdout.write(" " + lastWord);
+        // console.log("+++++++++ " + (string.indexOf("for(") !== -1));
         if(VERBOSE >= 2 ) {
             console.log("output (all): " + this.output);
             // let a = 1; // insert breakpoint here
@@ -674,6 +668,37 @@ function emitFunction(emitter: Emitter, node: Node): void {
     });
 }
 
+function emitForIn(emitter: Emitter, node: Node): void {
+    let initNode = node.children[0];
+    let varNode = initNode.children[0];
+    let inNode = node.children[1];
+    let blockNode = node.children[2];
+    let nameTypeInitNode = varNode.findChild(NodeKind.NAME_TYPE_INIT);
+    if (nameTypeInitNode) {
+        // emit variable type on for..of statements, but outside of the loop header.
+        let nameNode = nameTypeInitNode.findChild(NodeKind.NAME);
+        let typeNode = nameTypeInitNode.findChild(NodeKind.TYPE);
+        if(typeNode) {
+            emitter.catchup(node.start);
+            let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
+            emitter.insert(`let ${ nameNode.text }:${ typeRemapped };\n`);
+        }
+        emitter.catchup(node.start + Keywords.FOR.length + 1);
+        emitter.catchup(varNode.start);
+        emitter.insert(`${ nameNode.text }`);
+        emitter.skipTo(varNode.end);
+    } else {
+        emitter.catchup(node.start + Keywords.FOR.length + 1);
+        visitNode(emitter, initNode);
+    }
+
+    emitter.catchup(inNode.start);
+    emitter.skip(Keywords.IN.length + 1); // replace "in " with "of "
+    emitter.insert('of ');
+
+    visitNodes(emitter, inNode.children);
+    visitNode(emitter, blockNode);
+}
 
 function emitForEach(emitter: Emitter, node: Node): void {
     let varNode = node.children[0];
