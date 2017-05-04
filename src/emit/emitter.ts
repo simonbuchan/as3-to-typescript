@@ -683,6 +683,14 @@ function emitForIn(emitter: Emitter, node: Node): void {
             let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
             emitter.insert(`let ${ nameNode.text }:${ typeRemapped };\n`);
         }
+        else {
+            let vecNode = nameTypeInitNode.findChild(NodeKind.VECTOR);
+            if(vecNode) {
+                if (WARNINGS >= 1) {
+                    console.log("emitter.ts: *** WARNING *** for iterators of type vector not supported. Please declare iterator outside of the for's header");
+                }
+            }
+        }
         emitter.catchup(node.start + Keywords.FOR.length + 1);
         emitter.catchup(varNode.start);
         emitter.insert(`${ nameNode.text }`);
@@ -713,6 +721,14 @@ function emitForEach(emitter: Emitter, node: Node): void {
             emitter.catchup(node.start);
             let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
             emitter.insert(`let ${ nameNode.text }:${ typeRemapped };\n`);
+        }
+        else {
+            let vecNode = nameTypeInitNode.findChild(NodeKind.VECTOR);
+            if(vecNode) {
+                if (WARNINGS >= 1) {
+                    console.log("emitter.ts: *** WARNING *** for iterators of type vector not supported. Please declare iterator outside of the for's header");
+                }
+            }
         }
         emitter.catchup(node.start + Keywords.FOR.length + 1);
         emitter.skip(4); // "each"
