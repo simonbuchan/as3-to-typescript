@@ -3,7 +3,7 @@ import * as Keywords from '../syntax/keywords';
 import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
 import { CustomVisitor } from "../custom-visitors"
-import {VERBOSE, WARNINGS} from '../config';
+import {VERBOSE, WARNINGS, FOR_IN_KEY} from '../config';
 
 const util = require('util');
 
@@ -108,7 +108,8 @@ const VISITORS: {[kind: number]: NodeVisitor} = {
     [NodeKind.VALUE]: emitObjectValue,
     [NodeKind.DOT]: emitDot,
     [NodeKind.LITERAL]: emitLiteral,
-    [NodeKind.ARRAY]: emitArray
+    [NodeKind.ARRAY]: emitArray,
+    [NodeKind.BLOCK]: emitBlock
 };
 
 
@@ -733,7 +734,8 @@ function emitForEach(emitter: Emitter, node: Node): void {
         emitter.catchup(node.start + Keywords.FOR.length + 1);
         emitter.skip(4); // "each"
         emitter.catchup(varNode.start);
-        emitter.insert(`${ nameNode.text }`);
+        //emitter.insert(`${ nameNode.text }`);
+        emitter.insert(FOR_IN_KEY);
         emitter.skipTo(varNode.end);
     } else {
         emitter.catchup(node.start + Keywords.FOR.length + 1);
@@ -742,13 +744,24 @@ function emitForEach(emitter: Emitter, node: Node): void {
     }
 
     emitter.catchup(inNode.start);
-    emitter.skip(Keywords.IN.length + 1); // replace "in " with "of "
-    emitter.insert('of ');
+    //emitter.skip(Keywords.IN.length + 1); // replace "in " with "of "
+    //emitter.insert(' of ');
+    emitter.insert(' ');
 
     visitNodes(emitter, inNode.children);
+/*    emitter.catchup(node.start + Keywords.FOR.length + 1);
+    let assignNode = createNode(NodeKind.ASSIGN, {
+        text: 'Sprite = bbb;\n',
+        start: blockNode.start,
+        end: blockNode.end
+    });*/
     visitNode(emitter, blockNode);
 }
 
+function emitBlock(emitter: Emitter, node: Node): void {
+
+    visitNodes(emitter, node.children);
+}
 
 function getClassDeclarations(emitter: Emitter, className: string, contentsNode: Node[]): Declaration[] {
     let found: { [name: string]: boolean } = {};
