@@ -712,12 +712,14 @@ function emitForIn(emitter: Emitter, node: Node): void {
 function emitForEach(emitter: Emitter, node: Node): void {
     let varNode = node.children[0];
     let inNode = node.children[1];
+    let objNode = inNode.children[0];
     let blockNode = node.children[2];
     let nameTypeInitNode = varNode.findChild(NodeKind.NAME_TYPE_INIT);
+    let nameNode = nameTypeInitNode.findChild(NodeKind.NAME);
+    let typeNode = nameTypeInitNode.findChild(NodeKind.TYPE);
     if (nameTypeInitNode) {
         // emit variable type on for..of statements, but outside of the loop header.
-        let nameNode = nameTypeInitNode.findChild(NodeKind.NAME);
-        let typeNode = nameTypeInitNode.findChild(NodeKind.TYPE);
+
         if(typeNode) {
             emitter.catchup(node.start);
             let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
@@ -748,18 +750,16 @@ function emitForEach(emitter: Emitter, node: Node): void {
     //emitter.insert(' of ');
     emitter.insert(' ');
 
+/*    visitNodes(emitter, inNode.children);
+    visitNode(emitter, blockNode);*/
+
     visitNodes(emitter, inNode.children);
-/*    emitter.catchup(node.start + Keywords.FOR.length + 1);
-    let assignNode = createNode(NodeKind.ASSIGN, {
-        text: 'Sprite = bbb;\n',
-        start: blockNode.start,
-        end: blockNode.end
-    });*/
+    emitter.catchup(blockNode.start + 1);
+    emitter.insert("\n\t\t\t" + nameNode.text + " = " + objNode.text + "[" + FOR_IN_KEY + "];\n");
     visitNode(emitter, blockNode);
 }
 
 function emitBlock(emitter: Emitter, node: Node): void {
-
     visitNodes(emitter, node.children);
 }
 
