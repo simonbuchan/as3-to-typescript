@@ -1169,9 +1169,12 @@ function emitCatch(emitter: Emitter, node: Node): void {
 
 
 function emitRelation(emitter: Emitter, node: Node): void {
+
     emitter.catchup(node.start);
+
+    // Check for 'as' in relation.
     let as = node.findChild(NodeKind.AS);
-    if (as) {
+    if(as) {
         // TODO: implement relation with type cast to vectors
         //       e.g. (myVector as Vector.<Boolean>)
         if (node.lastChild.kind === NodeKind.IDENTIFIER) {
@@ -1185,15 +1188,79 @@ function emitRelation(emitter: Emitter, node: Node): void {
 
         } else if (node.lastChild.kind === NodeKind.VECTOR) {
             visitNodes(emitter, node.children);
-
         } else {
             emitter.commentNode(node, false);
         }
         return;
     }
+
+    // Check for 'is' in relation.
+    let is = containsIsKeyword(node);
+    if(is) {
+        console.log('ITS AN IS');
+
+        // Determine if the check is against a primitive or a custom type.
+        // console.log(node.toString());
+        var isPrimitiveCheck:boolean = containsPrimitiveIdentifier(node);
+        if(isPrimitiveCheck) {
+            console.log('PRIMITIVE CHECK');
+
+            // Identify players.
+            var varNode = node.children[0];
+            var isNode = node.children[1];
+            var typeNode = node.children[2];
+
+            // Insert 'typeof' before instance name.
+            emitter.catchup(node.start);
+            emitter.insert('typeof ');
+
+            // Emit variable name.
+            visitNode(emitter, varNode);
+
+            // Emit equality check.
+            emitter.insert(' === ');
+
+            // Replace type with string comparison.
+            let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
+            emitter.insert(`'${typeRemapped}'`);
+
+            // Skip the rest... 'is Number/String/Boolean'
+            emitter.skipTo(node.end);
+
+            return;
+        }
+        else {
+            // TODO: custom type interface checks are currently not checked by the compiler
+            if (WARNINGS >= 1) {
+                console.log("emitter.ts: *** WARNING *** custom type interface checks are currently not treated by the compiler.");
+            }
+        }
+    }
+
     visitNodes(emitter, node.children);
 }
 
+function containsIsKeyword(node:Node) {
+    for(var i:number = 0; i < node.children.length; i++) {
+        var child:Node = node.children[i];
+        if(child.text == 'is') {
+            return true;
+        }
+    }
+    return false;
+}
+
+function containsPrimitiveIdentifier(node:Node) {
+    for(var i:number = 0; i < node.children.length; i++) {
+        var child:Node = node.children[i];
+        if(child.kind == NodeKind.IDENTIFIER) {
+            if(child.text === 'Number' || child.text === 'String' || child.text === 'Boolean') {
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
 function emitOp(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start);
