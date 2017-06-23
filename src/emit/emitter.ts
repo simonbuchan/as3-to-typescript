@@ -3,7 +3,7 @@ import * as Keywords from '../syntax/keywords';
 import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
 import { CustomVisitor } from "../custom-visitors"
-import {VERBOSE, WARNINGS, FOR_IN_KEY} from '../config';
+import {VERBOSE, WARNINGS, FOR_IN_KEY, INDENT} from '../config';
 
 const util = require('util');
 
@@ -675,14 +675,19 @@ function emitForIn(emitter: Emitter, node: Node): void {
     let inNode = node.children[1];
     let blockNode = node.children[2];
     let nameTypeInitNode = varNode.findChild(NodeKind.NAME_TYPE_INIT);
+    let typeStr = "";
     if (nameTypeInitNode) {
         // emit variable type on for..of statements, but outside of the loop header.
         let nameNode = nameTypeInitNode.findChild(NodeKind.NAME);
         let typeNode = nameTypeInitNode.findChild(NodeKind.TYPE);
         if(typeNode) {
             emitter.catchup(node.start);
+/*            let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
+            emitter.insert(`let ${ nameNode.text }:${ typeRemapped };\n`);*/
+
             let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
-            emitter.insert(`let ${ nameNode.text }:${ typeRemapped };\n`);//TODO to check for undefined
+            typeStr = typeRemapped == undefined ? '' : ':' + typeRemapped;
+            emitter.insert(`let ${ nameNode.text }${ typeStr };\n`);
         }
         else {
             let vecNode = nameTypeInitNode.findChild(NodeKind.VECTOR);
@@ -702,8 +707,9 @@ function emitForIn(emitter: Emitter, node: Node): void {
     }
 
     emitter.catchup(inNode.start);
-    emitter.skip(Keywords.IN.length + 1); // replace "in " with "of "
-    emitter.insert('of ');
+    emitter.insert(' ');
+/*    emitter.skip(Keywords.IN.length + 1); // replace "in " with "of "
+    emitter.insert('of ');*/
 
     visitNodes(emitter, inNode.children);
     visitNode(emitter, blockNode);
@@ -739,7 +745,7 @@ function emitForEach(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start + Keywords.FOR.length + 1);
     emitter.skip(4); // "each"
     emitter.catchup(varNode.start);
-    emitter.insert(FOR_IN_KEY);
+    emitter.insert(`let ${FOR_IN_KEY}`);
     emitter.skipTo(varNode.end);
 
     emitter.catchup(inNode.start);
@@ -748,71 +754,10 @@ function emitForEach(emitter: Emitter, node: Node): void {
 
     visitNodes(emitter, inNode.children);
     emitter.catchup(blockNode.start + 1);
-    emitter.insert(`\n\t\t\tlet ${nameNode.text}${typeStr} = ${objNode.text}[${FOR_IN_KEY}];\n`);
+    emitter.insert(`\n\t\t\tlet ${ nameNode.text }${ typeStr } = ${ objNode.text }[${ FOR_IN_KEY }];\n`);
     visitNode(emitter, blockNode);
 }
-/*
-function emitForEach(emitter: Emitter, node: Node): void {
-    let varNode = node.children[0];
-    let inNode = node.children[1];
-    let objNode = inNode.children[0];
-    let blockNode = node.children[2];
-    let nameTypeInitNode = varNode.findChild(NodeKind.NAME_TYPE_INIT);
-    let nameNode;
-    let typeNode;
-    let typeStr:string
-    if (nameTypeInitNode) {
-        // emit variable type on for..of statements, but outside of the loop header.
-        nameNode = nameTypeInitNode.findChild(NodeKind.NAME);
-        typeNode = nameTypeInitNode.findChild(NodeKind.TYPE);
-        if(typeNode) {
-            emitter.catchup(node.start);
-            let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
-            typeStr = typeRemapped == undefined ? '' : ':' + typeRemapped;
-        }
-        else {
-            let vecNode = nameTypeInitNode.findChild(NodeKind.VECTOR);
-            if(vecNode) {
-                if (WARNINGS >= 1) {
-                    console.log("emitter.ts: *** WARNING *** for iterators of type vector not supported. Please declare iterator outside of the for's header");
-                }
-            }
-        }
-        emitter.catchup(node.start + Keywords.FOR.length + 1);
-        emitter.skip(4); // "each"
-        emitter.catchup(varNode.start);
-        //emitter.insert(`${ nameNode.text }`);
-        emitter.insert(FOR_IN_KEY);
-        emitter.skipTo(varNode.end);
-    } else {
-        nameNode = node.findChild(NodeKind.NAME);
-        typeNode = node.findChild(NodeKind.TYPE);
-        if(typeNode) {
-            emitter.catchup(node.start);
-            let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
-            typeStr = typeRemapped == undefined ? '' : ':' + typeRemapped;
-        }
-        else {
-            typeStr = "";
-        }
-        emitter.catchup(node.start + Keywords.FOR.length + 1);
-        emitter.skip(4); // "each"
-        visitNode(emitter, varNode);
-        emitter.catchup(varNode.start);
-        emitter.insert(FOR_IN_KEY);
-        emitter.skipTo(varNode.end);
-    }
 
-    emitter.catchup(inNode.start);
-    emitter.insert(' ');
-
-
-    visitNodes(emitter, inNode.children);
-    emitter.catchup(blockNode.start + 1);
-    emitter.insert(`\n\t\t\tlet ${nameNode.text}${typeStr} = ${objNode.text}[${FOR_IN_KEY}];\n`);
-    visitNode(emitter, blockNode);
-}
-*/
 
 function emitBlock(emitter: Emitter, node: Node): void {
     visitNodes(emitter, node.children);
@@ -1384,6 +1329,11 @@ function emitArray(emitter: Emitter, node: Node): void {
     }
     emitter.insert(']');
     emitter.skipTo(node.end);
+}
+
+function getIndent(tabs:number):string
+{
+    return
 }
 
 export function emit(ast: Node, source: string, options?: EmitterOptions): string {
