@@ -7,9 +7,9 @@ import {startsWith} from '../string';
 import AS3Parser, {nextToken, nextTokenIgnoringDocumentation, consume, skip, tokIs} from './parser';
 import {parseQualifiedName, parseBlock, parseParameterList, parseNameTypeInit} from './parse-common';
 import {ASDOC_COMMENT, MULTIPLE_LINES_COMMENT} from './parser';
+import {VERBOSE} from '../config';
 import {parseExpression} from './parse-expressions';
 import {parseOptionalType} from './parse-types';
-
 
 /**
  * tok is empty, since nextToken has not been called before
@@ -46,6 +46,11 @@ function parsePackage(parser:AS3Parser):Node {
 
 
 function parsePackageContent(parser:AS3Parser):Node {
+
+    if(VERBOSE >= 1) {
+        console.log("parse-declarations.ts - parsePackageContent() - token: " + parser.tok.text + ", line: " + parser.scn.lastLineScanned);
+    }
+
     let result:Node = createNode(NodeKind.CONTENT, {start: parser.tok.index});
     let modifiers:Token[] = [];
     let meta:Node[] = [];
@@ -96,10 +101,14 @@ function parsePackageContent(parser:AS3Parser):Node {
 
 
 function parseImport(parser:AS3Parser):Node {
+
     let tok = consume(parser, Keywords.IMPORT);
     let name = parseImportName(parser);
     let result:Node = createNode(NodeKind.IMPORT, {start: tok.index, text: name});
     skip(parser, Operators.SEMI_COLUMN);
+    if(VERBOSE >= 2) {
+        console.log("parse-declarations.ts - parseImport() - name: " + name + ", line: " + parser.scn.lastLineScanned);
+    }
     return result;
 }
 
@@ -241,11 +250,19 @@ function parseImplementsList(parser:AS3Parser):Node {
 
 
 function parseClassContent(parser:AS3Parser):Node {
+
+    if(VERBOSE >= 1) {
+        console.log("parse-declarations.ts - parseClassContent() - token: " + parser.tok.text + ", line: " + parser.scn.lastLineScanned);
+    }
+
     let result:Node = createNode(NodeKind.CONTENT, {start: parser.tok.index});
     let modifiers:Token[] = [];
     let meta:Node[] = [];
 
     while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
+        if(VERBOSE >= 2) {
+            console.log("parse-declarations.ts - keyword: " + parser.tok.text + ", index: " + parser.tok.index);
+        }
         if (tokIs(parser, Operators.LEFT_CURLY_BRACKET)) {
             result.children.push(parseBlock(parser));
         }
@@ -367,6 +384,7 @@ function parseInterfaceContent(parser:AS3Parser):Node {
 
 
 function parseClassFunctions(parser:AS3Parser, result:Node, modifiers:Token[], meta:Node[]):void {
+
     result.children.push(parseFunction(parser, meta, modifiers));
     meta.length = 0;
     modifiers.length = 0;
@@ -374,8 +392,18 @@ function parseClassFunctions(parser:AS3Parser, result:Node, modifiers:Token[], m
 
 
 function parseFunction(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
+
+    if(modifiers && modifiers.length === 0) {
+        var line:number = parser.scn.getNumLineBreaksBeforeIndex();
+        throw new Error("*** ERROR *** Class member modifier (public, private, internal) is required at line: " + line);
+    }
+
     let {type, name, params, returnType} = doParseSignature(parser);
     let result:Node = createNode(findFunctionTypeFromTypeNode(type), {start: type.start, end: -1, text: type.text});
+
+    if(VERBOSE >= 2) {
+        console.log("parse-declarations.ts - parseFunction: " + name.text + "()" + ", line: " + parser.scn.lastLineScanned);
+    }
 
     if (parser.currentAsDoc) {
         result.children.push(parser.currentAsDoc);
@@ -385,11 +413,18 @@ function parseFunction(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
         result.children.push(parser.currentMultiLineComment);
         parser.currentMultiLineComment = null;
     }
+
+    // Append dummy modifier to constructor
+    if (modifiers.length === 0 && /^[A-Z]/.test(name.text)) {
+        modifiers.push( new Token("public", type.start) )
+    }
+
     result.children.push(convertMeta(parser, meta));
     result.children.push(convertModifiers(parser, modifiers));
     result.children.push(name);
     result.children.push(params);
     result.children.push(returnType);
+
     if (tokIs(parser, Operators.SEMI_COLUMN)) {
         consume(parser, Operators.SEMI_COLUMN);
     } else {
@@ -410,7 +445,7 @@ function parseFunctionSignature(parser:AS3Parser):Node {
     let {type, name, params, returnType} = doParseSignature(parser);
     skip(parser, Operators.SEMI_COLUMN);
     let result:Node = createNode(
-        findFunctionTypeFromTypeNode(type),
+        type.kind,
         {start: type.start, end: -1, text: type.text},
         name,
         params,
@@ -423,11 +458,34 @@ function parseFunctionSignature(parser:AS3Parser):Node {
 
 
 function doParseSignature(parser:AS3Parser) {
+
+    // console.logparse-declarations.ts - doParseSignature()");
+
     let tok = consume(parser, Keywords.FUNCTION);
     let type:Node = createNode(NodeKind.TYPE, {tok: tok});
-    if (tokIs(parser, Keywords.SET) || tokIs(parser, Keywords.GET)) {
-        type = createNode(NodeKind.TYPE, {start: tok.index, end: parser.tok.end, text: parser.tok.text});
+
+    let isGet = tokIs(parser, Keywords.GET);
+    let isSet = tokIs(parser, Keywords.SET);
+
+    if (isGet || isSet) {
+        let currentToken = parser.tok;
+        let checkpoint = parser.scn.getCheckPoint();
+
         nextToken(parser); // set or get
+        let valid: boolean = (parser.tok.text !== "(");
+
+        if (valid) {
+            type = createNode((isGet) ? NodeKind.GET : NodeKind.SET, {
+                start: tok.index,
+                end: parser.tok.end,
+                text: parser.tok.text
+            });
+
+        } else {
+            parser.scn.rewind(checkpoint);
+            parser.tok = currentToken;
+        }
+
     }
     let name:Node = createNode(NodeKind.NAME, {tok: parser.tok});
     nextToken(parser); // name
@@ -438,10 +496,10 @@ function doParseSignature(parser:AS3Parser) {
 
 
 function findFunctionTypeFromTypeNode(node: Node):NodeKind {
-    if (node.text === Keywords.SET) {
+    if (node.text === Keywords.SET || node.kind === NodeKind.SET) {
         return NodeKind.SET;
     }
-    if (node.text === Keywords.GET) {
+    if (node.text === Keywords.GET || node.kind === NodeKind.GET) {
         return NodeKind.GET;
     }
     return NodeKind.FUNCTION;
@@ -460,6 +518,10 @@ function parseFunctionBlock(parser:AS3Parser):Node {
 
 
 export function parseVarList(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
+    if(modifiers && modifiers.length === 0) {
+        var line:number = parser.scn.getNumLineBreaksBeforeIndex();
+        throw new Error("*** ERROR *** Class member modifier (public, private, internal) is required at line: " + line);
+    }
     let tok = consume(parser, Keywords.VAR);
     let result:Node = createNode(NodeKind.VAR_LIST, {start: tok.index, end: tok.end});
     result.children.push(convertMeta(parser, meta));

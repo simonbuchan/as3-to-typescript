@@ -35,20 +35,17 @@ import Token from './token';
 import Node from '../syntax/node';
 import {startsWith} from '../string';
 
-
 export const ASDOC_COMMENT = '/**';
 export const MULTIPLE_LINES_COMMENT = '/*';
 export const NEW_LINE = '\n';
 const SINGLE_LINE_COMMENT = '//';
 export const VECTOR = 'Vector';
 
-
 /**
  * @author xagnetti
  */
 export default class AS3Parser {
     sourceFile:SourceFile;
-
     currentAsDoc:Node;
     currentFunctionNode:Node;
     currentMultiLineComment:Node;

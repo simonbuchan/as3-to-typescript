@@ -1,92 +1,105 @@
 /*jshint node: true */
-
 var fs = require('fs-extra');
 var path = require('path');
 var diff = require('diff');
 var parse = require('../lib/parse');
 var emit = require('../lib/emit');
 
-
-var FIXTURES_DIR = path.join(__dirname, 'fixtures');
-var EXPECTED_DIR = path.join(FIXTURES_DIR, 'expected');
-var GENERATED_DIR = path.join(FIXTURES_DIR, 'generated');
-
-
-function fixturePaths() {
-  return fs.readdirSync(FIXTURES_DIR)
-    .filter(function (name) {
-      return path.extname(name) === '.as';
-    }).map(function (name) {
-      var basename = path.basename(name, '.as');
-      return {
-        name: name,
-        source: path.join(FIXTURES_DIR, name),
-        expectedTs: path.join(EXPECTED_DIR, basename + '.ts'),
-        expectedAst: path.join(EXPECTED_DIR, basename + '.ast.json'),
-        generatedTs: path.join(GENERATED_DIR, basename + '.ts'),
-        generatedAst: path.join(GENERATED_DIR, basename + '.ast.json')
-      };
-    });
+let sourceDir = path.resolve(__dirname, "as3");
+let outputDir = path.resolve(__dirname, "generated");
+if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir);
 }
 
-function readNormalizedSync(path) {
-  return fs.readFileSync(path, 'UTF-8').replace(/\r\n?/g, '\n');
-}
+// let bridge = require('../lib/bridge/createjs').default;
+let bridge = undefined;
+let overwrite = true;
+let commonjs = true;
 
-function generate() {
-  fs.emptyDirSync(GENERATED_DIR);
-  fixturePaths().forEach(function (fixture) {
-    console.log('compiling : ' + fixture.name);
-    var source = readNormalizedSync(fixture.source);
-    var ast = parse(fixture.source, source);
-    fs.outputFileSync(fixture.generatedAst, JSON.stringify(ast, null, 2));
-    var output = emit(ast, source);
-    fs.outputFileSync(fixture.generatedTs, output.replace(/\r\n?/g, '\n'));
-  });
-}
-
-function acceptGenerated() {
-  fs.removeSync(EXPECTED_DIR);
-  fs.copySync(GENERATED_DIR, EXPECTED_DIR);
-}
-
-function printDiff(expectedPath, generatedPath) {
-  var expected = readNormalizedSync(expectedPath);
-  var generated = readNormalizedSync(generatedPath);
-  if (expected === generated) {
-    return false;
-  }
-  var patch = diff.createTwoFilesPatch(
+function printDiff (expectedPath, generatedPath, expected, generated) {
+  console.log(diff.createTwoFilesPatch(
     expectedPath,
     generatedPath,
     expected,
-    generated);
-  console.log(patch);
-  return true;
+    generated
+  ));
 }
 
-function compare() {
-  var exitCode = 0;
-  fixturePaths().forEach(function (fixture) {
-    if (printDiff(fixture.expectedAst, fixture.generatedAst) ||
-        printDiff(fixture.expectedTs, fixture.generatedTs)) {
-      exitCode = 1;
+function readdir(dir, prefix, result) {
+  if (!prefix) prefix = '';
+  if (!result) result = [];
+
+    fs.readdirSync(dir).forEach(file => {
+        let fileName = path.join(prefix, file);
+        let filePath = path.join(dir, file);
+        if (!fs.statSync(filePath).isDirectory()) {
+            result.push(fileName);
+        } else {
+            readdir(filePath, fileName, result);
+        }
+    });
+    return result;
+}
+
+let files = readdir(sourceDir).filter(file => /.as$/.test(file));
+let number = 0;
+let length = files.length;
+
+// get class definitions by namespace
+let definitionsByNamespace = {};
+files.forEach(file => {
+    let segments = file.match(/([a-zA-Z]+)/g);
+    segments.pop();
+
+    let identifier = segments.pop();
+    let ns = segments.join(".");
+
+    if (!definitionsByNamespace[ ns ]) {
+        definitionsByNamespace[ ns ] = [ ];
     }
-  });
-  process.exit(exitCode);
-}
 
-var command = process.argv[2];
-switch (command) {
-  case 'generate':
-    generate();
-    break;
-  case 'accept':
-    acceptGenerated();
-    break;
-  case 'compare':
-    compare();
-    break;
-  default:
-    throw new Error('unknown command :' + command);
-}
+    definitionsByNamespace[ ns ].push( identifier );
+});
+
+let emitterOptions = {
+    lineSeparator: '\n',
+    useNamespaces: !commonjs,
+    bridge: bridge,
+    definitionsByNamespace: definitionsByNamespace
+};
+
+files.forEach(file => {
+
+    let fileTs = file.replace(/.as$/, '.ts');
+    let inputFile = path.resolve(sourceDir, file);
+    let outputFile = path.resolve(outputDir, fileTs);
+    let expectedOutputFile = outputFile.replace("/generated/", "/ts/");
+
+    if (!overwrite && fs.existsSync(outputFile)) {
+        let stat = fs.statSync(outputFile)
+        if (previousLockTimestamp.getTime() !== stat.mtime.getTime()) {
+            if (interactive && !readlineSync.keyInYN(`"${ fileTs }" has been modified. Overwrite it?`)) {
+                return;
+            }
+        }
+    }
+
+    let content = fs.readFileSync(inputFile, 'UTF-8');
+    let ast = parse(path.basename(file), content);
+    let contents = emit(ast, content, emitterOptions);
+
+    if (bridge && bridge.postProcessing) {
+        contents = bridge.postProcessing(emitterOptions, contents);
+    }
+
+    let generatedContents = contents.replace(/\r\n/g, "\n");
+    let expectedContents = fs.readFileSync(expectedOutputFile).toString();
+    let isOK = expectedContents === generatedContents;
+
+    if (!isOK) {
+      printDiff(outputFile, expectedOutputFile, expectedContents, generatedContents);
+    }
+
+    console.log(((isOK) ? 'OK' : 'MISMATCH') + ' - (' + ( number + 1 ) + '/' + length + ') \'' + file + '\'');
+    number++;
+});

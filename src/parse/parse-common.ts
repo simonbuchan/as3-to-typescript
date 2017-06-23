@@ -1,6 +1,7 @@
 import Node, {createNode} from '../syntax/node';
 import NodeKind from '../syntax/nodeKind';
 import * as Operators from '../syntax/operators';
+import {VERBOSE} from '../config';
 import {startsWith} from '../string';
 import AS3Parser, {nextToken, consume, tokIs} from './parser';
 import {MULTIPLE_LINES_COMMENT} from './parser';
@@ -29,13 +30,24 @@ export function parseQualifiedName(parser:AS3Parser, skipPackage:boolean):string
 
 
 export function parseBlock(parser:AS3Parser, result?:Node):Node {
+
+    if(VERBOSE >= 2) {
+        console.log("parseBlock()" + ", line: " + parser.scn.lastLineScanned);
+    }
+
     let tok = consume(parser, Operators.LEFT_CURLY_BRACKET);
     if (!result) {
         result = createNode(NodeKind.BLOCK, {start: tok.index, end: parser.tok.end});
     } else {
         result.start = tok.index;
     }
+    if(VERBOSE >= 2) {
+        console.log("token: " + parser.tok.text + ", index: " + parser.tok.index + ", line: " + parser.scn.lastLineScanned);
+    }
     while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
+        if(VERBOSE >= 3) {
+            console.log("parseBlock() - iter");
+        }
         if (startsWith(parser.tok.text, MULTIPLE_LINES_COMMENT)) {
             parser.currentFunctionNode.children.push(
                 createNode(NodeKind.MULTI_LINE_COMMENT, {tok: parser.tok}));
