@@ -745,7 +745,7 @@ function emitForEach(emitter: Emitter, node: Node): void {
     emitter.catchup(node.start + Keywords.FOR.length + 1);
     emitter.skip(4); // "each"
     emitter.catchup(varNode.start);
-    emitter.insert(`let ${FOR_IN_KEY}`);
+    emitter.insert(`var ${FOR_IN_KEY}`);
     emitter.skipTo(varNode.end);
 
     emitter.catchup(inNode.start);
@@ -754,7 +754,7 @@ function emitForEach(emitter: Emitter, node: Node): void {
 
     visitNodes(emitter, inNode.children);
     emitter.catchup(blockNode.start + 1);
-    emitter.insert(`\n\t\t\tlet ${ nameNode.text }${ typeStr } = ${ objNode.text }[${ FOR_IN_KEY }];\n`);
+    emitter.insert(`\n\t\t\tvar ${ nameNode.text }${ typeStr } = ${ objNode.text }[${ FOR_IN_KEY }];\n`);
     visitNode(emitter, blockNode);
 }
 
@@ -909,7 +909,46 @@ function emitMethod(emitter: Emitter, node: Node): void {
             emitter.catchup(mods.start);
         }
         emitter.insert('constructor');
-        emitter.skipTo(name.end);
+
+        // Check if the class extends an Array, in which an insertion
+        // is required in the constructor. It's a weird
+        // case but necessary.
+        if(emitter.output.indexOf('extends Array') > -1) {
+
+            // Prepare the injection.
+            var className = name.text;
+            var injection = '\nvar thisAny:any=this;\nthisAny.__proto__ = ' + className + '.prototype;\n';
+
+            // Find position of insertion.
+            // Enter child nodes and process 1 by 1...
+            emitter.withScope(getFunctionDeclarations(emitter, node), () => {
+                emitter.skipTo(name.end);
+                var children = node.getChildFrom(NodeKind.NAME);
+                for (var i: number = 0; i < children.length; i++) {
+                    var child = children[i];
+                    if (child.kind !== NodeKind.BLOCK) { // visit all other nodes normally
+                        visitNode(emitter, child);
+                        // emitter.skipTo(child.end);
+                    }
+                    else { // treat block node differently
+                        // Find super()
+                        for (var j: number = 0; j < child.children.length; j++) {
+                            var grandChild = child.children[j];
+                            visitNode(emitter, grandChild);
+                            emitter.catchup(grandChild.end + 1);
+                            if (containsSuperCall(grandChild)) {
+                                emitter.insert(injection);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return;
+        }
+        else {
+            emitter.skipTo(name.end);
+        }
 
         // // find "super" on constructor and move it to the beginning of the
         // // block
@@ -937,6 +976,17 @@ function emitMethod(emitter: Emitter, node: Node): void {
     emitter.withScope(getFunctionDeclarations(emitter, node), () => {
         visitNodes(emitter, node.getChildFrom(NodeKind.NAME));
     });
+}
+
+function containsSuperCall(node:Node):boolean {
+    for(var i:number = 0; i < node.children.length; i++) {
+        var child = node.children[i];
+        if(child.text === 'super') {
+            return true;
+        }
+        return containsSuperCall(child);
+    }
+    return false;
 }
 
 
