@@ -753,8 +753,27 @@ function emitForEach(emitter: Emitter, node: Node): void {
 
     visitNodes(emitter, inNode.children);
     emitter.catchup(blockNode.start + 1);
-    let declarationWord:string = nameTypeInitNode ? "var" : "";
-    emitter.insert(`\n\t\t\t${ declarationWord } ${ nameNode.text }${ typeStr } = ${ objNode.text }[${ FOR_IN_KEY }];\n`);
+    let def = emitter.findDefInScope(nameNode.text);
+    let declarationWord:string = "";
+    if (nameTypeInitNode){
+        declarationWord = "var ";
+    }
+    else {
+        if (def){
+            if (def.bound ){
+                declarationWord = def.bound + ".";
+            }
+            else
+            {
+                declarationWord = "";
+            }
+        }
+        else {
+            declarationWord = "this.";
+        }
+    }
+
+    emitter.insert(`\n\t\t\t${ declarationWord }${ nameNode.text }${ typeStr } = ${ objNode.text }[${ FOR_IN_KEY }];\n`);
     visitNode(emitter, blockNode);
 
 }
