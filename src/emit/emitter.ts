@@ -751,11 +751,12 @@ function emitForEach(emitter: Emitter, node: Node): void {
     emitter.catchup(inNode.start);
     emitter.insert(' ');
 
-
     visitNodes(emitter, inNode.children);
     emitter.catchup(blockNode.start + 1);
-    emitter.insert(`\n\t\t\tvar ${ nameNode.text }${ typeStr } = ${ objNode.text }[${ FOR_IN_KEY }];\n`);
+    let declarationWord:string = nameTypeInitNode ? "var" : "";
+    emitter.insert(`\n\t\t\t${ declarationWord } ${ nameNode.text }${ typeStr } = ${ objNode.text }[${ FOR_IN_KEY }];\n`);
     visitNode(emitter, blockNode);
+
 }
 
 
@@ -1097,6 +1098,7 @@ function emitCall(emitter: Emitter, node: Node): void {
             }
             emitter.insert(']');
             emitter.skipTo(args.end);
+
             return;
         }
         else {
