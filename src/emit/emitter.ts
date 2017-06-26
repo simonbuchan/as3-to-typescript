@@ -687,7 +687,7 @@ function emitForIn(emitter: Emitter, node: Node): void {
 
             let typeRemapped = emitter.getTypeRemap(typeNode.text) || typeNode.text;
             typeStr = typeRemapped == undefined ? '' : ':' + typeRemapped;
-            emitter.insert(`let ${ nameNode.text }${ typeStr };\n`);
+            emitter.insert(`var ${ nameNode.text }${ typeStr };\n`);
         }
         else {
             let vecNode = nameTypeInitNode.findChild(NodeKind.VECTOR);
@@ -754,7 +754,7 @@ function emitForEach(emitter: Emitter, node: Node): void {
 
     visitNodes(emitter, inNode.children);
     emitter.catchup(blockNode.start + 1);
-    emitter.insert(`\n\t\t\tlet ${ nameNode.text }${ typeStr } = ${ objNode.text }[${ FOR_IN_KEY }];\n`);
+    emitter.insert(`\n\t\t\tvar ${ nameNode.text }${ typeStr } = ${ objNode.text }[${ FOR_IN_KEY }];\n`);
     visitNode(emitter, blockNode);
 }
 
