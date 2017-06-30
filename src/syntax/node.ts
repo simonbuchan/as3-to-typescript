@@ -1,6 +1,6 @@
 import NodeKind, {nodeKindName} from './nodeKind';
 import Token from '../parse/token';
-import {VERBOSE, VERBOSE_MASK} from '../config';
+import {VERBOSE_MASK} from '../config';
 
 interface CreateNodeOptions {
     start?: number;
@@ -39,7 +39,7 @@ export function createNode(kind: NodeKind, options?: CreateNodeOptions, ... chil
     node.children = children;
 
     //if(VERBOSE >= 3) {
-    if((VERBOSE_MASK & ReportFlags.FLAG_23) == ReportFlags.FLAG_23) {
+    if((VERBOSE_MASK & ReportFlags.CREATE_NODES) == ReportFlags.CREATE_NODES) {
 
         console.log("node.ts - createNode() - kind: " + nodeKindName(node.kind) + ", text: " + node.text);
     }

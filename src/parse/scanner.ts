@@ -30,7 +30,7 @@
  */
 
 
-import {VERBOSE, VERBOSE_MASK, WARNINGS, AUTO_INSERT_SEMICOLONS} from '../config';
+import {VERBOSE_MASK, WARNINGS, AUTO_INSERT_SEMICOLONS} from '../config';
 import Token from './token';
 import * as Keywords from '../syntax/keywords';
 import {startsWith, endsWith} from '../string';
@@ -101,7 +101,7 @@ export default class AS3Scanner {
         }
 
         //if(VERBOSE >= 2) {
-        if((VERBOSE_MASK & ReportFlags.FLAG_18) == ReportFlags.FLAG_18) {
+        if((VERBOSE_MASK & ReportFlags.SCANNER_POINTS) == ReportFlags.SCANNER_POINTS) {
             console.log("  scanner - token: " + text + ", line: " + this.getNumLineBreaksBeforeIndex());
         }
 
@@ -139,7 +139,7 @@ export default class AS3Scanner {
         }
 
         //if(VERBOSE >= 3) {
-        if((VERBOSE_MASK & ReportFlags.FLAG_19) == ReportFlags.FLAG_19) {
+        if((VERBOSE_MASK & ReportFlags.SCANNER_DETAILS) == ReportFlags.SCANNER_DETAILS) {
             console.log("  scanner - char: " + currentChar + ", index: " + this.index + ", inVector: " + this.inVector);
         }
 
@@ -205,7 +205,7 @@ function nextToken(scanner: AS3Scanner): Token {
 
     if (scanner.index >= scanner.content.length) {
         //if(VERBOSE >= 3) {
-        if((VERBOSE_MASK & ReportFlags.FLAG_19) == ReportFlags.FLAG_19) {
+        if((VERBOSE_MASK & ReportFlags.SCANNER_DETAILS) == ReportFlags.SCANNER_DETAILS) {
             console.log("  scanner - EOF");
         }
         return scanner.createToken(Keywords.EOF, { skip: false });

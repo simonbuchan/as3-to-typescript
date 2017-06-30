@@ -1,7 +1,7 @@
 import Node, {createNode} from '../syntax/node';
 import NodeKind from '../syntax/nodeKind';
 import * as Operators from '../syntax/operators';
-import {VERBOSE, VERBOSE_MASK} from '../config';
+import {VERBOSE_MASK} from '../config';
 import {startsWith} from '../string';
 import AS3Parser, {nextToken, consume, tokIs} from './parser';
 import {MULTIPLE_LINES_COMMENT} from './parser';
@@ -32,7 +32,7 @@ export function parseQualifiedName(parser:AS3Parser, skipPackage:boolean):string
 export function parseBlock(parser:AS3Parser, result?:Node):Node {
 
     //if(VERBOSE >= 2) {
-    if((VERBOSE_MASK & ReportFlags.FLAG_07) == ReportFlags.FLAG_07) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_POINTS) == ReportFlags.PARSER_POINTS) {
 
         console.log("parseBlock()" + ", line: " + parser.scn.lastLineScanned);
     }
@@ -44,12 +44,12 @@ export function parseBlock(parser:AS3Parser, result?:Node):Node {
         result.start = tok.index;
     }
     //if(VERBOSE >= 2) {
-    if((VERBOSE_MASK & ReportFlags.FLAG_07) == ReportFlags.FLAG_07) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_POINTS) == ReportFlags.PARSER_POINTS) {
         console.log("token: " + parser.tok.text + ", index: " + parser.tok.index + ", line: " + parser.scn.lastLineScanned);
     }
     while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
         //if(VERBOSE >= 3) {
-        if((VERBOSE_MASK & ReportFlags.FLAG_08) == ReportFlags.FLAG_08) {
+        if((VERBOSE_MASK & ReportFlags.PARSER_DETAILS) == ReportFlags.PARSER_DETAILS) {
             console.log("parseBlock() - iter");
         }
         if (startsWith(parser.tok.text, MULTIPLE_LINES_COMMENT)) {

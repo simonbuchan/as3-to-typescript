@@ -7,7 +7,7 @@ import {startsWith} from '../string';
 import AS3Parser, {nextToken, nextTokenIgnoringDocumentation, consume, skip, tokIs} from './parser';
 import {parseQualifiedName, parseBlock, parseParameterList, parseNameTypeInit} from './parse-common';
 import {ASDOC_COMMENT, MULTIPLE_LINES_COMMENT} from './parser';
-import {VERBOSE, VERBOSE_MASK} from '../config';
+import {VERBOSE_MASK} from '../config';
 import {parseExpression} from './parse-expressions';
 import {parseOptionalType} from './parse-types';
 
@@ -48,7 +48,7 @@ function parsePackage(parser:AS3Parser):Node {
 function parsePackageContent(parser:AS3Parser):Node {
 
     //if(VERBOSE >= 1) {
-    if((VERBOSE_MASK & ReportFlags.FLAG_07) == ReportFlags.FLAG_07) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_POINTS) == ReportFlags.PARSER_POINTS) {
         console.log("parse-declarations.ts - parsePackageContent() - token: " + parser.tok.text + ", line: " + parser.scn.lastLineScanned);
     }
 
@@ -108,7 +108,7 @@ function parseImport(parser:AS3Parser):Node {
     let result:Node = createNode(NodeKind.IMPORT, {start: tok.index, text: name});
     skip(parser, Operators.SEMI_COLUMN);
     //if(VERBOSE >= 2) {
-    if((VERBOSE_MASK & ReportFlags.FLAG_06) == ReportFlags.FLAG_06) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_IMPORTS) == ReportFlags.PARSER_IMPORTS) {
         console.log("parse-declarations.ts - parseImport() - name: " + name + ", line: " + parser.scn.lastLineScanned);
     }
     return result;
@@ -254,7 +254,7 @@ function parseImplementsList(parser:AS3Parser):Node {
 function parseClassContent(parser:AS3Parser):Node {
 
     //if(VERBOSE >= 1) {
-    if((VERBOSE_MASK & ReportFlags.FLAG_04) == ReportFlags.FLAG_04) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_CONTENT) == ReportFlags.PARSER_CONTENT) {
         console.log("parse-declarations.ts - parseClassContent() - token: " + parser.tok.text + ", line: " + parser.scn.lastLineScanned);
     }
 
@@ -264,7 +264,7 @@ function parseClassContent(parser:AS3Parser):Node {
 
     while (!tokIs(parser, Operators.RIGHT_CURLY_BRACKET)) {
         //if(VERBOSE >= 2) {
-        if((VERBOSE_MASK & ReportFlags.FLAG_04) == ReportFlags.FLAG_04) {
+        if((VERBOSE_MASK & ReportFlags.PARSER_CONTENT) == ReportFlags.PARSER_CONTENT) {
             console.log("parse-declarations.ts - keyword: " + parser.tok.text + ", index: " + parser.tok.index);
         }
         if (tokIs(parser, Operators.LEFT_CURLY_BRACKET)) {
@@ -406,7 +406,7 @@ function parseFunction(parser:AS3Parser, meta:Node[], modifiers:Token[]):Node {
     let result:Node = createNode(findFunctionTypeFromTypeNode(type), {start: type.start, end: -1, text: type.text});
 
     //if(VERBOSE >= 2) {
-    if((VERBOSE_MASK & ReportFlags.FLAG_05) == ReportFlags.FLAG_05) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_FUNCTIONS) == ReportFlags.PARSER_FUNCTIONS) {
         console.log("parse-declarations.ts - parseFunction: " + name.text + "()" + ", line: " + parser.scn.lastLineScanned);
     }
 

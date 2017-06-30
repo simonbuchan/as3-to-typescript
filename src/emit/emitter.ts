@@ -3,7 +3,7 @@ import * as Keywords from '../syntax/keywords';
 import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
 import { CustomVisitor } from "../custom-visitors"
-import {VERBOSE, VERBOSE_MASK, WARNINGS, FOR_IN_KEY, INDENT} from '../config';
+import {VERBOSE_MASK, WARNINGS, FOR_IN_KEY, INDENT} from '../config';
 
 const util = require('util');
 
@@ -140,7 +140,7 @@ export function visitNode(emitter: Emitter, node: Node): void {
     };
 
     //if(VERBOSE >= 2 && VISITORS[node.kind]) {
-    if((VERBOSE_MASK & ReportFlags.FLAG_03) == ReportFlags.FLAG_03 && VISITORS[node.kind]) {
+    if((VERBOSE_MASK & ReportFlags.NODES_TREE) == ReportFlags.NODES_TREE && VISITORS[node.kind]) {
         console.log("visit:" + VISITORS[node.kind].name + "() <=====================================");
         console.log("node: " + node.toString());
     }
@@ -201,7 +201,7 @@ export default class Emitter {
     emit(ast: Node): string {
 
         //if(VERBOSE >= 1) {
-        if((VERBOSE_MASK & ReportFlags.FLAG_01) == ReportFlags.FLAG_01) {
+        if((VERBOSE_MASK & ReportFlags.KEY_POINTS) == ReportFlags.KEY_POINTS) {
             console.log("emit() ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑");
         }
 
@@ -328,7 +328,7 @@ export default class Emitter {
         // process.stdout.write(" " + lastWord);
         // console.log("+++++++++ " + (string.indexOf("for(") !== -1));
         //if(VERBOSE >= 2 ) {
-        if((VERBOSE_MASK & ReportFlags.FLAG_02) == ReportFlags.FLAG_02) {
+        if((VERBOSE_MASK & ReportFlags.TRANSPILED_CODE) == ReportFlags.TRANSPILED_CODE) {
             console.log("output (all): " + this.output);
             // let a = 1; // insert breakpoint here
         }

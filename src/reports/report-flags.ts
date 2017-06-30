@@ -2,14 +2,14 @@
 export let NODE = '.<';
 export let XOR_EQUAL = '^=';*/
 const enum ReportFlags {
-    FLAG_01	= 1,//keyPoints
-    FLAG_02	= 2,//transpiledCode
-    FLAG_03	= 4,//nodesTree
-    FLAG_04	= 8,//parserContent
-    FLAG_05	= 16,//parserFunctions
-    FLAG_06	= 32,//parserImports
-    FLAG_07	= 64,//parserPoints
-    FLAG_08	= 128,
+    KEY_POINTS	        = 1,
+    TRANSPILED_CODE	    = 2,
+    NODES_TREE	        = 4,
+    PARSER_CONTENT	    = 8,
+    PARSER_FUNCTIONS	= 16,
+    PARSER_IMPORTS	    = 32,
+    PARSER_POINTS	    = 64,
+    PARSER_DETAILS	    = 128,
     FLAG_09	= 256,
     FLAG_10	= 512,
     FLAG_11	= 1024,
@@ -19,12 +19,12 @@ const enum ReportFlags {
     FLAG_15	= 16384,
     FLAG_16	= 32768,
     FLAG_17	= 65536,
-    FLAG_18	= 131072,//scannerPoints
-    FLAG_19	= 262144,//scannerDetails
-    FLAG_20	= 524288,
-    FLAG_21	= 1048576,
-    FLAG_22	= 2097152,
-    FLAG_23	= 4194304,//createNodes
+    SCANNER_POINTS	    = 131072,
+    SCANNER_DETAILS	    = 262144,
+    FLAG_20	            = 524288,
+    FLAG_21	            = 1048576,
+    FLAG_22	            = 2097152,
+    CREATE_NODES	    = 4194304,
     FLAG_24	= 8388608,
     FLAG_25	= 16777216,
     FLAG_26	= 33554432,
@@ -36,5 +36,11 @@ const enum ReportFlags {
     FLAG_32	= 2147483648,
 
 
-    TRACE_ALL = 0 | FLAG_01 | FLAG_03 | FLAG_04 | FLAG_05 | FLAG_06 | FLAG_07 | FLAG_08 | FLAG_09 | FLAG_10 | FLAG_11
+    LOG_ALL = -1,
+    LOG_NOTHING = 0,
+    LOG_PARCER = 0 | PARSER_CONTENT | PARSER_FUNCTIONS | PARSER_IMPORTS | PARSER_POINTS | PARSER_DETAILS,
+    LOG_EMITTER = 0 | CREATE_NODES | TRANSPILED_CODE,
+    VERBOSE_1 = 0 | KEY_POINTS,
+    VERBOSE_2 = 0 | SCANNER_POINTS | PARSER_POINTS | PARSER_FUNCTIONS | PARSER_CONTENT | KEY_POINTS | TRANSPILED_CODE | PARSER_IMPORTS ,
+    VERBOSE_3 = -1
 }
