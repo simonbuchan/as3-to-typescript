@@ -30,7 +30,7 @@
  */
 
 
-
+import {VERBOSE_MASK, WARNINGS, AUTO_INSERT_SEMICOLONS} from '../config';
 import Token from './token';
 import * as Keywords from '../syntax/keywords';
 import {startsWith, endsWith} from '../string';
@@ -47,18 +47,27 @@ export interface CheckPoint {
 
 /**
  * convert a actionscript to a stream of tokens
- * 
+ *
  * @author rbokel
  * @author xagnetti
  */
 export default class AS3Scanner {
-    inVector: boolean;
+
+    inVector: boolean = false;
     index: number;
     content: string = '';
+    lastTokenText:String = "";
+    lastLineScanned:number = 0;
+    missedSemi:Boolean = false;
+    queuedToken:Token = null;
 
     setContent(content: string = ''): void {
+        this.inVector = false;
+        this.missedSemi = false;
+        this.queuedToken = null;
         this.content = content;
         this.index = -1;
+        this.lastLineScanned = 0;
     }
 
     nextToken(): Token {
@@ -90,7 +99,23 @@ export default class AS3Scanner {
         if (options.skip && text.length > 1) {
             this.skipChars(text.length - 1);
         }
+
+        //if(VERBOSE >= 2) {
+        if((VERBOSE_MASK & ReportFlags.SCANNER_POINTS) == ReportFlags.SCANNER_POINTS) {
+            console.log("  scanner - token: " + text + ", line: " + this.getNumLineBreaksBeforeIndex());
+        }
+
+        this.lastTokenText = text;
+
         return new Token(text, options.index, options.isNumeric, options.isXML);
+    }
+
+    getNumLineBreaksBeforeIndex():number {
+        var sub:string = this.content.substr(0, this.index);
+        var dump:string[] = sub.split("\n");
+        if(dump.length == 0) { dump = sub.split("\r"); }
+        if(dump.length == 0) { dump = sub.split("\r\n"); }
+        return dump.length;
     }
 
     getPreviousCharacter(): string {
@@ -104,6 +129,7 @@ export default class AS3Scanner {
     }
 
     nextChar(): string {
+
         this.index++;
         let currentChar = this.content.charAt(this.index);
 
@@ -111,6 +137,31 @@ export default class AS3Scanner {
             this.index++;
             currentChar = this.content.charAt(this.index);
         }
+
+        //if(VERBOSE >= 3) {
+        if((VERBOSE_MASK & ReportFlags.SCANNER_DETAILS) == ReportFlags.SCANNER_DETAILS) {
+            console.log("  scanner - char: " + currentChar + ", index: " + this.index + ", inVector: " + this.inVector);
+        }
+
+        if(isNewLineChar(currentChar)) {
+
+            this.lastLineScanned = this.getNumLineBreaksBeforeIndex();
+
+            // Check for missing semicolons in 'break' or 'continue' statements.
+            if(this.getPreviousCharacter() !== ";") {
+                var isCriticalToken = this.lastTokenText === Keywords.BREAK || this.lastTokenText === Keywords.CONTINUE;
+                var isValidToken = this.lastTokenText === "{" || this.lastTokenText === "}" || this.lastTokenText === "\n" || this.lastTokenText === ";";
+                this.missedSemi = this.lastTokenText && !isValidToken;
+                if(WARNINGS >= 1 && this.lastTokenText && isCriticalToken) {
+                    console.warn("scanner.ts: *** IMPORTANT WARNING *** Dangerous missing semicolon in line: " + this.lastLineScanned + " after '" + this.lastTokenText + "' statement.\n" +
+                        "Missing semicolons around such statements can cause the transpiler to fail by entering and infinite loop.");
+                }
+                else if(WARNINGS >= 3 && this.missedSemi) {
+                    console.log("scanner.ts: *** WARNING *** Missing semicolon in line: " + this.lastLineScanned + ", last: >" + this.lastTokenText + "<");
+                }
+            }
+        }
+
         return currentChar;
     }
 
@@ -140,20 +191,43 @@ export default class AS3Scanner {
     }
 }
 
+function isNewLineChar(char:string):boolean {
+    return char === "\n" || char === "\r" || char === "\r\n";
+}
 
 function nextToken(scanner: AS3Scanner): Token {
+
+    if(scanner.queuedToken) {
+        var tok:Token = scanner.queuedToken;
+        scanner.queuedToken = null;
+        return tok;
+    }
+
     if (scanner.index >= scanner.content.length) {
+        //if(VERBOSE >= 3) {
+        if((VERBOSE_MASK & ReportFlags.SCANNER_DETAILS) == ReportFlags.SCANNER_DETAILS) {
+            console.log("  scanner - EOF");
+        }
         return scanner.createToken(Keywords.EOF, { skip: false });
     }
 
     let currentCharacter = scanner.nextNonWhitespaceCharacter();
+    if(AUTO_INSERT_SEMICOLONS && scanner.missedSemi) {
+        // insert semicolon
+        // TODO: this is successfully detected, but the insertion doesn not work
+        // console.log(">>> [INSERT SEMICOLON] <<<");
+        // scanner.queuedToken = scanner.createToken(";\n", {skip: true});
+    }
+
     switch (currentCharacter) {
         case '\n':
+        case '\r':
+        case '\r\n':
             return scanner.createToken(currentCharacter);
         case '/':
             return scanCommentRegExpOrOperator(scanner);
         case '"': case '\'':
-        return scanUntilDelimiter(scanner, currentCharacter);
+            return scanUntilDelimiter(scanner, currentCharacter);
         case '<':
             return scanXMLOrOperator(scanner, currentCharacter);
         case '0': case '1': case '2': case '3': case '4':
@@ -185,7 +259,11 @@ function nextToken(scanner: AS3Scanner): Token {
             return scanCharacterSequence(scanner, currentCharacter, ['^=']);
         case '>':
             if (scanner.inVector) {
-                scanner.inVector = false;
+                // Support deep vectors (such as `Vector.<Vector.<Vector.<Class>>>`)
+                let checkpoint = scanner.getCheckPoint();
+                let nextToken = scanner.nextToken();
+                scanner.rewind(checkpoint);
+                if (nextToken.text !== ">") scanner.inVector = false;
                 break;
             }
             return scanCharacterSequence(scanner, currentCharacter, ['>>>=', '>>>', '>>=', '>>', '>=']);
@@ -198,9 +276,10 @@ function nextToken(scanner: AS3Scanner): Token {
     }
 
     let token = scanWord(scanner, currentCharacter);
-    return token.text.length === 0 ? scanner.nextToken() : token;
-}
+    token = token.text.length === 0 ? scanner.nextToken() : token;
 
+    return token;
+}
 
 function scanCharacterSequence(scanner: AS3Scanner, currentCharacter: string, possibleMatches: string[]): Token {
     let buffer = currentCharacter;
@@ -377,7 +456,7 @@ function scanNumberOrDots(scanner: AS3Scanner, characterToBeScanned: string): To
         }
     }
 
-    if (characterToBeScanned === '0' && scanner.peekChar(1) === 'x') {
+    if (characterToBeScanned === '0' && scanner.peekChar(1).match(/[xX]/)) {
         return scanHex(scanner);
     }
 
@@ -396,7 +475,7 @@ function scanSingleLineComment(scanner: AS3Scanner): Token {
         char = scanner.nextChar();
         buffer += char;
     }
-    while (char !== '\n');
+    while (!isNewLineChar(char));
 
     return scanner.createToken(buffer, {skip: false});
 }
@@ -408,25 +487,49 @@ function scanSingleLineComment(scanner: AS3Scanner): Token {
  */
 function scanUntilDelimiter(scanner: AS3Scanner, start: string, delimiter: string = start): Token {
     let buffer = start;
-    let inBackslash = false;
+    let peekPos = 1;
+    let numberOfBackslashes = 0;
 
-    for (let peekPos = 1; scanner.index + peekPos < scanner.content.length; peekPos++) {
-        let currentCharacter = scanner.peekChar(peekPos);
-        if (currentCharacter === '\n') {
+    while (peekPos < scanner.content.length) {
+        let currentCharacter: string = scanner.peekChar(peekPos++);
+        if (isNewLineChar(currentCharacter) || (scanner.index + peekPos >= scanner.content.length)) {
             return null;
         }
         buffer += currentCharacter;
-        if (currentCharacter === delimiter && !inBackslash) {
-            return scanner.createToken(buffer);
+        if ((currentCharacter === delimiter  && numberOfBackslashes == 0) ) {
+            let result = new Token(buffer, scanner.index);
+            scanner.skipChars(buffer.toString().length - 1);
+            return result;
         }
-        if (currentCharacter === '\\') {
-            inBackslash = !inBackslash;
-        }
+        numberOfBackslashes = (currentCharacter === "\\")
+            ? (numberOfBackslashes + 1) % 2
+            : 0 ;
     }
+
     return null;
 
 }
 
+// function scanUntilDelimiter(scanner: AS3Scanner, start: string, delimiter: string = start): Token {
+//     let buffer = start;
+//     let inBackslash = false;
+//
+//     for (let peekPos = 1; scanner.index + peekPos < scanner.content.length; peekPos++) {
+//         let currentCharacter = scanner.peekChar(peekPos);
+//         if (currentCharacter === '\n') {
+//             return null;
+//         }
+//         buffer += currentCharacter;
+//         if (currentCharacter === delimiter && !inBackslash) {
+//             return scanner.createToken(buffer);
+//         }
+//         if (currentCharacter === '\\') {
+//             inBackslash = !inBackslash;
+//         }
+//     }
+//     return null;
+//
+// }
 
 function scanWord(scanner: AS3Scanner, startingCharacter: string): Token {
     let buffer = startingCharacter;
@@ -463,7 +566,7 @@ function scanXML(scanner: AS3Scanner): Token {
             buffer += currentToken.text;
             if (startsWith(currentToken.text, '<?')) {
                 currentCharacter = scanner.nextChar();
-                if (currentCharacter === '\n') {
+                if (isNewLineChar(currentCharacter)) {
                     buffer += '\n';
                     scanner.nextChar();
                 }

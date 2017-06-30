@@ -6,7 +6,7 @@ import AS3Parser, {nextToken, tryParse, skip, consume, tokIs, VECTOR} from './pa
 import {parseParameterList, parseBlock} from './parse-common';
 import {parseOptionalType, parseVector} from './parse-types';
 import {parseArrayLiteral, parseObjectLiteral, parseShortVector} from './parse-literals';
-
+import {VERBOSE_MASK} from '../config';
 
 export function parseExpressionList(parser:AS3Parser):Node {
     let result:Node = createNode(NodeKind.EXPR_LIST, {start: parser.tok.index}, parseAssignmentExpression(parser));
@@ -28,6 +28,11 @@ export function parseExpression(parser:AS3Parser):Node {
 
 export function parsePrimaryExpression(parser:AS3Parser):Node {
     let result:Node;
+
+    //if(VERBOSE >= 2) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_POINTS) == ReportFlags.PARSER_POINTS) {
+        console.log("parse-expressions.ts - parsePrimaryExpression() - token: " + parser.tok.text);
+    }
 
     if (tokIs(parser, Operators.LEFT_SQUARE_BRACKET)) {
         return parseArrayLiteral(parser);
@@ -62,6 +67,12 @@ export function parsePrimaryExpression(parser:AS3Parser):Node {
         result = createNode(NodeKind.LITERAL, {tok: parser.tok});
     } else {
         result = createNode(NodeKind.IDENTIFIER, {tok: parser.tok});
+
+        // Transpile identifier to JavaScript equivalent if it's a keyword.
+        if (result.text === Keywords.INT || result.text === Keywords.UINT) {
+            // console.log("That's a INT/UINT: ", result);
+            result.text = "Number";
+        }
     }
     nextToken(parser, true);
     return result;
@@ -69,6 +80,12 @@ export function parsePrimaryExpression(parser:AS3Parser):Node {
 
 
 function parseLambdaExpression(parser:AS3Parser):Node {
+
+    //if(VERBOSE >= 2) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_POINTS) == ReportFlags.PARSER_POINTS) {
+        console.log("parse-expressions.ts - parseLambdaExpression() - token: " + parser.tok.text);
+    }
+
     let tok = consume(parser, Keywords.FUNCTION);
     let result:Node;
 
@@ -109,6 +126,12 @@ function parseNewExpression(parser:AS3Parser):Node {
 
 
 function parseEncapsulatedExpression(parser:AS3Parser):Node {
+
+    //if(VERBOSE >= 2) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_POINTS) == ReportFlags.PARSER_POINTS) {
+        console.log("parse-expressions.ts - parseEncapsulatedExpression()");
+    }
+
     let tok = consume(parser, Operators.LEFT_PARENTHESIS);
     let result:Node = createNode(NodeKind.ENCAPSULATED, {start: tok.index});
     result.children.push(parseExpressionList(parser));
@@ -290,7 +313,11 @@ function parseAdditiveExpression(parser:AS3Parser):Node {
         NodeKind.ADD,
         {start: parser.tok.index, end: parser.tok.end},
         parseMultiplicativeExpression(parser));
-    while (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2) || tokIs(parser, Operators.MINUS)) {
+    //
+    // Having PLUS_AS2 emits wrong AST when a method is called "add"
+    // while (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2) || tokIs(parser, Operators.MINUS)) {
+    //
+    while (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.MINUS)) {
         result.children.push(createNode(NodeKind.OP, {tok: parser.tok}));
         nextToken(parser, true);
         result.children.push(parseMultiplicativeExpression(parser));
@@ -328,7 +355,11 @@ function parseUnaryExpression(parser:AS3Parser):Node {
     } else if (tokIs(parser, Operators.MINUS)) {
         nextToken(parser);
         result = createNode(NodeKind.MINUS, {start: parser.tok.index, end: index}, parseUnaryExpression(parser));
-    } else if (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2)) {
+    //
+    // Having PLUS_AS2 emits wrong AST when a method is called "add"
+    // } else if (tokIs(parser, Operators.PLUS) || tokIs(parser, Operators.PLUS_AS2)) {
+    //
+    } else if (tokIs(parser, Operators.PLUS)) {
         nextToken(parser);
         result = createNode(NodeKind.PLUS, {start: parser.tok.index, end: index}, parseUnaryExpression(parser));
     } else {
@@ -417,8 +448,10 @@ function parseAccessExpression(parser:AS3Parser):Node {
 
 
 function parseFunctionCall(parser:AS3Parser, node:Node):Node {
+
     let result:Node = createNode(NodeKind.CALL, {start: node.start});
     result.children.push(node);
+
     while (tokIs(parser, Operators.LEFT_PARENTHESIS)) {
         result.children.push(parseArgumentList(parser));
     }

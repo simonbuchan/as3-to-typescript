@@ -1,5 +1,6 @@
 # compile output, *not* ignored by .npmignore
 /lib
+/typings
 
 # default .npmignore
 /node_modules
@@ -12,4 +13,8 @@ npm-debug.log
 
 # Tests
 /test/fixtures/generated
+/test/generated
 /test/single
+/test-ast/fixtures/generated
+/test-ast/generated
+/test-ast/single
