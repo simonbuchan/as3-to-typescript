@@ -3,7 +3,7 @@ import * as Keywords from '../syntax/keywords';
 import Node, {createNode} from '../syntax/node';
 import assign = require('object-assign');
 import { CustomVisitor } from "../custom-visitors"
-import {VERBOSE, WARNINGS, FOR_IN_KEY, INDENT} from '../config';
+import {VERBOSE_MASK, WARNINGS, FOR_IN_KEY, INDENT} from '../config';
 
 const util = require('util');
 
@@ -139,10 +139,12 @@ export function visitNode(emitter: Emitter, node: Node): void {
         visitNodes(emitter, node.children);
     };
 
-    if(VERBOSE >= 2 && VISITORS[node.kind]) {
+    //if(VERBOSE >= 2 && VISITORS[node.kind]) {
+    if((VERBOSE_MASK & ReportFlags.NODES_TREE) == ReportFlags.NODES_TREE && VISITORS[node.kind]) {
         console.log("visit:" + VISITORS[node.kind].name + "() <=====================================");
         console.log("node: " + node.toString());
     }
+
     visitor(emitter, node);
 }
 
@@ -198,7 +200,8 @@ export default class Emitter {
 
     emit(ast: Node): string {
 
-        if(VERBOSE >= 1) {
+        //if(VERBOSE >= 1) {
+        if((VERBOSE_MASK & ReportFlags.KEY_POINTS) == ReportFlags.KEY_POINTS) {
             console.log("emit() ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑");
         }
 
@@ -324,7 +327,8 @@ export default class Emitter {
         // console.log("    emitter.ts - output += " + lastWord);
         // process.stdout.write(" " + lastWord);
         // console.log("+++++++++ " + (string.indexOf("for(") !== -1));
-        if(VERBOSE >= 2 ) {
+        //if(VERBOSE >= 2 ) {
+        if((VERBOSE_MASK & ReportFlags.TRANSPILED_CODE) == ReportFlags.TRANSPILED_CODE) {
             console.log("output (all): " + this.output);
             // let a = 1; // insert breakpoint here
         }

@@ -6,7 +6,7 @@ import AS3Parser, {nextToken, tryParse, skip, consume, tokIs, VECTOR} from './pa
 import {parseParameterList, parseBlock} from './parse-common';
 import {parseOptionalType, parseVector} from './parse-types';
 import {parseArrayLiteral, parseObjectLiteral, parseShortVector} from './parse-literals';
-import {VERBOSE} from '../config';
+import {VERBOSE_MASK} from '../config';
 
 export function parseExpressionList(parser:AS3Parser):Node {
     let result:Node = createNode(NodeKind.EXPR_LIST, {start: parser.tok.index}, parseAssignmentExpression(parser));
@@ -29,7 +29,8 @@ export function parseExpression(parser:AS3Parser):Node {
 export function parsePrimaryExpression(parser:AS3Parser):Node {
     let result:Node;
 
-    if(VERBOSE >= 2) {
+    //if(VERBOSE >= 2) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_POINTS) == ReportFlags.PARSER_POINTS) {
         console.log("parse-expressions.ts - parsePrimaryExpression() - token: " + parser.tok.text);
     }
 
@@ -80,7 +81,8 @@ export function parsePrimaryExpression(parser:AS3Parser):Node {
 
 function parseLambdaExpression(parser:AS3Parser):Node {
 
-    if(VERBOSE >= 2) {
+    //if(VERBOSE >= 2) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_POINTS) == ReportFlags.PARSER_POINTS) {
         console.log("parse-expressions.ts - parseLambdaExpression() - token: " + parser.tok.text);
     }
 
@@ -125,7 +127,8 @@ function parseNewExpression(parser:AS3Parser):Node {
 
 function parseEncapsulatedExpression(parser:AS3Parser):Node {
 
-    if(VERBOSE >= 2) {
+    //if(VERBOSE >= 2) {
+    if((VERBOSE_MASK & ReportFlags.PARSER_POINTS) == ReportFlags.PARSER_POINTS) {
         console.log("parse-expressions.ts - parseEncapsulatedExpression()");
     }
 
