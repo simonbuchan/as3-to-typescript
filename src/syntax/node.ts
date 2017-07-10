@@ -30,7 +30,7 @@ export function createNode(kind: NodeKind, options?: CreateNodeOptions, ... chil
         }
     }
 
-    // Initialize in this order to emit the same .ast.json test files
+    // Initialize in this order to emit the same .ast.json test-old files
     let node = new Node();
     node.kind = kind;
     node.start = start;

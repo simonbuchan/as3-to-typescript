@@ -8,13 +8,14 @@
   },
   "scripts": {
     "install": "typings install && npm run compile",
-    "pretest": "npm run -s compile",
-    "test": "npm run -s generate && npm run -s compare",
-    "generate": "node -r source-map-support/register test-ast/runner generate",
-    "accept": "node -r source-map-support/register test-ast/runner accept",
-    "compare": "node -r source-map-support/register test-ast/runner compare || echo Comparison failed",
     "compile": "tsc --project src",
-    "watch": "tsc --project src --watch"
+    "watch": "tsc --project src --watch",
+    "pretest": "npm run -s compile",
+    "test:single_syntax": "npm run pretest && node tests/syntax/single-file/SingleFileSyntaxTests.js",
+    "test-OLD": "npm run -s generate && npm run -s compare",
+    "generate-OLD": "node -r source-map-support/register test-ast/runner generate",
+    "accept-OLD": "node -r source-map-support/register test-ast/runner accept",
+    "compare-OLD": "node -r source-map-support/register test-ast/runner compare || echo Comparison failed"
   },
   "keywords": [
     "actionscript",
@@ -22,7 +23,7 @@
     "typescript",
     "compiler"
   ],
-  "publishConfig":{
+  "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
   "repository": {
@@ -33,13 +34,17 @@
     "url": "https://github.com/GoodgameStudios/as3-to-ts/issues"
   },
   "author": "François de Campredon <francois.de.campredon@gmail.com>",
-  "contributors": [{
-    "name": "Endel Dreyer"
-  }, {
-    "name": "Simon Buchan"
-  }],
+  "contributors": [
+    {
+      "name": "Endel Dreyer"
+    },
+    {
+      "name": "Simon Buchan"
+    }
+  ],
   "license": "Apache-2.0",
   "dependencies": {
+    "colors": "^1.1.2",
     "fs-extra": "^0.24.0",
     "minimist": "^1.2.0",
     "object-assign": "^4.0.1",

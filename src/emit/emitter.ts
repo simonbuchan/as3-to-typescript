@@ -725,8 +725,8 @@ function emitForEach(emitter: Emitter, node: Node): void {
     let objNode = inNode.children[0];
     let blockNode = node.children[2];
     let nameTypeInitNode = varNode.findChild(NodeKind.NAME_TYPE_INIT);
-    let nameNode;
-    let typeNode;
+    let nameNode:Node;
+    let typeNode:Node;
     let typeStr:string = "";
     let variableContNode = nameTypeInitNode ? nameTypeInitNode : node;
     nameNode = variableContNode.findChild(NodeKind.NAME);
@@ -1285,13 +1285,11 @@ function emitRelation(emitter: Emitter, node: Node): void {
     // Check for 'is' in relation.
     let is = containsIsKeyword(node);
     if(is) {
-        console.log('ITS AN IS');
 
         // Determine if the check is against a primitive or a custom type.
         // console.log(node.toString());
         var isPrimitiveCheck:boolean = containsPrimitiveIdentifier(node);
         if(isPrimitiveCheck) {
-            console.log('PRIMITIVE CHECK');
 
             // Identify players.
             var varNode = node.children[0];
