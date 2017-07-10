@@ -11,7 +11,7 @@
     "compile": "tsc --project src",
     "watch": "tsc --project src --watch",
     "pretest": "npm run -s compile",
-    "test:single_syntax": "npm run pretest && node tests/syntax/single-file/SingleFileSyntaxTests.js",
+    "test:simple": "node tests/simple/SimpleTests.js",
     "test-OLD": "npm run -s generate && npm run -s compare",
     "generate-OLD": "node -r source-map-support/register test-ast/runner generate",
     "accept-OLD": "node -r source-map-support/register test-ast/runner accept",
