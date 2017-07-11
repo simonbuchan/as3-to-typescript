@@ -128,10 +128,15 @@ as3Files.forEach(file => {
     // Run js?
     if(run) {
       console.log(colors.cyan('       (exec)'));
-      let stdout = execSync('node ' + destinationJSDirectory + '/' + identifier + '.js', {stdio: 'pipe'}).toString();
-      let lines = stdout.split('\n');
-      for(let i = 0; i < lines.length; i++) {
-        console.log(colors.cyan('        ', lines[i]));
+      try {
+        let stdout = execSync('node ' + destinationJSDirectory + '/' + identifier + '.js', {stdio: 'pipe'}).toString();
+        let lines = stdout.split('\n');
+        for(let i = 0; i < lines.length; i++) {
+          console.log(colors.cyan('        ', lines[i]));
+        }
+      }
+      catch(err) {
+        console.log(colors.cyan('        ', err));
       }
     }
   }
