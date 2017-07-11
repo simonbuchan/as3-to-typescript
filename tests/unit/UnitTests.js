@@ -17,12 +17,14 @@ const execSync = require('child_process').execSync;
  */
 
 // Process incoming CLI arguments.
+// ***********************************************************************
 const params = conversion.processArgs(process.argv);
-const showdiff = params['showdiff'];
+const showdiff = params['showdiff']; // when outputs don't match, display the lines that don't match
 let focusedSourceFiles = params['focused']; // focus on a set of files
 let ignoredSourceFiles = params['ignored']; // ignore a set of files
 const tsc = params['tsc']; // convert ts output to js in /js-generated
 const run = params['run']; // run js output (requires tsc)
+// ***********************************************************************
 
 // Configuration settings used in this script:
 const sourceDirectory = path.resolve(__dirname, './as3');
@@ -77,6 +79,7 @@ as3Files.forEach(file => {
   let content = fs.readFileSync(as3File, 'UTF-8');
   let ast = parse(path.basename(file), content);
   let contents = emit(ast, content, emitterOptions);
+  contents = contents.replace(/\r\n?/g, '\n');
 
   // Apply custom visitors postprocessing.
   emitterOptions.customVisitors.forEach(visitor => {
@@ -86,7 +89,7 @@ as3Files.forEach(file => {
   });
 
   // Write converted ts output.
-  fs.outputFileSync(outputFile, contents.replace(/\r\n?/g, '\n'));
+  fs.outputFileSync(outputFile, contents);
 
   // Read expected output.
   let expectedTsFile = path.resolve(comparisonDirectory, identifier + '.ts');
@@ -147,5 +150,5 @@ if(passed < tested) {
   console.log(colors.red.inverse('\n  ☠☠☠️' + (tested - passed) + ' tests failed.\n'));
 }
 else {
-  console.log(colors.blue.inverse('\n  ★★★︎ All tests passed!\n'));
+  console.log(colors.blue.inverse('\n  ★★★︎ All tests passed! ⚑ \n'));
 }
