@@ -5,6 +5,8 @@ const parse = require('../../lib/parse');
 const emit = require('../../lib/emit');
 const colors = require('colors');
 const jsdiff = require('diff');
+const ts = require('typescript');
+const execSync = require('child_process').execSync;
 
 /*
   Converts all as3 files in tests/unit/as3 to typescript files in tests/unit/ts-generated
@@ -18,10 +20,13 @@ const jsdiff = require('diff');
 const params = conversion.processArgs(process.argv);
 const showdiff = params['showdiff'];
 const focusedSourceFile = params['focused']; // pass as argument to focus on a single file
+const tsc = params['tsc']; // convert ts output to js in /js-generated
+const run = params['run']; // run js output (requires tsc)
 
 // Configuration settings used in this script:
 const sourceDirectory = path.resolve(__dirname, './as3');
 const destinationDirectory = path.resolve(__dirname, './ts-generated');
+const destinationJSDirectory = path.resolve(__dirname, './js-generated');
 const comparisonDirectory = path.resolve(__dirname, './ts-expected');
 const emitterOptions = {
   lineSeparator: '\n',
@@ -45,7 +50,6 @@ console.log("Running unit conversion tests on " + as3Files.length + " files...\n
 
 // For each as3 file, convert and test...
 let passed = 0;
-let diffs = [];
 as3Files.forEach(file => {
 
   // Identify source file.
@@ -69,7 +73,7 @@ as3Files.forEach(file => {
     }
   });
 
-  // Write converted output.
+  // Write converted ts output.
   fs.outputFileSync(outputFile, contents.replace(/\r\n?/g, '\n'));
 
   // Read expected output.
@@ -82,26 +86,42 @@ as3Files.forEach(file => {
     }
     else {
       console.log(colors.red("  ✗ " + identifier + '.ts ERROR: diff failed'));
-      diffs.push(jsdiff.diffLines(contents, expectedContents));
+
+      // Show diff?
+      if(showdiff) {
+        const diff = jsdiff.diffLines(contents, expectedContents);
+        diff.forEach(function(part) {
+          let color = part.added ? 'green' : part.removed ? 'red' : 'grey';
+          process.stderr.write(part.value[color]);
+        });
+        console.log();
+      }
     }
   }
   else {
     console.log(colors.red("  ✗✗ " + identifier + '.ts ERROR: reference .ts file not found'));
   }
+
+  // Convert to js?
+  if(tsc) {
+    console.log(colors.blue('      ' + identifier + '.js'));
+
+    // Compile typescript to javascript.
+    let jsCode = ts.transpileModule(contents, {}).outputText;
+
+    // Write converted js output.
+    const jsFile = path.resolve(destinationJSDirectory, identifier + ".js");
+    fs.outputFileSync(jsFile, jsCode);
+
+    // Run js?
+    if(run) {
+      let stdout = execSync('node ' + destinationJSDirectory + '/' + identifier + '.js', {stdio: 'pipe'}).toString();
+      let lines = stdout.split('\n');
+      for(let i = 0; i < lines.length; i++) {
+        console.log(colors.cyan('        ', lines[i]));
+      }
+    }
+  }
 });
 
 console.log('\nTests passed: ' + passed + "/" + as3Files.length + "\n");
-
-// Print diffs if present.
-if(showdiff && diffs.length > 0) {
-  console.log("Diffs:\n");
-  for(let i = 0; i < diffs.length; i++) {
-    const diff = diffs[i];
-    diff.forEach(function(part) {
-      let color = part.added ? 'green' : part.removed ? 'red' : 'grey';
-      process.stderr.write(part.value[color]);
-    });
-    console.log();
-  }
-  console.log('\n');
-}
