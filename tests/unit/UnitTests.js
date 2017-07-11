@@ -81,11 +81,11 @@ as3Files.forEach(file => {
   if(fs.existsSync(expectedTsFile)) {
     let expectedContents = fs.readFileSync(expectedTsFile).toString();
     if(expectedContents === contents) {
-      console.log(colors.green("  ✔ " + identifier + '.ts'));
+      console.log(colors.green("  ✔ " + identifier + '.as -> ' + identifier + '.ts'));
       passed++;
     }
     else {
-      console.log(colors.red("  ✗ " + identifier + '.ts ERROR: generated output does not match expected output.'));
+      console.log(colors.red("  ✗ " + identifier + '.as -> ' + identifier + '.ts ERROR: generated output does not match expected output.'));
 
       // Show diff?
       if(showdiff) {
@@ -99,7 +99,7 @@ as3Files.forEach(file => {
     }
   }
   else {
-    console.log(colors.red("  ✗✗ " + identifier + '.ts ERROR: expected output file not found.'));
+    console.log(colors.red.inverse("  ✗ " + identifier + '.as -> ' + identifier + '.ts ERROR: expected output file not found. Please manually provide a reference file to compare output with in ' + comparisonDirectory));
   }
 
   // Convert to js?
