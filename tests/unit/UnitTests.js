@@ -48,7 +48,6 @@ if(ignoredSourceFiles) {
   ignoredSourceFiles = ignoredSourceFiles.split(',');
 }
 let as3Files = conversion.readdir(sourceDirectory).filter(file => /.as$/.test(file));
-console.log('focusedSourceFiles: ', focusedSourceFiles);
 
 console.log("Running unit conversion tests on " + as3Files.length + " files...\n");
 
