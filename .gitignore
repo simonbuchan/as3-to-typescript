@@ -18,3 +18,4 @@ npm-debug.log
 /test-ast/fixtures/generated
 /test-ast/generated
 /test-ast/single
+/tests/unit/js-generated

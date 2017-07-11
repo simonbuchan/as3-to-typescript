@@ -85,7 +85,7 @@ as3Files.forEach(file => {
       passed++;
     }
     else {
-      console.log(colors.red("  ✗ " + identifier + '.ts ERROR: diff failed'));
+      console.log(colors.red("  ✗ " + identifier + '.ts ERROR: generated output does not match expected output.'));
 
       // Show diff?
       if(showdiff) {
@@ -99,12 +99,12 @@ as3Files.forEach(file => {
     }
   }
   else {
-    console.log(colors.red("  ✗✗ " + identifier + '.ts ERROR: reference .ts file not found'));
+    console.log(colors.red("  ✗✗ " + identifier + '.ts ERROR: expected output file not found.'));
   }
 
   // Convert to js?
   if(tsc) {
-    console.log(colors.blue('      ' + identifier + '.js'));
+    console.log(colors.blue('      ↳' + identifier + '.js'));
 
     // Compile typescript to javascript.
     let jsCode = ts.transpileModule(contents, {}).outputText;
