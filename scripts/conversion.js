@@ -1,6 +1,30 @@
 const fs = require('fs-extra');
 const path = require('path');
 
+// Processes incoming argv params into a dictionary where
+// myOption to params[myOption] = true
+// myKey=myKeyVal to params[myKey] = myKeyVal
+// expects arguments: process.argv
+function processArgs(arguments) {
+  let nextArgIdx = 2;
+  let nextArg = arguments[nextArgIdx];
+  let params = {};
+  while(nextArg) {
+    if(nextArg.indexOf('=') !== -1) {
+      const dump = nextArg.split('=');
+      const key = dump[0];
+      const val = dump[1];
+      params[key] = val;
+    }
+    else {
+      params[nextArg] = true;
+    }
+    nextArgIdx++;
+    nextArg = arguments[nextArgIdx];
+  }
+  return params;
+}
+
 // Deletes all files within a directory.
 function clearDirectory(dir) {
   fs.emptyDirSync(dir);
@@ -44,5 +68,6 @@ module.exports = {
   readdir: readdir,
   readNormalizedSync: readNormalizedSync,
   instantiateVisitorsFromStr: instantiateVisitorsFromStr,
-  clearDirectory: clearDirectory
+  clearDirectory: clearDirectory,
+  processArgs: processArgs
 };
