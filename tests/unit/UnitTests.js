@@ -124,4 +124,10 @@ as3Files.forEach(file => {
   }
 });
 
-console.log('\nTests passed: ' + passed + "/" + as3Files.length + "\n");
+// Summary
+if(passed < as3Files.length) {
+  console.log(colors.red.inverse('\n  ☠☠☠️ Some tests failed: ' + passed + "/" + as3Files.length + "\n"));
+}
+else {
+  console.log(colors.blue.inverse('\n  ★︎ All tests passed!\n'));
+}
