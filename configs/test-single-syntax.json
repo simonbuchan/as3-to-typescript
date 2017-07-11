@@ -1,5 +1,0 @@
-{
-  "sourceDirectories": ["./tests/syntax/single-file/as3"],
-  "destionationTS": "./tests/syntax/single-file/ts-generated",
-  "excludes": []
-}
