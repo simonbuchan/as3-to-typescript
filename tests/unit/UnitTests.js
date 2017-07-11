@@ -19,7 +19,8 @@ const execSync = require('child_process').execSync;
 // Process incoming CLI arguments.
 const params = conversion.processArgs(process.argv);
 const showdiff = params['showdiff'];
-const focusedSourceFile = params['focused']; // pass as argument to focus on a single file
+let focusedSourceFiles = params['focused']; // focus on a set of files
+let ignoredSourceFiles = params['ignored']; // ignore a set of files
 const tsc = params['tsc']; // convert ts output to js in /js-generated
 const run = params['run']; // run js output (requires tsc)
 
@@ -38,18 +39,20 @@ const emitterOptions = {
 };
 
 // Collect all files.
-let as3Files;
-if(focusedSourceFile) {
-  as3Files = [path.resolve(sourceDirectory, focusedSourceFile)];
+if(focusedSourceFiles) {
+  focusedSourceFiles = focusedSourceFiles.split(',');
 }
-else {
-  as3Files = conversion.readdir(sourceDirectory).filter(file => /.as$/.test(file));
+if(ignoredSourceFiles) {
+  ignoredSourceFiles = ignoredSourceFiles.split(',');
 }
+let as3Files = conversion.readdir(sourceDirectory).filter(file => /.as$/.test(file));
+console.log('focusedSourceFiles: ', focusedSourceFiles);
 
 console.log("Running unit conversion tests on " + as3Files.length + " files...\n");
 
 // For each as3 file, convert and test...
 let passed = 0;
+let tested = 0;
 as3Files.forEach(file => {
 
   // Identify source file.
@@ -57,6 +60,15 @@ as3Files.forEach(file => {
   let segments = file.match(/([a-zA-Z0-9]+)/g);
   segments.pop();
   let identifier = segments.pop();
+
+  // Focus or ignore?
+  if(focusedSourceFiles && focusedSourceFiles.indexOf(identifier) === -1) {
+    return;
+  }
+  if(ignoredSourceFiles && ignoredSourceFiles.indexOf(identifier) !== -1) {
+    return;
+  }
+  tested++;
 
   // Identify source/target files.
   let outputFile = path.resolve(destinationDirectory, identifier + ".ts");
@@ -104,7 +116,7 @@ as3Files.forEach(file => {
 
   // Convert to js?
   if(tsc) {
-    console.log(colors.blue('      ↳' + identifier + '.js'));
+    console.log(colors.blue('      ↳' + identifier + '.ts -> ' + identifier + '.js'));
 
     // Compile typescript to javascript.
     let jsCode = ts.transpileModule(contents, {}).outputText;
@@ -115,6 +127,7 @@ as3Files.forEach(file => {
 
     // Run js?
     if(run) {
+      console.log(colors.cyan('       (exec)'));
       let stdout = execSync('node ' + destinationJSDirectory + '/' + identifier + '.js', {stdio: 'pipe'}).toString();
       let lines = stdout.split('\n');
       for(let i = 0; i < lines.length; i++) {
@@ -125,9 +138,9 @@ as3Files.forEach(file => {
 });
 
 // Summary
-if(passed < as3Files.length) {
-  console.log(colors.red.inverse('\n  ☠☠☠️ Some tests failed: ' + passed + "/" + as3Files.length + "\n"));
+if(passed < tested) {
+  console.log(colors.red.inverse('\n  ☠☠☠️' + (tested - passed) + ' tests failed.\n'));
 }
 else {
-  console.log(colors.blue.inverse('\n  ★︎ All tests passed!\n'));
+  console.log(colors.blue.inverse('\n  ★★★︎ All tests passed!\n'));
 }
