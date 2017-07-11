@@ -147,8 +147,8 @@ as3Files.forEach(file => {
 
 // Summary
 if(passed < tested) {
-  console.log(colors.red.inverse('\n  ☠☠☠️' + (tested - passed) + ' tests failed.\n'));
+  console.log(colors.red.inverse('\n  ☠☠☠️' + (tested - passed) + ' tests failed ☠☠☠️\n'));
 }
 else {
-  console.log(colors.blue.inverse('\n  ★★★︎ All tests passed! ⚑ \n'));
+  console.log(colors.blue.inverse('\n  ⚑ All tests passed! \n'));
 }
