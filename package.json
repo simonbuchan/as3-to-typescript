@@ -11,7 +11,8 @@
     "compile": "tsc --project src",
     "watch": "tsc --project src --watch",
     "pretest": "npm run -s compile",
-    "unit": "node tests/unit/UnitTests.js"
+    "unit": "node tests/unit/UnitTests.js",
+    "multi": "node tests/multi/MultiTest.js"
   },
   "keywords": [
     "actionscript",

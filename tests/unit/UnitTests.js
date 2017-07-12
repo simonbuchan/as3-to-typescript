@@ -35,7 +35,16 @@ const emitterOptions = {
   lineSeparator: '\n',
   definitionsByNamespace: {},
   customVisitors: conversion.instantiateVisitorsFromStr(
-    'trace',
+    'trace,' +
+    'dictionary,' +
+    'flash-errors,' +
+    'gettimer,' +
+    'stringutil,' +
+    'trace,' +
+    'xml,' +
+    'imports,' +
+    'imports_toplevel,' +
+    'types',
     '../lib/custom-visitors/'
   )
 };
@@ -105,7 +114,7 @@ as3Files.forEach(file => {
       if(showdiff) {
         const diff = jsdiff.diffLines(contents, expectedContents);
         diff.forEach(function(part) {
-          let color = part.added ? 'green' : part.removed ? 'red' : 'grey';
+          let color = part.added ? 'yellow' : part.removed ? 'red' : 'grey';
           process.stderr.write(part.value[color]);
         });
         console.log();

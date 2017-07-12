@@ -19,3 +19,4 @@ npm-debug.log
 /test-ast/generated
 /test-ast/single
 /tests/unit/js-generated
+/tests/multi/js-generated
