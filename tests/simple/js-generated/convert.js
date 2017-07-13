@@ -1,12 +1,18 @@
-import { Sprite } from "./Sprite";
-import { View3D } from "./View3D";
-import { Mesh } from "./Mesh";
-import { StageScaleMode } from "./StageScaleMode";
-import { StageAlign } from "./StageAlign";
-import { PlaneGeometry } from "./PlaneGeometry";
-import { TextureMaterial } from "./TextureMaterial";
-import { Cast } from "./Cast";
-import { Event } from "./Event";
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var Sprite_1 = require("./Sprite");
+var View3D_1 = require("./View3D");
+var Mesh_1 = require("./Mesh");
+var StageScaleMode_1 = require("./StageScaleMode");
+var StageAlign_1 = require("./StageAlign");
+var PlaneGeometry_1 = require("./PlaneGeometry");
+var TextureMaterial_1 = require("./TextureMaterial");
+var Cast_1 = require("./Cast");
+var Event_1 = require("./Event");
 /*
 
  Basic View example in Away3d
@@ -44,8 +50,6 @@ import { Event } from "./Event";
  THE SOFTWARE.
 
  */
-
-
 /*import away3d.containers.*;
 */
 /*import away3d.entities.*;
@@ -56,70 +60,50 @@ import { Event } from "./Event";
 */
 /*import away3d.utils.*;
 */
-
 /*import flash.display.*;
 */
 /*import flash.events.*;
 */
-import { Vector3D } from "../flash/geom/Vector3D";
-
+var Vector3D_1 = require("../flash/geom/Vector3D");
 /*[SWF(backgroundColor="#000000", frameRate="60", quality="LOW")]*/
-
-export class Basic_View extends Sprite
-{
-    //plane texture
-    /*[Embed(source="/../embeds/floor_diffuse.jpg")]*/
-    public static FloorDiffuse:any;
-
-    //engine variables
-    private _view:View3D;
-
-    //scene objects
-    private _plane:Mesh;
-
+var Basic_View = (function (_super) {
+    __extends(Basic_View, _super);
     /**
      * Constructor
      */
-    constructor(){
-        this.stage.scaleMode = StageScaleMode.NO_SCALE;
-        this.stage.align = StageAlign.TOP_LEFT;
-
+    function Basic_View() {
+        this.stage.scaleMode = StageScaleMode_1.StageScaleMode.NO_SCALE;
+        this.stage.align = StageAlign_1.StageAlign.TOP_LEFT;
         //setup the view
-        this._view = new View3D();
+        this._view = new View3D_1.View3D();
         this.addChild(this._view);
-
         //setup the camera
         this._view.camera.z = -600;
         this._view.camera.y = 500;
-        this._view.camera.lookAt(new Vector3D());
-
+        this._view.camera.lookAt(new Vector3D_1.Vector3D());
         //setup the scene
-        this._plane = new Mesh(new PlaneGeometry(700, 700), new TextureMaterial(Cast.bitmapTexture(Basic_View.FloorDiffuse)));
+        this._plane = new Mesh_1.Mesh(new PlaneGeometry_1.PlaneGeometry(700, 700), new TextureMaterial_1.TextureMaterial(Cast_1.Cast.bitmapTexture(Basic_View.FloorDiffuse)));
         this._view.scene.addChild(this._plane);
-
         //setup the render loop
-        this.addEventListener(Event.ENTER_FRAME, this._onEnterFrame);
-        this.stage.addEventListener(Event.RESIZE, this.onResize);
+        this.addEventListener(Event_1.Event.ENTER_FRAME, this._onEnterFrame);
+        this.stage.addEventListener(Event_1.Event.RESIZE, this.onResize);
         this.onResize();
     }
-
     /**
      * render loop
      */
-    private _onEnterFrame(e:Event):void
-    {
+    Basic_View.prototype._onEnterFrame = function (e) {
         this._plane.rotationY += 1;
-
         this._view.render();
-    }
-
+    };
     /**
      * stage listener for resize events
      */
-    private onResize(event:Event = null):void
-    {
+    Basic_View.prototype.onResize = function (event) {
+        if (event === void 0) { event = null; }
         this._view.width = this.stage.stageWidth;
         this._view.height = this.stage.stageHeight;
-    }
-}
-
+    };
+    return Basic_View;
+}(Sprite_1.Sprite));
+exports.Basic_View = Basic_View;

@@ -233,6 +233,10 @@ function convertSources(sourceFolder, destinationFolder, emitterOptions) {
   });
 }
 
+function loadExternalNamespaces(namespaces, emitterOptions) {
+  namespaces.createExternalPackageDefinitions(emitterOptions.definitionsByNamespace);
+}
+
 module.exports = {
   readdir: readdir,
   readNormalizedSync: readNormalizedSync,
@@ -242,5 +246,6 @@ module.exports = {
   collectSources: collectSources,
   resolveIncludes: resolveIncludes,
   convertSources: convertSources,
-  populateNamespaces: populateNamespaces
+  populateNamespaces: populateNamespaces,
+  loadExternalNamespaces: loadExternalNamespaces
 };

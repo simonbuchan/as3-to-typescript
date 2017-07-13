@@ -1,13 +1,14 @@
-const conversion = require('../../scripts/conversion.js');
+const utils = require('../../wrappers/ConversionUtils.js');
 const fs = require('fs-extra');
 const path = require('path');
 const parse = require('../../lib/parse');
 const emit = require('../../lib/emit');
 const colors = require('colors');
-const ts = require('typescript');
+const jsdiff = require('diff');
+const flashDefinitions = require('../../wrappers/namespaces/flash/FlashNamespaces.js');
 
 /*
- Converts all as3 files in tests/multi/as3 to typescript files in tests/multi/ts-generated
+ Converts all as3 files in tests/compound/as3 to typescript files in tests/compound/ts-generated
  and compares the output.
 
  Files are interrelated and are supposed to interact with each other.
@@ -15,7 +16,7 @@ const ts = require('typescript');
 
 // Process incoming CLI arguments.
 // ***********************************************************************
-const params = conversion.processArgs(process.argv);
+const params = utils.processArgs(process.argv);
 const showdiff = params['showdiff']; // when outputs don't match, display the lines that don't match
 // ***********************************************************************
 
@@ -27,7 +28,7 @@ const comparisonDirectory = path.resolve(__dirname, './ts-expected');
 const emitterOptions = {
   lineSeparator: '\n',
   definitionsByNamespace: {},
-  customVisitors: conversion.instantiateVisitorsFromStr(
+  customVisitors: utils.instantiateVisitorsFromStr(
     'trace,' +
     'dictionary,' +
     'flash-errors,' +
@@ -43,26 +44,26 @@ const emitterOptions = {
 };
 
 // Clean output directories.
-conversion.clearDirectory(destinationDirectory);
-conversion.clearDirectory(sourceTempDirectory);
+utils.clearDirectory(destinationDirectory);
+utils.clearDirectory(sourceTempDirectory);
 console.log(colors.green("  1. Clear temp and output directories"));
 
 // Collect all files in tmp dir and resolve includes.
-conversion.collectSources([sourceDirectory], sourceTempDirectory);
+utils.collectSources([sourceDirectory], sourceTempDirectory);
 console.log(colors.green("  2. Collect sources into tmp dir and resolve includes"));
 
 // Collection namespace definitions.
 console.log(colors.green("  3. Construct namespaces"));
-// TODO: load external namespaces
-conversion.populateNamespaces(sourceTempDirectory, emitterOptions);
+utils.loadExternalNamespaces(flashDefinitions, emitterOptions);
+utils.populateNamespaces(sourceTempDirectory, emitterOptions);
 
 // Convert all sources.
 console.log(colors.green("  4. Convert sources"));
-conversion.convertSources(sourceTempDirectory, destinationDirectory, emitterOptions);
+utils.convertSources(sourceTempDirectory, destinationDirectory, emitterOptions);
 
 // Compare output.
 console.log(colors.green("  5. Compare output"));
-let filesAS = conversion.readdir(destinationDirectory).filter(file => /.ts$/.test(file));
+let filesAS = utils.readdir(destinationDirectory).filter(file => /.ts$/.test(file));
 filesAS.forEach(file => {
 
   // Identify source file.
@@ -78,11 +79,11 @@ filesAS.forEach(file => {
     let generatedContents = fs.readFileSync(generatedTsFile).toString();
     let expectedContents = fs.readFileSync(expectedTsFile).toString();
     if(generatedContents !== expectedContents) {
-      console.log(colors.green("  ✗ " + identifier + '.ts ERROR: generated output does not match expected output.'));
+      console.log(colors.red("  ✗ " + identifier + '.ts ERROR: generated output does not match expected output.'));
 
       // Show diff?
       if(showdiff) {
-        const diff = jsdiff.diffLines(contents, expectedContents);
+        const diff = jsdiff.diffLines(generatedContents, expectedContents);
         diff.forEach(function(part) {
           let color = part.added ? 'yellow' : part.removed ? 'red' : 'grey';
           process.stderr.write(part.value[color]);

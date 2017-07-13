@@ -1,4 +1,4 @@
-const conversion = require('../../scripts/conversion.js');
+const utils = require('../../wrappers/ConversionUtils.js');
 const fs = require('fs-extra');
 const path = require('path');
 const parse = require('../../lib/parse');
@@ -9,7 +9,7 @@ const ts = require('typescript');
 const execSync = require('child_process').execSync;
 
 /*
-  Converts all as3 files in tests/unit/as3 to typescript files in tests/unit/ts-generated
+  Converts all as3 files in tests/simple/as3 to typescript files in tests/simple/ts-generated
   and compares the output.
 
   All files are treated independently and there is no special multipass mechanism nor
@@ -18,7 +18,7 @@ const execSync = require('child_process').execSync;
 
 // Process incoming CLI arguments.
 // ***********************************************************************
-const params = conversion.processArgs(process.argv);
+const params = utils.processArgs(process.argv);
 const showdiff = params['showdiff']; // when outputs don't match, display the lines that don't match
 let focusedSourceFiles = params['focused']; // focus on a set of files
 let ignoredSourceFiles = params['ignored']; // ignore a set of files
@@ -34,7 +34,7 @@ const comparisonDirectory = path.resolve(__dirname, './ts-expected');
 const emitterOptions = {
   lineSeparator: '\n',
   definitionsByNamespace: {},
-  customVisitors: conversion.instantiateVisitorsFromStr(
+  customVisitors: utils.instantiateVisitorsFromStr(
     'trace,' +
     'dictionary,' +
     'flash-errors,' +
@@ -56,9 +56,9 @@ if(focusedSourceFiles) {
 if(ignoredSourceFiles) {
   ignoredSourceFiles = ignoredSourceFiles.split(',');
 }
-let as3Files = conversion.readdir(sourceDirectory).filter(file => /.as$/.test(file));
+let as3Files = utils.readdir(sourceDirectory).filter(file => /.as$/.test(file));
 
-console.log("Running unit conversion tests on " + as3Files.length + " files...\n");
+console.log("Running simple conversion tests on " + as3Files.length + " files...\n");
 
 // For each as3 file, convert and test...
 let passed = 0;

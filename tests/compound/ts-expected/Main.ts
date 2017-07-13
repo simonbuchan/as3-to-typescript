@@ -13,6 +13,7 @@ export class Main extends Sprite {
 
     public doYourThing(spr:Sprite):void {
     console.log("snippets are cool");
+    // hang on, what is this?
 }
 
 
