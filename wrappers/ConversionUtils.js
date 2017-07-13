@@ -33,6 +33,13 @@ function clearDirectory(dir) {
   fs.emptyDirSync(dir);
 }
 
+function clearDirectories(dirArr) {
+  for(let i = 0; i < dirArr.length; i++) {
+    const dir = dirArr[i];
+    clearDirectory(dir);
+  }
+}
+
 // Receives a string with comma separated visitor names and
 // returns an array of instantiated visitors
 function instantiateVisitorsFromStr(visitors, baseUrl) {
@@ -209,8 +216,12 @@ function convertSources(sourceFolder, destinationFolder, emitterOptions) {
 
     // Convert.
     let content = fs.readFileSync(inputFile, 'UTF-8');
-    let ast = parse(path.basename(file), content);
-    let contents = emit(ast, content, emitterOptions);
+    let ast;
+    try { ast = parse(path.basename(file), content); }
+    catch(err) { console.log(err); }
+    let contents;
+    try { contents = emit(ast, content, emitterOptions); }
+    catch(err) { console.log(err); }
 
     // Apply custom visitors postprocessing (needed for imports visitor).
     emitterOptions.customVisitors.forEach((visitor) => {
@@ -242,6 +253,7 @@ module.exports = {
   readNormalizedSync: readNormalizedSync,
   instantiateVisitorsFromStr: instantiateVisitorsFromStr,
   clearDirectory: clearDirectory,
+  clearDirectories: clearDirectories,
   processArgs: processArgs,
   collectSources: collectSources,
   resolveIncludes: resolveIncludes,
