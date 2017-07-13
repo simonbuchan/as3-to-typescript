@@ -21,7 +21,7 @@ const execSync = require('child_process').execSync;
 const params = utils.processArgs(process.argv);
 const showdiff = params['showdiff']; // when outputs don't match, display the lines that don't match
 let focusedSourceFiles = params['focused']; // focus on a set of files
-let ignoredSourceFiles = params['Super.as']; // ignore a set of files
+let ignoredSourceFiles = params['ignored']; // ignore a set of files
 const tsc = params['tsc']; // convert ts output to js in /js-generated
 const run = params['run']; // run js output (requires tsc)
 // ***********************************************************************
