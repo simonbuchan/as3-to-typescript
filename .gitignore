@@ -18,5 +18,5 @@ npm-debug.log
 /test-ast/fixtures/generated
 /test-ast/generated
 /test-ast/single
-/tests/unit/js-generated
-/tests/multi/js-generated
+/tests/simple/js-generated
+/tests/compound/js-generated
