@@ -13,10 +13,8 @@
     "pretest": "npm run -s compile",
     "test": "npm run pretest && npm run test:simple && npm run test:compound",
     "test:simple": "node tests/simple/SimpleTests.js",
-    "test:simple:webstorm": "node %NODE_DEBUG_OPTION% --focused Super.as tests/simple/SimpleTests.js",
-    "test:compound": "node tests/compound/CompoundTests.js",
-    "test:executable-s": "node tests/simple/ExecutableTests.js",
-    "test:executable": "node tests/compound/ExecutableTests.js"
+    "test:execute:webstorm": "node %NODE_DEBUG_OPTION% tests/compound/ExecutableTest.js focused=Trace tsc=true run=true",
+    "test:compound": "node tests/compound/CompoundTests.js"
   },
   "keywords": [
     "actionscript",

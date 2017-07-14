@@ -5,26 +5,33 @@ const parse = require('../../lib/parse');
 const emit = require('../../lib/emit');
 const colors = require('colors');
 const jsdiff = require('diff');
-const flashDefinitions = require('../../wrappers/namespaces/flash/FlashNamespaces.js');
+const ts = require('typescript');
+const execSync = require('child_process').execSync;
 
 /*
- Converts all as3 files in tests/compound/as3 to typescript files in tests/compound/ts-generated
- and compares the output.
+  Converts all as3 files in tests/simple/as3 to typescript files in tests/simple/ts-generated
+  and compares the output.
 
- Files are interrelated and are supposed to interact with each other.
+  All files are treated independently and there is no special multipass mechanism nor
+  inter-relation between the transpiled files.
  */
 
 // Process incoming CLI arguments.
 // ***********************************************************************
 const params = utils.processArgs(process.argv);
 const showdiff = params['showdiff']; // when outputs don't match, display the lines that don't match
+let focusedSourceFiles = params['focused']; // focus on a set of files
+let ignoredSourceFiles = params['ignored']; // ignore a set of files
+const tsc = params['tsc']; // convert ts output to js in /js-generated
+const run = params['run']; // run js output (requires tsc)
 // ***********************************************************************
 
 // Configuration settings used in this script:
-const sourceDirectory = path.resolve(__dirname, './as3');
+const sourceDirectory = path.resolve(__dirname, './as3-executable');
 const sourceTempDirectory = path.resolve(__dirname, './as3-tmp');
+const helperDirectory = path.resolve(__dirname, '../helpers');
 const destinationDirectory = path.resolve(__dirname, './ts-generated');
-const comparisonDirectory = path.resolve(__dirname, './ts-expected');
+const destinationJSDirectory = path.resolve(__dirname, './js-generated');
 const emitterOptions = {
   lineSeparator: '\n',
   definitionsByNamespace: {},
@@ -43,7 +50,7 @@ const emitterOptions = {
   )
 };
 
-// Clean output directories.
+/*// Clean output directories.
 utils.clearDirectory(destinationDirectory);
 utils.clearDirectory(sourceTempDirectory);
 console.log(colors.green("  1. Clear temp and output directories"));
@@ -52,52 +59,93 @@ console.log(colors.green("  1. Clear temp and output directories"));
 utils.collectSources([sourceDirectory], sourceTempDirectory);
 console.log(colors.green("  2. Collect sources into tmp dir and resolve includes"));
 
-// Collection namespace definitions.
-console.log(colors.green("  3. Construct namespaces"));
-utils.loadExternalNamespaces(flashDefinitions, emitterOptions);
-utils.populateNamespaces(sourceTempDirectory, emitterOptions);
+utils.collectSources([helperDirectory], sourceTempDirectory);
+console.log(colors.green("  3. Collect helpers into tmp dir and resolve includes"));*/
 
-// Convert all sources.
-console.log(colors.green("  4. Convert sources"));
-utils.convertSources(sourceTempDirectory, destinationDirectory, emitterOptions);
+// Collect all files.
+if(focusedSourceFiles) {
+  focusedSourceFiles = focusedSourceFiles.split(',');
+}
+if(ignoredSourceFiles) {
+  ignoredSourceFiles = ignoredSourceFiles.split(',');
+}
+let as3Files = utils.readdir(sourceTempDirectory).filter(file => /.as$/.test(file));
 
-// Compare output.
-console.log(colors.green("  5. Compare output"));
-let filesAS = utils.readdir(destinationDirectory).filter(file => /.ts$/.test(file));
-filesAS.forEach(file => {
+console.log("Running simple conversion tests on " + as3Files.length + " files...\n");
+
+// For each as3 file, convert and test...
+let passed = 0;
+let tested = 0;
+as3Files.forEach(file => {
 
   // Identify source file.
+  let as3File = path.resolve(sourceTempDirectory, file);
   let segments = file.match(/([a-zA-Z0-9]+)/g);
   segments.pop();
   let identifier = segments.pop();
 
-  // Identify files, read them and compare them.
-  let rel = path.join.apply(null, segments) + "/";
-  let generatedTsFile = path.resolve(destinationDirectory, rel + identifier + '.ts');
-  let expectedTsFile = path.resolve(comparisonDirectory, rel + identifier + '.ts');
-  if(fs.existsSync(generatedTsFile) && fs.existsSync(expectedTsFile)) {
-    let generatedContents = fs.readFileSync(generatedTsFile).toString();
-    let expectedContents = fs.readFileSync(expectedTsFile).toString();
-    if(generatedContents !== expectedContents) {
-      console.log(colors.red("  ✗ " + identifier + '.ts ERROR: generated output does not match expected output.'));
+  // Focus or ignore?
+  if(focusedSourceFiles && focusedSourceFiles.indexOf(identifier) === -1) {
+    return;
+  }
+  if(ignoredSourceFiles && ignoredSourceFiles.indexOf(identifier) !== -1) {
+    return;
+  }
+  tested++;
 
-      // Show diff?
-      if(showdiff) {
-        const diff = jsdiff.diffLines(generatedContents, expectedContents);
-        diff.forEach(function(part) {
-          let color = part.added ? 'yellow' : part.removed ? 'red' : 'grey';
-          process.stderr.write(part.value[color]);
-        });
-        console.log();
+  // Identify source/target files.
+  let outputFile = path.resolve(destinationDirectory, identifier + ".ts");
+
+  // Convert as3 -> ts.
+  let content = fs.readFileSync(as3File, 'UTF-8');
+  let ast = parse(path.basename(file), content);
+  let contents = emit(ast, content, emitterOptions);
+  contents = contents.replace(/\r\n?/g, '\n');
+
+  // Apply custom visitors postprocessing.
+  emitterOptions.customVisitors.forEach(visitor => {
+    if (visitor.postProcessing) {
+      contents = visitor.postProcessing(emitterOptions, contents);
+    }
+  });
+
+  // Write converted ts output.
+  fs.outputFileSync(outputFile, contents);
+
+
+
+  // Convert to js?
+  if(tsc) {
+    console.log(colors.blue('      ↳' + identifier + '.ts -> ' + identifier + '.js'));
+
+    // Compile typescript to javascript.
+    let jsCode = ts.transpileModule(contents, {}).outputText;
+
+    // Write converted js output.
+    const jsFile = path.resolve(destinationJSDirectory, identifier + ".js");
+    fs.outputFileSync(jsFile, jsCode);
+
+    // Run js?
+    if(run) {
+      console.log(colors.cyan('       (exec)'));
+      try {
+        let stdout = execSync('node ' + destinationJSDirectory + '/' + identifier + '.js', {stdio: 'pipe'}).toString();
+        let lines = stdout.split('\n');
+        for(let i = 0; i < lines.length; i++) {
+          console.log(colors.cyan('        ', lines[i]));
+        }
+      }
+      catch(err) {
+        console.log(colors.cyan('        ', err));
       }
     }
-    else {
-      console.log(colors.blue("    ✔ " + identifier + " diff matches"));
-    }
-  }
-  else {
-    console.log(colors.red('  ✗ ERROR: unable to find reference file to compare to.'));
   }
 });
 
-console.log(colors.green("  ⚑ Completed\n"));
+// Summary
+if(passed < tested) {
+  console.log(colors.red.inverse('\n  ☠☠☠️' + (tested - passed) + ' tests failed ☠☠☠️\n'));
+}
+else {
+  console.log(colors.blue.inverse('\n  ⚑ All tests passed! \n'));
+}

@@ -1,5 +1,3 @@
-import { SubDynamicClass } from "./SubDynamicClass";
-
 
 export class DynamicClass
 {
