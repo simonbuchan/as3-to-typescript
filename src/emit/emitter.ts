@@ -1021,18 +1021,41 @@ function emitMethod(emitter: Emitter, node: Node): void {
         // }
 
     }
-
+    //emitter.catchup(blockNode.start + 1);
     emitter.withScope(getFunctionDeclarations(emitter, node), () => {
         let children = node.getChildFrom(NodeKind.NAME);
         let nameNode = children[0];
         for (var i = 0; i < children.length; i++) {
             let childNode = children[i];
-            if (childNode.kind == NodeKind.BLOCK)
-            {
-                if (isConstructor == false) emitter.insert(" => ");
+            if (childNode.kind == NodeKind.BLOCK){
+                if (isConstructor) {
+                    emitter.catchup(childNode.start + 1);
+                    emitter.insert("\n\t\tsuper();");
+                }
+                else
+                {
+                    emitter.insert(" => ");
 
+                }
+                visitNode(emitter, childNode);
+/*                if (isConstructor) {
+                    let  blockChildren = childNode.children;
+                    emitter.insert("super()");
+                    let firstChild = blockChildren[0];
+                    visitNode(emitter, firstChild);
+                    for (var j = 1; j < blockChildren.length; j++) {
+                        var blockChild = blockChildren[j];
+                        visitNode(emitter, firstChild);
+                    }
+                } else {
+                    emitter.insert(" => ");
+                    visitNode(emitter, childNode);
+                }*/
             }
-            visitNode(emitter, childNode);
+            else         {
+                visitNode(emitter, childNode);
+            }
+
         }
         //visitNodes(emitter, node.getChildFrom(NodeKind.NAME));
 
