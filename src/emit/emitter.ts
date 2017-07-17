@@ -168,6 +168,7 @@ function filterAST(node: Node): Node {
 
 export default class Emitter {
     public isNew: boolean = false;
+    public isExtended: boolean = false;
 
     private _emitThisForNextIdent: boolean = true;
     get emitThisForNextIdent():boolean {
@@ -860,7 +861,11 @@ function emitClass(emitter: Emitter, node: Node): void {
     let extendsNode = node.findChild(NodeKind.EXTENDS);
     if (extendsNode) {
         emitIdent(emitter, extendsNode);
+        emitter.isExtended = true;
         emitter.ensureImportIdentifier(extendsNode.text);
+    } else
+    {
+        emitter.isExtended = false;
     }
 
     // ensure implements identifiers are being imported
@@ -1027,10 +1032,14 @@ function emitMethod(emitter: Emitter, node: Node): void {
         let nameNode = children[0];
         for (var i = 0; i < children.length; i++) {
             let childNode = children[i];
+            //var implemented = emitter.scope.parent.parent.declarations[0].name; //can not use because it icludes also imports
             if (childNode.kind == NodeKind.BLOCK){
                 if (isConstructor) {
-                    emitter.catchup(childNode.start + 1);
-                    emitter.insert("\n\t\tsuper();");
+                    if (emitter.isExtended){
+                        emitter.catchup(childNode.start + 1);
+                        emitter.insert("\n\t\tsuper();");
+                    }
+                    ;
                 }
                 else
                 {
