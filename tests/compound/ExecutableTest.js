@@ -28,7 +28,6 @@ const run = params['run']; // run js output (requires tsc)
 
 // Configuration settings used in this script:
 const sourceDirectory = path.resolve(__dirname, './as3-executable');
-const sourceTempDirectory = path.resolve(__dirname, './as3-tmp');
 const helperDirectory = path.resolve(__dirname, '../helpers');
 const destinationDirectory = path.resolve(__dirname, './ts-generated');
 const destinationJSDirectory = path.resolve(__dirname, './js-generated');
@@ -69,7 +68,7 @@ if(focusedSourceFiles) {
 if(ignoredSourceFiles) {
   ignoredSourceFiles = ignoredSourceFiles.split(',');
 }
-let as3Files = utils.readdir(sourceTempDirectory).filter(file => /.as$/.test(file));
+let as3Files = utils.readdir(sourceDirectory).filter(file => /.as$/.test(file));
 
 console.log("Running simple conversion tests on " + as3Files.length + " files...\n");
 
@@ -79,7 +78,7 @@ let tested = 0;
 as3Files.forEach(file => {
 
   // Identify source file.
-  let as3File = path.resolve(sourceTempDirectory, file);
+  let as3File = path.resolve(sourceDirectory, file);
   let segments = file.match(/([a-zA-Z0-9]+)/g);
   segments.pop();
   let identifier = segments.pop();
@@ -113,13 +112,15 @@ as3Files.forEach(file => {
   fs.outputFileSync(outputFile, contents);
 
 
-
+    passed++;
   // Convert to js?
   if(tsc) {
     console.log(colors.blue('      ↳' + identifier + '.ts -> ' + identifier + '.js'));
 
     // Compile typescript to javascript.
-    let jsCode = ts.transpileModule(contents, {}).outputText;
+    let compileOptions =   {"target":2};
+    let transpileOptions  =   {"compileOptions":compileOptions};
+    let jsCode = ts.transpileModule(contents, transpileOptions).outputText;
 
     // Write converted js output.
     const jsFile = path.resolve(destinationJSDirectory, identifier + ".js");
@@ -129,8 +130,10 @@ as3Files.forEach(file => {
     if(run) {
       console.log(colors.cyan('       (exec)'));
       try {
-        let stdout = execSync('node ' + destinationJSDirectory + '/' + identifier + '.js', {stdio: 'pipe'}).toString();
+        let childProcess = execSync('node ' + destinationJSDirectory + '/' + identifier + '.js', {stdio: 'pipe'});
+        let stdout = childProcess.toString();
         let lines = stdout.split('\n');
+        console.log(stdout);
         for(let i = 0; i < lines.length; i++) {
           console.log(colors.cyan('        ', lines[i]));
         }

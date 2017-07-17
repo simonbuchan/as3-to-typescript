@@ -666,11 +666,31 @@ function getFunctionDeclarations(emitter: Emitter, node: Node): Declaration[] {
 
 
 function emitFunction(emitter: Emitter, node: Node): void {
+    //emitter.insert("<" + NodeKind[node.kind] + ":>");
+    //emitter.insert("<declareation:>");
     emitDeclaration(emitter, node);
+    //emitter.insert("</declareation>");
     emitter.withScope(getFunctionDeclarations(emitter, node), () => {
         let rest = node.getChildFrom(NodeKind.MOD_LIST);
-        visitNodes(emitter, rest);
+        for (var i = 0; i < rest.length; i++) {
+            var childNode:Node = rest[i];
+            if (childNode.kind == NodeKind.BLOCK)
+            {
+                emitter.insert(" => ");
+            }
+            //emitter.insert("<" +  NodeKind[n.kind]+ ":>");
+            if (childNode.kind == NodeKind.PARAMETER_LIST)
+            {
+                emitter.skip(Keywords.FUNCTION.length + 1);
+            }
+            visitNode(emitter, rest[i]);
+
+            //emitter.insert("</" +  NodeKind[n.kind]+ ">");
+        }
+        //visitNodes(emitter, rest);
+
     });
+   // emitter.insert("</" + NodeKind[node.kind] + ">");
 }
 
 function emitForIn(emitter: Emitter, node: Node): void {
@@ -922,17 +942,21 @@ function emitNameTypeInit(emitter: Emitter, node: Node): void {
 }
 
 function emitMethod(emitter: Emitter, node: Node): void {
+    var isConstructor:boolean = false;
     let name = node.findChild(NodeKind.NAME);
     if (node.kind !== NodeKind.FUNCTION || name.text !== emitter.currentClassName) {
         emitClassField(emitter, node);
         emitter.consume('function', name.start);
         emitter.catchup(name.end);
+        emitter.insert(" = ");
+
     } else {
         let mods = node.findChild(NodeKind.MOD_LIST);
         if (mods) {
             emitter.catchup(mods.start);
         }
         emitter.insert('constructor');
+        isConstructor = true;
 
         // Check if the class extends an Array, in which an insertion
         // is required in the constructor. It's a weird
@@ -997,8 +1021,21 @@ function emitMethod(emitter: Emitter, node: Node): void {
         // }
 
     }
+
     emitter.withScope(getFunctionDeclarations(emitter, node), () => {
-        visitNodes(emitter, node.getChildFrom(NodeKind.NAME));
+        let children = node.getChildFrom(NodeKind.NAME);
+        let nameNode = children[0];
+        for (var i = 0; i < children.length; i++) {
+            let childNode = children[i];
+            if (childNode.kind == NodeKind.BLOCK)
+            {
+                if (isConstructor == false) emitter.insert(" => ");
+
+            }
+            visitNode(emitter, childNode);
+        }
+        //visitNodes(emitter, node.getChildFrom(NodeKind.NAME));
+
     });
 }
 
