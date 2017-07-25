@@ -1,5 +1,6 @@
-import NodeKind from './nodeKind';
+import NodeKind, {nodeKindName} from './nodeKind';
 import Token from '../parse/token';
+import {VERBOSE_MASK} from '../config';
 
 interface CreateNodeOptions {
     start?: number;
@@ -29,13 +30,20 @@ export function createNode(kind: NodeKind, options?: CreateNodeOptions, ... chil
         }
     }
 
-    // Initialize in this order to emit the same .ast.json test files
+    // Initialize in this order to emit the same .ast.json test-old files
     let node = new Node();
     node.kind = kind;
     node.start = start;
     node.end = end;
     node.text = text;
     node.children = children;
+
+    //if(VERBOSE >= 3) {
+    if((VERBOSE_MASK & ReportFlags.CREATE_NODES) == ReportFlags.CREATE_NODES) {
+
+        console.log("node.ts - createNode() - kind: " + nodeKindName(node.kind) + ", text: " + node.text);
+    }
+
     return node;
 }
 
@@ -47,6 +55,19 @@ export default class Node {
     public children: Node[];
     public parent: Node; // only during emit
 
+    toString(offset:string = ""):string {
+        let str:string = (offset === "" ? "" : offset + "↳") + nodeKindName(this.kind);
+        if(this.text) {
+            str += ", text: '" + this.text + "'";
+        }
+        str += "\n";
+        for(let i:number = 0; i < this.children.length; i++) {
+            const child:Node = this.children[i];
+            str += child.toString(offset + "  ");
+        }
+        return str;
+    }
+
     findChild(kind: NodeKind): Node {
         for (var i = 0; i < this.children.length; i++) {
             if (this.children[i].kind === kind) {
@@ -54,6 +75,16 @@ export default class Node {
             }
         }
         return null;
+    }
+
+    get previousSibling (): Node {
+        let thisIdx = this.parent.children.indexOf(this);
+        return this.parent.children[thisIdx-1];
+    }
+
+    get nextSibling (): Node {
+        let thisIdx = this.parent.children.indexOf(this);
+        return this.parent.children[thisIdx+1];
     }
 
     findChildren(kind: NodeKind): Node[] {

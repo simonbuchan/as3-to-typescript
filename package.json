@@ -1,19 +1,21 @@
 {
-  "name": "as3-to-typescript",
-  "version": "0.1.1",
-  "description": "convert as3 code base to typescript",
+  "name": "as3-to-ts",
+  "version": "0.3.3",
+  "description": "Tool to help porting ActionScript 3.0 code to TypeScript.",
   "main": "index.js",
   "bin": {
-    "as3-to-typescript": "./bin/as3-to-typescript"
+    "as3-to-ts": "./bin/as3-to-typescript"
   },
   "scripts": {
-    "pretest": "npm run -s compile",
-    "test": "npm run -s generate && npm run -s compare",
-    "generate": "node -r source-map-support/register test/runner generate",
-    "accept": "node -r source-map-support/register test/runner accept",
-    "compare": "node -r source-map-support/register test/runner compare || echo Comparison failed",
+    "install": "typings install && npm run compile",
     "compile": "tsc --project src",
-    "watch": "tsc --project src --watch"
+    "watch": "tsc --project src --watch",
+    "pretest": "npm run -s compile",
+    "test": "npm run pretest && npm run test:simple && npm run test:compound",
+    "test:simple": "node tests/simple/SimpleTests.js",
+    "test:execute:webstorm": "node %NODE_DEBUG_OPTION% tests/compound/ExecutableTest.js focused=LoopTestsAbstracts",
+    "test:execute": "node tests/compound/ExecutableTest.js focused=LoopTestsAbstracts tsc=true",
+    "test:compound": "node tests/compound/CompoundTests.js"
   },
   "keywords": [
     "actionscript",
@@ -21,24 +23,39 @@
     "typescript",
     "compiler"
   ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "repository": {
     "type": "git",
-    "url": "git://github.com/fdecampredon/as3-to-typescript.git"
+    "url": "git://github.com/GoodgameStudios/as3-to-ts.git"
   },
   "bugs": {
-    "url": "https://github.com/fdecampredon/as3-to-typescript/issues"
+    "url": "https://github.com/GoodgameStudios/as3-to-ts/issues"
   },
   "author": "François de Campredon <francois.de.campredon@gmail.com>",
+  "contributors": [
+    {
+      "name": "Endel Dreyer"
+    },
+    {
+      "name": "Simon Buchan"
+    }
+  ],
   "license": "Apache-2.0",
   "dependencies": {
+    "colors": "^1.1.2",
     "fs-extra": "^0.24.0",
+    "minimist": "^1.2.0",
     "object-assign": "^4.0.1",
+    "readline-sync": "^1.4.4",
     "sax": "~0.6.0"
   },
   "devDependencies": {
     "diff": "^2.2.1",
     "source-map-support": "^0.3.2",
     "tslint": "^2.5.1",
-    "typescript": "^1.5.3"
+    "typescript": "^1.5.3",
+    "typings": "^1.3.2"
   }
 }

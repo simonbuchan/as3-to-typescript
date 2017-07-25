@@ -28,6 +28,8 @@ export let INSTANCE_OF = 'instanceof';
 export let INTERFACE = 'interface';
 export let INTERNAL = 'internal';
 export let INTRINSIC = 'intrinsic';
+export let INT = 'int';
+export let UINT = 'uint';
 export let IS = 'is';
 export let NAMESPACE = 'namespace';
 export let NEW = 'new';
@@ -48,6 +50,7 @@ export let USE = 'use';
 export let VAR = 'var';
 export let VOID = 'void';
 export let WHILE = 'while';
+export let EMBED = 'EMBED';
 
 export let TRUE = 'true';
 export let FALSE = 'false';

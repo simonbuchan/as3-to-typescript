@@ -1,0 +1,33 @@
+/**
+ * Created by palebluedot on 3/24/17.
+ */
+package vehicles.components.Base {
+import flash.events.EventDispatcher;
+
+public class Thing implements IDoer {
+
+    public var callback:Function;
+
+    private var aFunction:Function = function(param1:uint, param2:String):Boolean {
+        return false;
+    };
+
+    public function Thing() {
+        callback = function() {
+            trace("Thing.callback - this: " + this);
+        }
+    }
+
+    public function doSomething():void {
+        trace("ok, I'm doing something");
+    }
+
+    private function thisIsASuperSecretMethod(name:String, defaultVal:* = null):void {
+
+    }
+
+    private function addSubDoer(doer:IDoer):void {
+
+    }
+}
+}

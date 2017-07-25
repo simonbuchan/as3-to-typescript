@@ -117,21 +117,21 @@ declare var Buffer: {
     /**
      * Returns true if {obj} is a Buffer
      *
-     * @param obj object to test.
+     * @param obj object to test-old.
      */
     isBuffer(obj: any): boolean;
     /**
      * Returns true if {encoding} is a valid encoding argument.
      * Valid string encodings in Node 0.12: 'ascii'|'utf8'|'utf16le'|'ucs2'(alias of 'utf16le')|'base64'|'binary'(deprecated)|'hex'
      *
-     * @param encoding string to test.
+     * @param encoding string to test-old.
      */
     isEncoding(encoding: string): boolean;
     /**
      * Gives the actual byte length of a string. encoding defaults to 'utf8'.
      * This is not the same as String.prototype.length since that returns the number of characters in a string.
      *
-     * @param string string to test.
+     * @param string string to test-old.
      * @param encoding encoding used to evaluate (defaults to 'utf8')
      */
     byteLength(string: string, encoding?: string): number;
@@ -1391,7 +1391,7 @@ declare module "path" {
     /**
      * Determines whether {path} is an absolute path. An absolute path will always resolve to the same location, regardless of the working directory.
      *
-     * @param path path to test.
+     * @param path path to test-old.
      */
     export function isAbsolute(path: string): boolean;
     /**
